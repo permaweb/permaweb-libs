@@ -12,7 +12,7 @@
 	"license": "ISC",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/permaweb/ao-permaweb.git",
+		"url": "https://github.com/permaweb/permaweb-libs.git",
 		"directory": "sdk"
 	},
 	"scripts": {
@@ -24,6 +24,7 @@
 		"tsc-alias": "^1.8.10"
 	},
 	"devDependencies": {
+		"@types/async-retry": "^1.4.9",
 		"@types/node": "^22.7.6",
 		"@typescript-eslint/eslint-plugin": "^5.57.1",
 		"@typescript-eslint/parser": "^5.57.1",

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@permaweb/arx": "^1.0.0",
+    "arweave": "^1.15.5"
+  }
+}

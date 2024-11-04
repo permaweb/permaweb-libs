@@ -43,8 +43,8 @@ export type ProfileCreateArgsType = {
 	username: string;
 	displayName: string;
 	description: string;
-	thumbnail?: string;
-	banner?: string;
+	thumbnail?: any;
+	banner?: any;
 };
 
 export type AssetCreateArgsType = {
