@@ -1632,6 +1632,22 @@ Subscribable.configTopicsAndChecks({
     },
 })
 
+if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
+    for _, tag in ipairs(Inbox[1].TagArray) do
+        local prefix = "Bootloader-"
+        local Tags = {}
+        if string.sub(tag.name, 1, string.len(prefix)) == prefix then
+            local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
+            if keyWithoutPrefix == "Tags" then
+                table.insert(Tags, tag.value)
+            else
+                Zone.zoneKV:set(keyWithoutPrefix, tag.value)
+            end
+            Zone.zoneKV:set("Tags", Tags)
+        end
+    end
+end
+
 if not ZoneInitCompleted then
     ZoneInitCompleted = true
 end
