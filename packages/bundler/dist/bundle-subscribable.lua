@@ -1122,21 +1122,6 @@ package.loaded["subscribable"] = newmodule
 
  -- ENDFILE 
 
--- possibly unneeded code
-
-table.insert(ao.authorities, 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY')
-Handlers.prepend("isTrusted",
-    function(msg)
-        return msg.From ~= msg.Owner and not ao.isTrusted(msg)
-    end,
-    function(msg)
-        Send({ Target = msg.From, Data = "Message is not trusted." })
-        print("Message is not trusted. From: " .. msg.From .. " - Owner: " .. msg.Owner)
-    end
-)
-
- -- ENDFILE 
-
 
 
 -- ================================================================================
@@ -1633,17 +1618,25 @@ Subscribable.configTopicsAndChecks({
 })
 
 if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
+    local collectedValues = {}
     for _, tag in ipairs(Inbox[1].TagArray) do
         local prefix = "Bootloader-"
-        local Tags = {}
         if string.sub(tag.name, 1, string.len(prefix)) == prefix then
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
-            if keyWithoutPrefix == "Tags" then
-                table.insert(Tags, tag.value)
+
+            if collectedValues[keyWithoutPrefix] == nil then
+                collectedValues[keyWithoutPrefix] = {tag.value}
             else
-                Zone.zoneKV:set(keyWithoutPrefix, tag.value)
+                table.insert(collectedValues[keyWithoutPrefix], tag.value)
             end
-            Zone.zoneKV:set("Tags", Tags)
+        end
+    end
+
+    for key, values in pairs(collectedValues) do
+        if #values == 1 then
+            Zone.zoneKV:set(key, values[1])
+        else
+            Zone.zoneKV:set(key, values)
         end
     end
 end

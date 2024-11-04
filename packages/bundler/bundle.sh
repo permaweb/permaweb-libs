@@ -12,7 +12,6 @@ TARGET_FILE="./dist/bundle-subscribable.lua"
 FILES=(
     "./apm_client.lua"
     "./subscribable.lua"
-    "./trusted.lua"
     "../kv/base/src/kv.lua"
     "../kv/batchplugin/src/batch.lua"
     "../asset-manager/asset-manager.lua"
@@ -21,7 +20,6 @@ FILES=(
 
 # Array of corresponding package names
 PACKAGE_NAMES=(
-    ""
     ""
     ""
     "@permaweb/kv-base"
