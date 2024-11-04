@@ -1,5 +1,5 @@
 export const AO = {
-	module: 'bkjb55i07GUCUSWROtKK4HU1mBS_X0TyH3M5jMV6aPg',
+	module: 'oKBlsMP3UWrAUURWUzGO4ZGEqlurAL5UkidMLrYo8EM',
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	src: {
 		asset: 'KnGqTZnqT-vCMiOJfZaFrLj_ur6pxs3iuQuf7WnhYIw',
