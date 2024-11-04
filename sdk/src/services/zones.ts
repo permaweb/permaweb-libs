@@ -16,6 +16,7 @@ export async function createZone(args: { tags?: TagType[] }, wallet: any, callba
 			},
 			(status) => callback(status),
 		);
+		
 		return zoneId;
 	} catch (e: any) {
 		throw new Error(e.message ?? 'Error creating zone');
