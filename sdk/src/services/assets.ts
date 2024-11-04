@@ -3,35 +3,33 @@ import { getGQLData } from 'common/gql';
 
 import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
 import { AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, GQLNodeResponseType, UDLicenseType } from 'helpers/types';
-import { formatAddress, getTagValue } from 'helpers/utils';
+import { checkValidAddress, formatAddress, getTagValue } from 'helpers/utils';
 
-// TODO: Render-With
-// TODO: Thumbnail
 // TODO: License
 export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback: (status: any) => void) {
 	if (!validateAssetCreateArgs(args)) throw new Error('Invalid arguments passed for atomic asset creation');
-
-	let processSrc: string | null = null;
+	
+	const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
+	const tags = buildAssetTags(args);
+	
+	let src: string | null = null;
 
 	try {
-		processSrc = await fetchProcessSrc(AO.src.asset);
+		src = await fetchProcessSrc(AO.src.asset);
 
-		if (processSrc) {
-			processSrc = processSrc.replaceAll(`'<NAME>'`, `[[${args.title}]]`);
-			processSrc = processSrc.replaceAll('<CREATOR>', args.creator ? args.creator : wallet.address);
-			processSrc = processSrc.replaceAll('<TICKER>', 'ATOMIC');
-			processSrc = processSrc.replaceAll('<DENOMINATION>', args.denomination ? args.denomination.toString() : '1');
-			processSrc = processSrc.replaceAll('<SUPPLY>', args.supply ? args.supply.toString() : '1');
+		if (src) {
+			src = src.replaceAll(`'<NAME>'`, `[[${args.title}]]`);
+			src = src.replaceAll('<CREATOR>', args.creator ? args.creator : wallet.address);
+			src = src.replaceAll('<TICKER>', 'ATOMIC');
+			src = src.replaceAll('<DENOMINATION>', args.denomination ? args.denomination.toString() : '1');
+			src = src.replaceAll('<SUPPLY>', args.supply ? args.supply.toString() : '1');
 
-			if (args.collectionId) processSrc = processSrc.replaceAll('<COLLECTION>', args.collectionId);
-			if (!args.transferable) processSrc = processSrc.replace('Transferable = true', 'Transferable = false');
+			if (args.collectionId) src = src.replaceAll('<COLLECTION>', args.collectionId);
+			if (!args.transferable) src = src.replace('Transferable = true', 'Transferable = false');
 		}
 	} catch (e: any) {
 		throw new Error(e);
 	}
-
-	const tags = buildAssetTags(args);
-	const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
 
 	try {
 		const assetId = await aoCreateProcess(
@@ -39,7 +37,7 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 				spawnData: data,
 				spawnTags: tags,
 				wallet: wallet,
-				evalSrc: processSrc,
+				evalSrc: src,
 			},
 			(status) => callback(status),
 		);
@@ -70,7 +68,7 @@ export async function getAtomicAsset(id: string): Promise<AssetDetailType | null
 
 		if (gqlResponse && gqlResponse.data.length) {
 			const asset: AssetHeaderType = buildAsset(gqlResponse.data[0]);
-			
+
 			let state: AssetStateType = {
 				ticker: null,
 				denomination: null,
@@ -171,9 +169,9 @@ export function buildAsset(element: GQLNodeResponseType): AssetHeaderType {
 }
 
 function getTitle(element: GQLNodeResponseType): string {
-    return getTagValue(element.node.tags, TAGS.keys.title) ||
-           getTagValue(element.node.tags, TAGS.keys.name) ||
-           formatAddress(element.node.id, false);
+	return getTagValue(element.node.tags, TAGS.keys.title) ||
+		getTagValue(element.node.tags, TAGS.keys.name) ||
+		formatAddress(element.node.id, false);
 }
 
 function getTopics(element: GQLNodeResponseType): string[] {
@@ -184,16 +182,16 @@ function getTopics(element: GQLNodeResponseType): string[] {
 
 
 function getDateCreated(element: GQLNodeResponseType): number {
-    if (element.node.block) {
-        return element.node.block.timestamp * 1000;
-    }
+	if (element.node.block) {
+		return element.node.block.timestamp * 1000;
+	}
 
-    const dateCreatedTag = getTagValue(element.node.tags, TAGS.keys.dateCreated);
-    if (dateCreatedTag) {
-        return Number(dateCreatedTag);
-    }
-    
-    return 0;
+	const dateCreatedTag = getTagValue(element.node.tags, TAGS.keys.dateCreated);
+	if (dateCreatedTag) {
+		return Number(dateCreatedTag);
+	}
+
+	return 0;
 }
 
 function getLicense(element: GQLNodeResponseType): UDLicenseType | null {
@@ -233,6 +231,14 @@ function buildAssetTags(args: AssetCreateArgsType): { name: string; value: strin
 		tags.push({ name: TAGS.keys.collectionId, value: args.collectionId });
 	}
 
+	if (args.renderWith) {
+		tags.push({ name: TAGS.keys.renderWith, value: args.renderWith });
+	}
+
+	if (args.thumbnail && checkValidAddress(args.thumbnail)) {
+		tags.push({ name: TAGS.keys.thumbnail, value: args.thumbnail });
+	}
+
 	return tags;
 }
 
@@ -253,6 +259,8 @@ function validateAssetCreateArgs(args: AssetCreateArgsType): boolean {
 
 	if ('creator' in args && typeof args.creator !== 'string') return false;
 	if ('collectionId' in args && typeof args.collectionId !== 'string') return false;
+	if ('renderWith' in args && typeof args.renderWith !== 'string') return false;
+	if ('thumbnail' in args && typeof args.thumbnail !== 'string') return false;
 	if ('supply' in args && (typeof args.supply !== 'number' || args.supply <= 0)) return false;
 	if ('transferable' in args && typeof args.transferable !== 'boolean') return false;
 

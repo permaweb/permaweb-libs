@@ -23,10 +23,8 @@ A profile must consist of the following components:
    - UserName
    - DisplayName
    - Description
-   - CoverImage
-   - ProfileImage
-   - DateCreated
-   - DateUpdated
+   - Thumbnail
+   - Banner
 
 3. Associated data:
    - Assets: An array of owned assets, each containing { Id, Type, Quantity }

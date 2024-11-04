@@ -39,6 +39,14 @@ export type MessageDryRunType = {
 	data?: string | object;
 };
 
+export type ProfileCreateArgsType = {
+	username: string;
+	displayName: string;
+	description: string;
+	thumbnail?: string;
+	banner?: string;
+};
+
 export type AssetCreateArgsType = {
 	title: string;
 	description: string;
@@ -48,6 +56,8 @@ export type AssetCreateArgsType = {
 	data: any;
 	creator?: string;
 	collectionId?: string;
+	renderWith?: string;
+	thumbnail?: string;
 	supply?: number;
 	denomination?: number;
 	transferable?: boolean;
