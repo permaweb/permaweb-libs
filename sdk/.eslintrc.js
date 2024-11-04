@@ -15,8 +15,8 @@ module.exports = {
 					'error',
 					{
 						groups: [
-							['^react', '^@?\\w'],
-							['^@permaweb/aoconnect', '^@permaweb/libs', '^@?\\w'],
+							['^arweave', '^@permaweb/libs', '^@?\\w'],
+							['^@permaweb/arx', '^@permaweb/aoconnect', '^@permaweb/libs', '^@?\\w'],
 							[
 								'^(@|app)(/.*|$)',
 								'^(@|assets)(/.*|$)',

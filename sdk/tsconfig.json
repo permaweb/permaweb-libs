@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"module": "CommonJS",
+		"module": "ES2015",
 		"target": "ES6",
 		"declaration": true,
 		"sourceMap": true,
@@ -8,7 +8,7 @@
 		"baseUrl": "src",
 		"rootDir": "./src",
 		"outDir": "./dist",
-		"moduleResolution": "Node",
+		"moduleResolution": "Bundler",
 		"lib": ["dom", "dom.iterable", "esnext"],
 		"paths": {
 			"common/*": ["common/*"],

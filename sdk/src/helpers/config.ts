@@ -3,7 +3,7 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	src: {
 		asset: 'KnGqTZnqT-vCMiOJfZaFrLj_ur6pxs3iuQuf7WnhYIw',
-		zone: 'tSRmbphTQZXfU0C9PRiJZDAyovA-8tPh65GQcNbwOuo'
+		zone: 'q752vOrOkW1Fe_y3DFpo-ARz9obpvUpv6DRmP4svSQY'
 	}
 };
 
@@ -31,6 +31,8 @@ export const TAGS = {
 		access: 'Access-Fee',
 		avatar: 'Avatar',
 		banner: 'Banner',
+		bootloader: 'Bootloader',
+		bootloaderInit: 'On-Boot',
 		collectionId: 'Collection-Id',
 		collectionName: 'Collection-Name',
 		commericalUse: 'Commercial-Use',
@@ -58,4 +60,12 @@ export const TAGS = {
 		topic: 'Topic',
 		type: 'Type',
 	}
+};
+
+export const UPLOAD = {
+	node1: 'https://up.arweave.net',
+	node2: 'https://turbo.ardrive.io',
+	batchSize: 1,
+	chunkSize: 7500000,
+	dispatchUploadSize: 100 * 1024,
 };

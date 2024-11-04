@@ -1,20 +1,24 @@
 import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
 
-import { AO } from 'helpers/config';
+import { AO, TAGS } from 'helpers/config';
+import { TagType } from 'helpers/types';
 
 // TODO: Add to registry
-export async function createZone(wallet: any, callback: (status: any) => void): Promise<string | null> {
+export async function createZone(args: { tags?: TagType[] }, wallet: any, callback: (status: any) => void): Promise<string | null> {
 	try {
+		const tags = [{ name: TAGS.keys.bootloaderInit, value: AO.src.zone }];
+		if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
+
 		const zoneId = await aoCreateProcess(
 			{
 				wallet: wallet,
-				evalTxId: AO.src.zone,
+				spawnTags: tags
 			},
 			(status) => callback(status),
 		);
 		return zoneId;
 	} catch (e: any) {
-		throw new Error(e);
+		throw new Error(e.message ?? 'Error creating zone');
 	}
 }
 

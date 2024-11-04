@@ -16,16 +16,21 @@ import { getGQLData } from './gql';
 
 export const RETRY_COUNT = 200;
 
-export async function aoSpawn(args: ProcessSpawnType): Promise<any> {
-	const processId = await spawn({
-		module: args.module,
-		scheduler: args.scheduler,
-		signer: createDataItemSigner(args.wallet),
-		tags: args.tags,
-		data: args.data,
-	});
-
-	return processId;
+export async function aoSpawn(args: ProcessSpawnType): Promise<string> {
+	try {
+		const processId = await spawn({
+			module: args.module,
+			scheduler: args.scheduler,
+			signer: createDataItemSigner(args.wallet),
+			tags: args.tags,
+			data: args.data,
+		});
+	
+		return processId;
+	}
+	catch (e: any) {
+		throw new Error(e.message ?? 'Error spawning process');
+	}
 }
 
 export async function aoSend(args: MessageSendType): Promise<string> {
@@ -56,7 +61,6 @@ export async function aoDryRun(args: MessageDryRunType): Promise<any> {
 		if (typeof args.data === 'object') {
 			dataPayload = JSON.stringify(args.data || {});
 		} else if (typeof args.data === 'string') {
-			// Try to parse json and throw an error if it can't
 			try {
 				JSON.parse(args.data);
 			} catch (e) {
@@ -283,7 +287,7 @@ async function handleProcessEval(args: {
 
 			return evalResult;
 		} catch (e: any) {
-			throw new Error(e);
+			throw new Error(e.message ?? 'Error sending process eval');
 		}
 	}
 
@@ -322,12 +326,12 @@ export async function aoCreateProcess(args: ProcessCreateType, statusCB?: (statu
 
 				if (evalResult && statusCB) statusCB('Eval complete');
 			} catch (e: any) {
-				throw new Error(e);
+				throw new Error(e.message ?? 'Error creating process');
 			}
 		}
 
 		return processId;
 	} catch (e: any) {
-		throw new Error(e);
+		throw new Error(e.message ?? 'Error creating process');
 	}
 }
