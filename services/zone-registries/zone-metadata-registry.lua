@@ -5,21 +5,31 @@ local sqlite3 = require('lsqlite3')
 Db = Db or sqlite3.open_memory()
 
 -- we have roles on who can do things, for now only owner used
--- registry handlers
+-- action names
+Zone.H_ZONE_GET = 'Info'
+
+local H_ZONE_ERROR = 'Zone.Error'
+local H_ZONE_SUCCESS = 'Zone.Success'
 local H_READ_AUTH = "Read-Auth"
 local H_GET_USER_ZONES = "Get-Zones-For-User"
 local H_GET_ZONES_METADATA = "Get-Zones-Metadata"
 local H_PREPARE_DB = "Prepare-Database"
+local H_INFO = "Zone-Info"
+local H_NOTIFY_ON_TOPIC = "Notify-On-Topic"
+local H_INIT_ZONE = "Init-Zone"
 
 -- handlers to be forwarded
-local H_META_SET = "Zone-Metadata.Set"
-local H_META_GET = "Zone-Metadata.Get"
+local H_ZONE_UPDATE = 'Update-Zone'
 local H_ROLE_SET = "Zone-Role.Set"
-local H_CREATE_ZONE = "Create-Zone"
+local H_BOOT_ZONE = "Create-Zone"
 
 local ASSIGNABLES = {
-    H_META_SET, H_ROLE_SET, H_CREATE_ZONE, H_GET_USER_ZONES, H_GET_ZONES_METADATA
+    H_PROFILE_UPDATE, H_ROLE_UPDATE, H_BOOT_ZONE, H_GET_USER_ZONES, H_GET_ZONES_METADATA
 }
+
+local RELEVANT_METADATA = {"Title", "Date-Created", "UserName", "DisplayName", "Description", "CoverImage", "ProfileImage", "Tags" }
+
+local NotifiedPending = {}
 
 local function match_assignable_actions(a)
     for _, v in ipairs(ASSIGNABLES) do
@@ -32,10 +42,19 @@ end
 ao.addAssignable("AssignableActions", { Action = function(a) return match_assignable_actions(a) end } )
 
 local HandlerRoles = {
-    [H_META_SET] = {'Owner', 'Admin'},
-    [H_ROLE_SET] = {'Owner'},
+    [H_PROFILE_UPDATE] = {'Owner', 'Admin'},
+    [H_ROLE_UPDATE] = {'Owner'},
     -- TODO add code to allow
 }
+
+local function isInArray(table, value)
+    for _, v in ipairs(table) do
+        if v == value then
+            return true
+        end
+    end
+    return false
+end
 
 local function decode_message_data(data)
     local status, decoded_data = pcall(json.decode, data)
@@ -70,12 +89,199 @@ local function is_authorized(zone_id, user_id, roles)
     return authorized
 end
 
--- on spawn, Action = Create-Zone, initializes owner role for userid on zoneId
+local function cleanPending()
+    local newPending = {}
+    local now = os.time()
+    for _, pending in ipairs(NotifiedPending) do
+        -- pending: { UpdateTx = "abc", Timestamp = os.time() }
+        if now - pending.Timestamp < 300 then
+            table.insert(newPending, pending)
+        end
+    end
+    NotifiedPending = newPending
+end
+
+local function handle_notified_update_profile(msg)
+    local decode_check, data = decode_message_data(msg.Data)
+    if not decode_check then
+
+    end
+
+    local updateTx = data["UpdateTx"];
+    table.insert(NotifiedPending, { UpdateTx = updateTx, Timestamp = os.time() })
+    Assign({
+        Message = updateTx,
+        Processes = {
+            ao.id
+        }
+    })
+end
+
+-- get notification on topic, check topic, and send to handler
+local function handle_notified(msg)
+    if msg.Tags.Topic == H_PROFILE_UPDATE then
+        handle_notified_update_profile(msg)
+    end
+end
+
+-- init an existing zone with full data
+local function handle_init_zone(msg)
+
+end
+
+-- init a zone from spawn msg using tags
+local function handle_boot_zone(msg)
+
+    local ZoneId = msg.Id -- create = msg.Id spawn
+    local UserId = msg.From -- (assigned) -- AuthorizedAddress
+
+    local check = Db:prepare('SELECT 1 FROM zone_auth WHERE user_id = ? AND zone_id = ? LIMIT 1')
+    check:bind_values(UserId, ZoneId)
+    if check:step() ~= sqlite3.ROW then
+        local insert_auth = Db:prepare(
+                'INSERT INTO zone_auth (zone_id, user_id, role) VALUES (?, ?, ?)')
+        insert_auth:bind_values(ZoneId, UserId, 'Owner')
+        insert_auth:step()
+        insert_auth:finalize()
+    else
+        ao.send({
+            Target = reply_to,
+            Action = 'Zone-Create-Notice',
+            Tags = {
+                Status = 'ERROR',
+                Message = "Zone already found, cannot insert"
+            },
+            Data = { Code = "INSERT_FAILED" }
+        })
+        return
+    end
+
+    -- for each tag starting with "bootloader-", populate metadataValues
+    local columns = {}
+    local placeholders = {}
+    local params = {}
+    local metadataValues = {}
+
+    -- extract Tags array, other metadata
+    for _, tag in msg.Tags do
+        local zoneTags = {}
+        if string.match(tag, "Bootloader-") then
+            -- strip "bootloader-" from tag
+            local cleanedTag = string.sub(tag, 12)
+            if (isInArray(RELEVANT_METADATA, cleanedTag)) then
+                if (cleanedTag == "Tags") then
+                    table.insert(zoneTags, tag.value)
+                else
+                    metadataTags[cleanedTag] = tag.value
+                end
+            end
+        end
+        metadataValues["Tags"] = json.encode(zoneTags)
+    end
+
+    local function generateInsertQuery()
+        for key, val in pairs(metadataValues) do
+            if val ~= nil then
+                -- Include the field if provided
+                table.insert(columns, key)
+                if val == "" then
+                    -- If the field is an empty string, insert NULL
+                    table.insert(placeholders, "NULL")
+                else
+                    -- Otherwise, prepare to bind the actual value
+                    table.insert(placeholders, "?")
+                    table.insert(params, val)
+                end
+            else
+                -- If field is nil and not mandatory, insert NULL
+                if key ~= "id" then
+                    table.insert(columns, key)
+                    table.insert(placeholders, "NULL")
+                end
+            end
+        end
+
+        local sql = "INSERT INTO ao_zone_metadata (" .. table.concat(columns, ", ") .. ")"
+        sql = sql .. " VALUES (" .. table.concat(placeholders, ", ") .. ")"
+
+        return sql
+    end
+    local sql = generateInsertQuery()
+    local stmt = Db:prepare(sql)
+
+    if not stmt then
+        ao.send({
+            Target = reply_to,
+            Action = 'DB_CODE',
+            Tags = {
+                Status = 'DB_PREPARE_FAILED',
+                Message = "DB PREPARED QUERY FAILED"
+            },
+            Data = { Code = "Failed to prepare insert statement",
+                     SQL = sql,
+                     ERROR = Db:errmsg()
+            }
+        })
+        print("Failed to prepare insert statement")
+        return json.encode({ Code = 'DB_PREPARE_FAILED' })
+    end
+
+    -- bind values for INSERT statement
+    local bindres = stmt:bind_values(table.unpack(params))
+
+    if not bindres then
+        ao.send({
+            Target = reply_to,
+            Action = 'Zone-Create-Notice',
+            Tags = {
+                Status = 'DB_PREPARE_FAILED',
+                Message = "DB BIND QUERY FAILED"
+            },
+            Data = { Code = "Failed to prepare insert statement",
+                     SQL = sql,
+                     ERROR = Db:errmsg()
+            }
+        })
+        print("Failed to prepare insert statement")
+        return json.encode({ Code = 'DB_PREPARE_FAILED' })
+    end
+    local step_status = stmt:step()
+
+    if step_status ~= sqlite3.OK and step_status ~= sqlite3.DONE and step_status ~= sqlite3.ROW then
+        stmt:finalize()
+        print("Error: " .. Db:errmsg())
+        print("SQL" .. sql)
+        ao.send({
+            Target = reply_to,
+            Action = 'DB_STEP_CODE',
+            Tags = {
+                Status = 'ERROR',
+                Message = 'sqlite step error'
+            },
+            Data = { DB_STEP_MSG = step_status }
+        })
+        return json.encode({ Code = step_status })
+    end
+    stmt:finalize()    ao.send({
+        Target = reply_to,
+        Action = 'Success',
+        Tags = {
+            Status = 'Success',
+            Message = is_update and 'Record Updated' or 'Record Inserted'
+        },
+        Data = json.encode(metadataValues)
+    })
+
+end
+
+-- deprecated:
+-- on spawn or init, Action = Create-Zone, initializes owner role for userid on zoneId
 -- make sure spawn is the correct type of thing
 local function handle_create_zone(msg)
     local reply_to = msg.From
     local decode_check, data = decode_message_data(msg.Data)
     -- data may contain {"UserName":"x", ...etc}
+    -- also { "Tags" = {"Crypto", "NFT", "DAO", "DeFi", "Social"} }
 
     if not decode_check then
         ao.send({
@@ -124,9 +330,11 @@ local function handle_create_zone(msg)
         cover_image = data.CoverImage or nil,
         description = data.Description or nil,
         display_name = data.DisplayName or nil,
+        tags = data.Tags or nil,
         date_updated = msg.Timestamp,
         date_created = msg.Timestamp
     }
+
     local function generateInsertQuery()
         for key, val in pairs(metadataValues) do
             if val ~= nil then
@@ -243,6 +451,7 @@ local function handle_prepare_db(msg)
                     description TEXT,
                     profile_image TEXT,
                     cover_image TEXT,
+                    tags TEXT,
                     date_created INTEGER NOT NULL,
                     date_updated INTEGER NOT NULL
                 );
@@ -416,7 +625,8 @@ local function handle_meta_get(msg)
                                              ProfileImage = row.profile_image,
                                              CoverImage = row.cover_image,
                                              Description = row.description,
-                                             DisplayName = row.display_name
+                                             DisplayName = row.display_name,
+                                             Tags = JSON.decode(row.tags),
                     })
                 end
 
@@ -505,6 +715,7 @@ local function handle_meta_set(msg)
         profile_image = data.ProfileImage or nil,
         cover_image = data.CoverImage or nil,
         description = data.Description or nil,
+        tags = data.Tags and json.encode(data.Tags) or nil,
         display_name = data.DisplayName or nil,
         date_updated = data.DateUpdated
     }
@@ -665,8 +876,8 @@ Handlers.add(H_GET_USER_ZONES, Handlers.utils.hasMatchingTag('Action', H_GET_USE
         end)
 
 -- Create-Profile Handler: (assigned from original zone spawn message)
-Handlers.add(H_CREATE_ZONE, Handlers.utils.hasMatchingTag('Action', H_CREATE_ZONE),
-        handle_create_zone )
+Handlers.add(H_BOOT_ZONE, Handlers.utils.hasMatchingTag('Action', H_BOOT_ZONE),
+        handle_boot_zone )
 
 Handlers.add(H_META_SET, Handlers.utils.hasMatchingTag('Action', H_META_SET),
         handle_meta_set)
