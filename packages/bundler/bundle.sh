@@ -14,9 +14,8 @@ FILES=(
     "./subscribable.lua"
     "../kv/base/src/kv.lua"
     "../kv/batchplugin/src/batch.lua"
-
+    "../asset-manager/asset-manager.lua"
     "../zone/src/zone.lua"
-        "../asset-manager/asset-manager.lua"
 )
 
 # Array of corresponding package names
@@ -25,9 +24,8 @@ PACKAGE_NAMES=(
     ""
     "@permaweb/kv-base"
     "@permaweb/kv-batch"
-
+    "@permaweb/asset-manager"
     "@permaweb/zone"
-        "@permaweb/asset-manager"
 )
 
 # Function to print headers
