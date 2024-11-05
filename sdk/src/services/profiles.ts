@@ -84,7 +84,7 @@ export async function createProfile(args: ProfileCreateArgsType, wallet: any, ca
 
 // TODO
 export async function getProfileByWalletAddress(args: { address: string }): Promise<ProfileType & any | null> {
-	const zoneId = 'xvuQ8yYm9fJxH_Lvys9GPdQzyjsNR3vqNViG33FkWu8';
+	const zoneId = 'iSJy3wjcNuOm7NeEmRQbslmnoH6nyZuEYDL_3LyxAp4';
 
 	try {
 		const zone = await getZone(zoneId);

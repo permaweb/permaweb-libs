@@ -216,7 +216,7 @@ export function cleanTagValue(value: string) {
  * @param prefix The prefix to filter keys by (e.g., 'portal')
  * @returns Array of values whose keys match the prefix
  */
-export function getKeyedElements<T = any>(store: Record<string, T>, prefix: string): T[] {
+export function getStoreNamespace<T = any>(store: Record<string, T>, prefix: string): T[] {
     if (!store) return [];
     
     const searchPrefix = `${prefix}:`;

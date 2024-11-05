@@ -67,7 +67,7 @@ export type AssetCreateArgsType = {
 	topics: string[];
 	contentType: string;
 	data: any;
-	creator?: string;
+	creator: string;
 	collectionId?: string;
 	renderWith?: string;
 	thumbnail?: string;

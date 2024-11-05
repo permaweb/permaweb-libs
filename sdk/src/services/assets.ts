@@ -19,7 +19,7 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 
 		if (src) {
 			src = src.replaceAll(`'<NAME>'`, `[[${args.title}]]`);
-			src = src.replaceAll('<CREATOR>', args.creator ? args.creator : wallet.address);
+			src = src.replaceAll('<CREATOR>', args.creator);
 			src = src.replaceAll('<TICKER>', 'ATOMIC');
 			src = src.replaceAll('<DENOMINATION>', args.denomination ? args.denomination.toString() : '1');
 			src = src.replaceAll('<SUPPLY>', args.supply ? args.supply.toString() : '1');
