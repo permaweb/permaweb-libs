@@ -253,7 +253,6 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 	}
 }
 
-// TODO: Bootloader
 async function handleProcessEval(args: {
 	processId: string;
 	evalTxId: string | null;

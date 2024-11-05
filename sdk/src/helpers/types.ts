@@ -39,12 +39,25 @@ export type MessageDryRunType = {
 	data?: string | object;
 };
 
+export type ZoneType = { store: any, assets: any };
+
 export type ProfileCreateArgsType = {
 	username: string;
 	displayName: string;
 	description: string;
 	thumbnail?: any;
 	banner?: any;
+};
+
+export type ProfileType = {
+	id: string;
+	walletAddress: string;
+	username: string;
+	displayName: string;
+	description: string;
+	thumbnail?: any;
+	banner?: any;
+	assets: { id: string, quantity: string }[];
 };
 
 export type AssetCreateArgsType = {

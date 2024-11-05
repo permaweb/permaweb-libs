@@ -209,3 +209,18 @@ export function cleanTagValue(value: string) {
 	updatedValue = value.replace(/\[|\]/g, '');
 	return updatedValue;
 }
+
+/**
+ * Extracts all values from a key-value store that match a given prefix
+ * @param store The key-value store object to search
+ * @param prefix The prefix to filter keys by (e.g., 'portal')
+ * @returns Array of values whose keys match the prefix
+ */
+export function getKeyedElements<T = any>(store: Record<string, T>, prefix: string): T[] {
+    if (!store) return [];
+    
+    const searchPrefix = `${prefix}:`;
+    return Object.keys(store)
+        .filter(key => key.startsWith(searchPrefix))
+        .map(key => store[key]) as any;
+}
