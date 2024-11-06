@@ -1,12 +1,12 @@
 import { resolveTransaction } from 'common/arweave';
 
 // import { TAGS } from 'helpers/config';
-import { ProfileCreateArgsType, ProfileType, ZoneType } from 'helpers/types';
+import { ProfileArgsType, ProfileType, ZoneType } from 'helpers/types';
 
 import { createZone, getZone, updateZone } from './zones';
 
 // TODO: Bootloader
-export async function createProfile(args: ProfileCreateArgsType, wallet: any, callback: (status: any) => void): Promise<string | null> {
+export async function createProfile(args: ProfileArgsType, wallet: any, callback: (status: any) => void): Promise<string | null> {
 	let profileId: string | null = null;
 
 	// const tags: { name: string, value: string }[] = [];
@@ -38,13 +38,21 @@ export async function createProfile(args: ProfileCreateArgsType, wallet: any, ca
 	try {
 		// profileId = await createZone({ tags: tags }, wallet, callback);
 		profileId = await createZone({}, wallet, callback);
+		if (profileId) {
+			const profileUpdateId = await updateProfile(args, profileId, wallet, callback);
+			console.log(`Profile update: ${profileUpdateId}`);
+		}
 	}
 	catch (e: any) {
 		throw new Error(e.message ?? 'Error creating profile');
 	}
 
+	return profileId;
+}
+
+export async function updateProfile(args: ProfileArgsType, profileId: string, wallet: any, callback: (status: any) => void): Promise<string | null> {
 	if (profileId) {
-		let data: ProfileCreateArgsType = {
+		let data: ProfileArgsType = {
 			username: args.username,
 			displayName: args.displayName,
 			description: args.description
@@ -72,14 +80,15 @@ export async function createProfile(args: ProfileCreateArgsType, wallet: any, ca
 				data: data
 			}, wallet);
 
-			console.log(`Profile update: ${profileUpdateId}`);
+			return profileUpdateId;
 		}
 		catch (e: any) {
 			throw new Error(e.message ?? 'Error creating profile');
 		}
 	}
-
-	return profileId;
+	else {
+		throw new Error('No profile provided');
+	}
 }
 
 // TODO
