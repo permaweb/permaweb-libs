@@ -1603,6 +1603,8 @@ Handlers.add(Zone.H_ZONE_CREDIT_NOTICE, Zone.H_ZONE_CREDIT_NOTICE, Zone.creditNo
 Handlers.add(Zone.H_ZONE_DEBIT_NOTICE, Zone.H_ZONE_DEBIT_NOTICE, Zone.creditNotice)
 Handlers.add(Zone.H_ZONE_RUN_ACTION, Zone.H_ZONE_RUN_ACTION, Zone.runAction)
 
+-- Register-Whitelisted-Subscriber
+-- looks for Tag: Subscriber-Process-Id = <registry_id>
 Handlers.add(
     'Register-Whitelisted-Subscriber',
     Handlers.utils.hasMatchingTag('Action', 'Register-Whitelisted-Subscriber'),
