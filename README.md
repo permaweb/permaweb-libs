@@ -21,21 +21,30 @@ or
 
 Zones are a representation of an entity which contains information relevant to that entity and can carry out actions on that entity's behalf.
 
+---
+
 #### `createZone`
 
-Creates a zone. ([View implementation](./sdk/src/services/zones.ts#L5))
+Creates a zone. There are two default packages installed into zones, which are a key value store and asset manager which keeps track of the tokens you create or transfer on AO. ([View implementation](./sdk/src/services/zones.ts#L5))
 
 ```typescript
 import { createZone } from "@permaweb/libs";
 
-const zoneId = await createZone(wallet, (status) => console.log(status));
+const zoneId = await createZone(wallet);
 ```
 
-**Response**
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
 
 ```typescript
 ZoneProcessId;
 ```
+
+</details>
+
+---
 
 #### `updateZone`
 
@@ -48,10 +57,10 @@ const zoneUpdateId = await updateZone(
   {
     zoneId: zoneId,
     data: {
-      name: 'Sample Zone',
+      name: "Sample Zone",
       metadata: {
-        description: 'A test zone for unit testing',
-        version: '1.0.0',
+        description: "A test zone for unit testing",
+        version: "1.0.0",
       },
     },
   },
@@ -59,11 +68,18 @@ const zoneUpdateId = await updateZone(
 );
 ```
 
-**Response**
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
 
 ```typescript
 ZoneUpdateId;
 ```
+
+</details>
+
+---
 
 #### `getZone`
 
@@ -75,15 +91,24 @@ import { getZone } from "@permaweb/libs";
 const zone = await getZone(zoneId);
 ```
 
-**Response**
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
 
 ```typescript
 { store: [], assets: [] }
 ```
 
+</details>
+
+---
+
 ### Atomic Assets
 
 Atomic assets are unique digital item consisting of an AO process and its associated data which are stored together in a single transaction on Arweave.
+
+---
 
 #### `createAtomicAsset`
 
@@ -99,14 +124,21 @@ const assetId = await createAtomicAsset({
     topics: ['Topic 1', 'Topic 2', 'Topic 3'],
     contentType: 'text/html',
     data: '1234'
-}, wallet, (status) => console.log(status));
+}, wallet);
 ```
 
-**Response**
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
 
 ```typescript
 AssetProcessId;
 ```
+
+</details>
+
+---
 
 #### `getAtomicAsset`
 
@@ -118,7 +150,10 @@ import { getAtomicAsset } from "@permaweb/libs";
 const asset = await getAtomicAsset(AssetTxId);
 ```
 
-**Response**
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
 
 ```typescript
  {
@@ -151,9 +186,14 @@ const asset = await getAtomicAsset(AssetTxId);
     cfQOZc7saMMizHtBKkBoF_QuH5ri0Bmb5KSf_kxQsZE: '1',
     U3TjJAZWJjlWBB4KAXSHKzuky81jtyh0zqH8rUL4Wd0: '98'
   },
-  transferable: true
+  transferable: true,
+  tags: [{ name: 'Remaining', value: 'Tag' }]
 }
 ```
+
+</details>
+
+---
 
 #### `getAtomicAssets`
 
@@ -163,16 +203,19 @@ Performs a lookup of atomic assets. ([View implementation](./sdk/src/services/as
 import { getAtomicAssets } from "@permaweb/libs";
 
 const assets = await getAtomicAssets({
-  ids: ["AssetTxId1", "AssetTxId2", "AssetTxId3"],
+  ids: ["AssetProcessId1", "AssetProcessId2"],
 });
 ```
 
-**Response**
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
 
 ```typescript
 [
   {
-    id: "z0f2O9Fs3yb_EMXtPPwKeb2O0WueIG5r7JLs5UxsA4I",
+    id: "AssetProcessId1",
     title: "City",
     description:
       "A collection of AI generated images of different settings and areas",
@@ -195,6 +238,35 @@ const assets = await getAtomicAssets({
     implementation: "ANS-110",
     dateCreated: 1717663091000,
     blockHeight: 1439467,
+    tags: [{ name: "Remaining", value: "Tag" }],
+  },
+  {
+    id: "AssetProcessId2",
+    title: "City",
+    description:
+      "A collection of AI generated images of different settings and areas",
+    type: null,
+    topics: null,
+    contentType: "image/png",
+    renderWith: null,
+    thumbnail: null,
+    udl: {
+      access: { value: "One-Time-0.1" },
+      derivations: { value: "Allowed-With-One-Time-Fee-0.1" },
+      commercialUse: { value: "Allowed-With-One-Time-Fee-0.1" },
+      dataModelTraining: { value: "Disallowed" },
+      paymentMode: "Single",
+      paymentAddress: "uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk",
+      currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
+    },
+    creator: "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M",
+    collectionId: "XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc",
+    implementation: "ANS-110",
+    dateCreated: 1717663091000,
+    blockHeight: 1439467,
+    tags: [{ name: "Remaining", value: "Tag" }],
   },
 ];
 ```
+
+</details>

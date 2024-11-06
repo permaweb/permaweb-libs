@@ -6,7 +6,7 @@ import { AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, 
 import { checkValidAddress, formatAddress, getTagValue } from 'helpers/utils';
 
 // TODO: License
-export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback: (status: any) => void) {
+export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback?: (status: any) => void) {
 	if (!validateAssetCreateArgs(args)) throw new Error('Invalid arguments passed for atomic asset creation');
 	
 	const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
@@ -39,7 +39,7 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 				wallet: wallet,
 				evalSrc: src,
 			},
-			(status) => callback(status),
+			callback ? (status) => callback(status) : undefined,
 		);
 
 		const initMessage = await aoSend({

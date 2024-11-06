@@ -91,17 +91,14 @@ export async function updateProfile(args: ProfileArgsType, profileId: string, wa
 	}
 }
 
-// TODO
-export async function getProfileByWalletAddress(args: { address: string }): Promise<ProfileType & any | null> {
-	const zoneId = 'iSJy3wjcNuOm7NeEmRQbslmnoH6nyZuEYDL_3LyxAp4';
-
+export async function getProfileById(profileId: string): Promise<ProfileType & any | null> {
 	try {
-		const zone = await getZone(zoneId);
+		const zone = await getZone(profileId);
 
 		if (zone && zone.store) {
 			let profile: any = {
-				id: zoneId,
-				walletAddress: args.address,
+				id: profileId,
+				walletAddress: null, // TODO: get owner
 				username: zone.store.username ?? 'None',
 				displayName: zone.store.displayName ?? 'None',
 				description: zone.store.description ?? 'None',
@@ -123,4 +120,11 @@ export async function getProfileByWalletAddress(args: { address: string }): Prom
 	catch (e: any) {
 		throw new Error(e.message ?? 'Error fetching profile');
 	}
+}
+
+// TODO
+export async function getProfileByWalletAddress(walletAddress: string): Promise<ProfileType & any | null> {
+	console.log(`Get profile by wallet: ${walletAddress}`);
+	const profileId = 'iSJy3wjcNuOm7NeEmRQbslmnoH6nyZuEYDL_3LyxAp4';
+	return await getProfileById(profileId);
 }

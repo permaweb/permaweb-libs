@@ -4,7 +4,7 @@ import { AO, TAGS } from 'helpers/config';
 import { TagType, ZoneType } from 'helpers/types';
 
 // TODO: Add to registry
-export async function createZone(args: { tags?: TagType[] }, wallet: any, callback: (status: any) => void): Promise<string | null> {
+export async function createZone(args: { tags?: TagType[] }, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	try {
 		const tags = [{ name: TAGS.keys.bootloaderInit, value: AO.src.zone }];
 		if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
@@ -14,7 +14,7 @@ export async function createZone(args: { tags?: TagType[] }, wallet: any, callba
 				wallet: wallet,
 				spawnTags: tags
 			},
-			(status) => callback(status),
+			callback ? (status) => callback(status) : undefined,
 		);
 		
 		return zoneId;
