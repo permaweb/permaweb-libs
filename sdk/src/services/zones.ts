@@ -3,7 +3,6 @@ import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
 import { AO, TAGS } from 'helpers/config';
 import { TagType, ZoneType } from 'helpers/types';
 
-// TODO: Add to registry
 export async function createZone(args: { tags?: TagType[] }, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	try {
 		const tags = [{ name: TAGS.keys.bootloaderInit, value: AO.src.zone }];

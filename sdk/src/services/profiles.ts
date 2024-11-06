@@ -6,7 +6,7 @@ import { ProfileArgsType, ProfileType, ZoneType } from 'helpers/types';
 import { createZone, getZone, updateZone } from './zones';
 
 // TODO: Bootloader
-export async function createProfile(args: ProfileArgsType, wallet: any, callback: (status: any) => void): Promise<string | null> {
+export async function createProfile(args: ProfileArgsType, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	let profileId: string | null = null;
 
 	// const tags: { name: string, value: string }[] = [];
@@ -39,7 +39,7 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 		// profileId = await createZone({ tags: tags }, wallet, callback);
 		profileId = await createZone({}, wallet, callback);
 		if (profileId) {
-			const profileUpdateId = await updateProfile(args, profileId, wallet, callback);
+			const profileUpdateId = await updateProfile(args, profileId, wallet, callback ?? undefined);
 			console.log(`Profile update: ${profileUpdateId}`);
 		}
 	}
@@ -50,7 +50,7 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 	return profileId;
 }
 
-export async function updateProfile(args: ProfileArgsType, profileId: string, wallet: any, callback: (status: any) => void): Promise<string | null> {
+export async function updateProfile(args: ProfileArgsType, profileId: string, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	if (profileId) {
 		let data: ProfileArgsType = {
 			username: args.username,
@@ -62,7 +62,7 @@ export async function updateProfile(args: ProfileArgsType, profileId: string, wa
 			try {
 				data.thumbnail = await resolveTransaction(args.thumbnail);
 			} catch (e: any) {
-				callback(`Failed to resolve thumbnail: ${e.message}`);
+				if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
 			}
 		}
 
@@ -70,7 +70,7 @@ export async function updateProfile(args: ProfileArgsType, profileId: string, wa
 			try {
 				data.banner = await resolveTransaction(args.banner);
 			} catch (e: any) {
-				callback(`Failed to resolve banner: ${e.message}`);
+				if (callback) callback(`Failed to resolve banner: ${e.message}`);
 			}
 		}
 
