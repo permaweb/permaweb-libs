@@ -1423,7 +1423,7 @@ end
 Handlers.add('Add-Upload', 'Add-Upload', function(msg)
     if not msg.AssetId then return end
 
-    Zone.assetManager:update({
+    AssetManager:update({
         Type = 'Add',
         AssetId = msg.AssetId,
         Timestamp = msg.Timestamp
