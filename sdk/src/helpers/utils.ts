@@ -102,9 +102,9 @@ export function formatDate(dateArg: string | number | null, dateType: 'iso' | 'e
 	}
 
 	return fullTime
-		? `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()} ${
+		? `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()} at ${
 				date.getHours() % 12 || 12
-			}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')} ${
+			}:${date.getMinutes().toString().padStart(2, '0')} ${
 				date.getHours() >= 12 ? 'PM' : 'AM'
 			}`
 		: `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()}`;
@@ -208,4 +208,19 @@ export function cleanTagValue(value: string) {
 	let updatedValue: string;
 	updatedValue = value.replace(/\[|\]/g, '');
 	return updatedValue;
+}
+
+/**
+ * Extracts all values from a key-value store that match a given prefix
+ * @param store The key-value store object to search
+ * @param prefix The prefix to filter keys by (e.g., 'portal')
+ * @returns Array of values whose keys match the prefix
+ */
+export function getStoreNamespace<T = any>(store: Record<string, T>, prefix: string): T[] {
+    if (!store) return [];
+    
+    const searchPrefix = `${prefix}:`;
+    return Object.keys(store)
+        .filter(key => key.startsWith(searchPrefix))
+        .map(key => store[key]) as any;
 }

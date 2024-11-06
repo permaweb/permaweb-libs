@@ -2,11 +2,11 @@ import { aoCreateProcess, aoDryRun, aoSend, fetchProcessSrc } from 'common/ao';
 import { getGQLData } from 'common/gql';
 
 import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
-import { AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, GQLNodeResponseType, UDLicenseType } from 'helpers/types';
+import { AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, GQLNodeResponseType, TagType, UDLicenseType } from 'helpers/types';
 import { checkValidAddress, formatAddress, getTagValue } from 'helpers/utils';
 
 // TODO: License
-export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback: (status: any) => void) {
+export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback?: (status: any) => void) {
 	if (!validateAssetCreateArgs(args)) throw new Error('Invalid arguments passed for atomic asset creation');
 	
 	const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
@@ -19,7 +19,7 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 
 		if (src) {
 			src = src.replaceAll(`'<NAME>'`, `[[${args.title}]]`);
-			src = src.replaceAll('<CREATOR>', args.creator ? args.creator : wallet.address);
+			src = src.replaceAll('<CREATOR>', args.creator);
 			src = src.replaceAll('<TICKER>', 'ATOMIC');
 			src = src.replaceAll('<DENOMINATION>', args.denomination ? args.denomination.toString() : '1');
 			src = src.replaceAll('<SUPPLY>', args.supply ? args.supply.toString() : '1');
@@ -39,7 +39,7 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 				wallet: wallet,
 				evalSrc: src,
 			},
-			(status) => callback(status),
+			callback ? (status) => callback(status) : undefined,
 		);
 
 		const initMessage = await aoSend({
@@ -147,25 +147,49 @@ export async function getAtomicAssets(args: { ids?: string[] }): Promise<AssetHe
 }
 
 export function buildAsset(element: GQLNodeResponseType): AssetHeaderType {
-	const asset = {
-		id: element.node.id,
-		owner: element.node.owner.address,
-		creator: getTagValue(element.node.tags, TAGS.keys.creator),
-		title: getTitle(element),
-		description: getTagValue(element.node.tags, TAGS.keys.description),
-		type: getTagValue(element.node.tags, TAGS.keys.type),
-		topics: getTopics(element),
-		implementation: getTagValue(element.node.tags, TAGS.keys.implements),
-		contentType: getTagValue(element.node.tags, TAGS.keys.contentType),
-		renderWith: getTagValue(element.node.tags, TAGS.keys.renderWith),
-		thumbnail: getTagValue(element.node.tags, TAGS.keys.thumbnail),
-		udl: getLicense(element),
-		collectionId: getTagValue(element.node.tags, TAGS.keys.collectionId),
-		dateCreated: getDateCreated(element),
-		blockHeight: element.node.block ? element.node.block.height : 0,
-	}
+    const mappedTagKeys = new Set([
+        TAGS.keys.creator,
+        TAGS.keys.title,
+        TAGS.keys.name,
+        TAGS.keys.description,
+        TAGS.keys.type,
+        TAGS.keys.topic,
+        TAGS.keys.implements,
+        TAGS.keys.contentType,
+        TAGS.keys.renderWith,
+        TAGS.keys.thumbnail,
+        TAGS.keys.license,
+        TAGS.keys.access,
+        TAGS.keys.derivations,
+        TAGS.keys.commericalUse,
+        TAGS.keys.dataModelTraining,
+        TAGS.keys.paymentMode,
+        TAGS.keys.paymentAddress,
+        TAGS.keys.currency,
+        TAGS.keys.collectionId,
+        TAGS.keys.dateCreated,
+    ]);
 
-	return asset;
+    const asset = {
+        id: element.node.id,
+        owner: element.node.owner.address,
+        creator: getTagValue(element.node.tags, TAGS.keys.creator),
+        title: getTitle(element),
+        description: getTagValue(element.node.tags, TAGS.keys.description),
+        type: getTagValue(element.node.tags, TAGS.keys.type),
+        topics: getTopics(element),
+        implementation: getTagValue(element.node.tags, TAGS.keys.implements),
+        contentType: getTagValue(element.node.tags, TAGS.keys.contentType),
+        renderWith: getTagValue(element.node.tags, TAGS.keys.renderWith),
+        thumbnail: getTagValue(element.node.tags, TAGS.keys.thumbnail),
+        udl: getLicense(element),
+        collectionId: getTagValue(element.node.tags, TAGS.keys.collectionId),
+        dateCreated: getDateCreated(element),
+        blockHeight: element.node.block ? element.node.block.height : 0,
+        tags: element.node.tags.filter(tag => !mappedTagKeys.has(tag.name))
+    }
+
+    return asset;
 }
 
 function getTitle(element: GQLNodeResponseType): string {
@@ -238,6 +262,8 @@ function buildAssetTags(args: AssetCreateArgsType): { name: string; value: strin
 	if (args.thumbnail && checkValidAddress(args.thumbnail)) {
 		tags.push({ name: TAGS.keys.thumbnail, value: args.thumbnail });
 	}
+
+	if (args.tags) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	return tags;
 }

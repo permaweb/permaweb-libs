@@ -17,12 +17,16 @@ import { getGQLData } from './gql';
 export const RETRY_COUNT = 200;
 
 export async function aoSpawn(args: ProcessSpawnType): Promise<string> {
+
+	const tags = [{ name: 'Authority', value: AO.mu }];
+	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
+
 	try {
 		const processId = await spawn({
 			module: args.module,
 			scheduler: args.scheduler,
 			signer: createDataItemSigner(args.wallet),
-			tags: args.tags,
+			tags: tags,
 			data: args.data,
 		});
 	
@@ -253,7 +257,6 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 	}
 }
 
-// TODO: Bootloader
 async function handleProcessEval(args: {
 	processId: string;
 	evalTxId: string | null;

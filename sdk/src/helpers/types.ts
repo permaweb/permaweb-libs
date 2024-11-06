@@ -39,12 +39,27 @@ export type MessageDryRunType = {
 	data?: string | object;
 };
 
-export type ProfileCreateArgsType = {
+export type ZoneType = { store: any, assets: ZoneAssetType[] };
+
+export type ZoneAssetType = { id: string, balance: string, dateCreated: number, lastUpdate: number }
+
+export type ProfileArgsType = {
 	username: string;
 	displayName: string;
 	description: string;
 	thumbnail?: any;
 	banner?: any;
+};
+
+export type ProfileType = {
+	id: string;
+	walletAddress: string;
+	username: string;
+	displayName: string;
+	description: string;
+	thumbnail?: any;
+	banner?: any;
+	assets: { id: string, quantity: string }[];
 };
 
 export type AssetCreateArgsType = {
@@ -54,13 +69,14 @@ export type AssetCreateArgsType = {
 	topics: string[];
 	contentType: string;
 	data: any;
-	creator?: string;
+	creator: string;
 	collectionId?: string;
 	renderWith?: string;
 	thumbnail?: string;
 	supply?: number;
 	denomination?: number;
 	transferable?: boolean;
+	tags?: TagType[];
 };
 
 export type AssetHeaderType = {
@@ -79,6 +95,7 @@ export type AssetHeaderType = {
 	collectionId: string | null;
 	dateCreated: number | null;
 	blockHeight: number | null;
+	tags?: TagType[];
 };
 
 export type AssetStateType = {

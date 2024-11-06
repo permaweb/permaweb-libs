@@ -12,7 +12,7 @@ Collection = Collection or '<COLLECTION>'
 
 Transferable = true
 
-table.insert(ao.authorities, 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY')
+-- table.insert(ao.authorities, 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY')
 
 local function checkValidAddress(address)
 	if not address or type(address) ~= 'string' then
