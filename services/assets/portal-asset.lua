@@ -239,18 +239,8 @@ Handlers.add('Total-Supply', Handlers.utils.hasMatchingTag('Action', 'Total-Supp
     })
 end)
 
--- Initialize a request to add to creator zone
-Handlers.once('Add-Upload-To-Zone', 'Add-Upload-To-Zone', function(msg)
-    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
-    ao.send({
-        Target = Creator,
-        Action = 'Add-Upload',
-        AssetId = ao.id
-    })
-end)
-
 -- Update post content
-Handlers.once('Update-Post', 'Update-Post', function(msg)
+Handlers.add('Update-Post', 'Update-Post', function(msg)
     if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
     local decodeCheck, data = decodeMessageData(msg.Data)
 
@@ -264,7 +254,7 @@ Handlers.once('Update-Post', 'Update-Post', function(msg)
 end)
 
 -- Get post content
-Handlers.once('Get-Post', 'Get-Post', function(msg)
+Handlers.add('Get-Post', 'Get-Post', function(msg)
     msg.reply({
         Action = 'Post-Notice',
         Data = json.encode({
@@ -272,5 +262,31 @@ Handlers.once('Get-Post', 'Get-Post', function(msg)
             content = Content,
             topics = Topics,
         })
+    })
+end)
+
+-- Get post content
+Handlers.add('Update-Post-Balance-Holders', 'Update-Post-Balance-Holders', function(msg)
+    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
+    local decodeCheck, data = decodeMessageData(msg.Data)
+
+    if decodeCheck and data then
+        if data.Recipients then
+            for _, recipient in ipairs(data.Recipients) do
+                if not Balances[ao.id] then Balances[ao.id] = '0' end
+                Balances[ao.id] = tostring(bint(Balances[ao.id]) + bint(1))
+                ao.send({ Target = ao.id, Action = 'Transfer', Recipient = recipient, Quantity = '1' })
+            end
+        end
+    end
+end)
+
+-- Initialize a request to add to creator zone
+Handlers.once('Add-Upload-To-Zone', 'Add-Upload-To-Zone', function(msg)
+    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
+    ao.send({
+        Target = Creator,
+        Action = 'Add-Upload',
+        AssetId = ao.id
     })
 end)
