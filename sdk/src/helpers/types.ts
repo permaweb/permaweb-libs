@@ -77,6 +77,7 @@ export type AssetCreateArgsType = {
 	denomination?: number;
 	transferable?: boolean;
 	tags?: TagType[];
+	src?: string;
 };
 
 export type AssetHeaderType = {
