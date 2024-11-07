@@ -15,7 +15,7 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 	let src: string | null = null;
 
 	try {
-		src = await fetchProcessSrc(AO.src.asset);
+		src = await fetchProcessSrc(args.src ?? AO.src.asset);
 
 		if (src) {
 			src = src.replaceAll(`'<NAME>'`, `[[${args.title}]]`);
@@ -289,6 +289,8 @@ function validateAssetCreateArgs(args: AssetCreateArgsType): boolean {
 	if ('thumbnail' in args && typeof args.thumbnail !== 'string') return false;
 	if ('supply' in args && (typeof args.supply !== 'number' || args.supply <= 0)) return false;
 	if ('transferable' in args && typeof args.transferable !== 'boolean') return false;
+	if ('tags' in args && (!Array.isArray(args.tags) || args.tags.some(tag => typeof tag !== 'object'))) return false;
+	if ('src' in args && typeof args.src !== 'string') return false;
 
 	return true;
 }

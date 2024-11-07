@@ -91,7 +91,15 @@ function Zone.zoneUpdate(msg)
     if entries and #entries then
         for _, entry in ipairs(entries) do
             if entry.key and entry.value then
-                Zone.zoneKV:set(entry.key, entry.value)
+                local updateType = 'Add-Or-Update'
+
+                if msg.UpdateType then
+                    if msg.UpdateType == 'Add-Or-Update' then updateType = 'Add-Or-Update' end
+                    if msg.UpdateType == 'Remove' then updateType = 'Remove' end
+                end
+
+                if updateType == 'Add-Or-Update' then Zone.zoneKV:set(entry.key, entry.value) end
+                if updateType == 'Remove' then Zone.zoneKV:del(entry.key, entry.value) end
             end
         end
         ao.send({
@@ -179,7 +187,7 @@ if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
 
             if collectedValues[keyWithoutPrefix] == nil then
-                collectedValues[keyWithoutPrefix] = {tag.value}
+                collectedValues[keyWithoutPrefix] = { tag.value }
             else
                 table.insert(collectedValues[keyWithoutPrefix], tag.value)
             end
