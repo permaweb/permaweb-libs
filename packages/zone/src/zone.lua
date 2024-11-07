@@ -52,10 +52,10 @@ function Zone.zoneGet(msg)
     msg.reply({
         Target = msg.From,
         Action = Zone.H_ZONE_SUCCESS,
-        Data = json.encode({
-            store = Zone.zoneKV:dump(),
-            assets = Zone.assetManager.assets
-        })
+        Data = {
+            Store = Zone.zoneKV:dump(),
+            Assets = Zone.assetManager.assets
+        }
     })
 end
 
