@@ -1,10 +1,10 @@
 export const AO = {
-	module: 'oKBlsMP3UWrAUURWUzGO4ZGEqlurAL5UkidMLrYo8EM',
+	module: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM',
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
 		asset: 'OM6b2xWw3Wo5YCYKhD_N5qslF9wCIUhu7fXoTq1Q3uU',
-		zone: 'q752vOrOkW1Fe_y3DFpo-ARz9obpvUpv6DRmP4svSQY'
+		zone: 'ASMTaqDrq2ER6BL83NSrDt9aNhTiIo3xxJXNZ8LNUSY'
 	}
 };
 
