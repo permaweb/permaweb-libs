@@ -245,6 +245,7 @@ Handlers.add('Update-Post', 'Update-Post', function(msg)
     local decodeCheck, data = decodeMessageData(msg.Data)
 
     if decodeCheck and data then
+        if data.Title then Name = data.Title end
         if data.Status then Status = data.Status end
         if data.Content then Content = data.Content end
         if data.Topics then Topics = data.Topics end
@@ -258,9 +259,12 @@ Handlers.add('Get-Post', 'Get-Post', function(msg)
     msg.reply({
         Action = 'Post-Notice',
         Data = json.encode({
+            title = Name,
+            creator = Creator,
+            balances = Balances,
             status = Status,
-            content = Content,
             topics = Topics,
+            content = Content
         })
     })
 end)
