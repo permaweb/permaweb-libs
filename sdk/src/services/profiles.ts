@@ -98,7 +98,7 @@ export async function getProfileById(profileId: string): Promise<ProfileType & a
 		if (zone && zone.store) {
 			let profile: any = {
 				id: profileId,
-				walletAddress: null, // TODO: get owner
+				walletAddress: null, // TODO: Get owner
 				username: zone.store.username ?? 'None',
 				displayName: zone.store.displayName ?? 'None',
 				description: zone.store.description ?? 'None',
