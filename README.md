@@ -1,6 +1,6 @@
 # @permaweb/libs
 
-This SDK provides a set of libraries designed as foundational building blocks for developers to create and interact with applications on Arweave's permaweb. These libraries aim to contribute building on the composable web, promoting interoperability and reusability across decentralized applications. With modules for managing zones, profiles, atomic assets, and more, this SDK simplifies the development of decentralized, permanent applications.
+This SDK provides a set of libraries designed as foundational building blocks for developers to create and interact with applications on Arweave's permaweb. These libraries aim to contribute building on the composable web, promoting interoperability and reusability across decentralized applications. With libraries for managing profiles, atomic assets, and more, this SDK simplifies the development of decentralized, permanent applications.
 
 ## Prerequisites
 
@@ -23,7 +23,7 @@ yarn add @permaweb/libs
 
 Profiles are a digital representation of entities, such as users, organizations, or channels. They instantiate zones with specific metadata that describes the entity and can be associated with various digital assets and collections. Profiles are created, updated, and fetched using the following functions.
 
-### `createProfile`
+#### `createProfile`
 
 Creates a profile, initializing a zone with specific profile relevant metadata.
 
@@ -45,7 +45,7 @@ const profileId = await createProfile(
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing profile details, including `username`, `displayName`, `description`, `thumbnail`, and `banner`.
+- `args`: Object containing profile details, including `username`, `displayName`, `description`, `thumbnail`, and `banner`
 - `wallet`: Wallet object
 - `callback (optional)`: Callback function for client use
 
@@ -60,7 +60,7 @@ string | null; // Profile ID or null if creation fails
 
 </details>
 
-### `updateProfile`
+#### `updateProfile`
 
 Updates a profile by modifying its metadata, such as `username`, `displayName`, `description`, and optional image fields like `thumbnail` and `banner`.
 
@@ -83,10 +83,10 @@ const profileId = await updateProfile(
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Profile details to update, structured similarly to `createProfile`.
-- `profileId`: The ID of the profile to update.
-- `wallet`: Wallet object for transaction signing.
-- `callback (optional)`: Function to log status during the update process.
+- `args`: Profile details to update, structured similarly to `createProfile`
+- `profileId`: The ID of the profile to update
+- `wallet`: Wallet object
+- `callback (optional)`: Callback function for client use
 
 </details>
 
@@ -99,7 +99,7 @@ string | null; // Profile update ID or null if update fails
 
 </details>
 
-### `getProfileById`
+#### `getProfileById`
 
 Fetches a profile based on its ID. Returns a structured profile object containing the profile’s metadata, assets, and other properties associated with the profile.
 
@@ -110,9 +110,9 @@ const profile = await getProfileById(profileId);
 ```
 
 <details>
-  <summary><strong>Arguments</strong></summary>
+  <summary><strong>Parameters</strong></summary>
 
-- `profileId`: The ID of the profile to fetch.
+- `profileId`: The ID of the profile to fetch
 
 </details>
 
@@ -121,21 +121,24 @@ const profile = await getProfileById(profileId);
 
 ```typescript
 {
-  id: ProfileID;
-  walletAddress: WalletAddress;
-  username: string;
-  displayName: string;
-  description: string;
-  thumbnail?: string;
-  banner?: string;
-  assets?: object;
-  [key: string]: any;
+  id: "ProfileProcessId",
+  walletAddress: "WalletAddress",
+  username: "Sample username",
+  displayName: "Sample display name",
+  description: "Sample description",
+  thumbnail: "ThumbnailTxId",
+  banner: "BannerTxId",
+  assets: [
+    { id: "AssetProcessId1", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+    { id: "AssetProcessId2", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+    { id: "AssetProcessId3", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+  ]
 }
 ```
 
 </details>
 
-### `getProfileByWalletAddress`
+#### `getProfileByWalletAddress`
 
 Fetches a profile using the wallet address associated with it. This function is useful for retrieving a profile when only the wallet address is known.
 
@@ -146,9 +149,9 @@ const profile = await getProfileByWalletAddress(walletAddress);
 ```
 
 <details>
-  <summary><strong>Arguments</strong></summary>
+  <summary><strong>Parameters</strong></summary>
 
-- `walletAddress`: The wallet address associated with the profile.
+- `walletAddress`: The wallet address associated with the profile
 
 </details>
 
@@ -156,80 +159,20 @@ const profile = await getProfileByWalletAddress(walletAddress);
   <summary><strong>Response</strong></summary>
 
 ```typescript
-ProfileType | null;
-```
-
-</details>
-
-## Zones
-
-Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity's behalf. A profile is an instance of a zone with specific metadata.
-
-### `createZone`
-
-Creates a zone, setting up a key-value store and asset manager to track tokens created or transferred.
-
-```typescript
-import { createZone } from "@permaweb/libs";
-
-const zoneId = await createZone(wallet);
-```
-
-<details>
-  <summary><strong>Response</strong></summary>
-
-```typescript
-ZoneProcessId;
-```
-
-</details>
-
-### `updateZone`
-
-Updates a zone's key-value store with specified data.
-
-```typescript
-import { updateZone } from "@permaweb/libs";
-
-const zoneUpdateId = await updateZone(
-  {
-    zoneId: zoneId,
-    data: {
-      name: "Sample Zone",
-      metadata: {
-        description: "A test zone for unit testing",
-        version: "1.0.0",
-      },
-    },
-  },
-  wallet
-);
-```
-
-<details>
-  <summary><strong>Response</strong></summary>
-
-```typescript
-ZoneUpdateId;
-```
-
-</details>
-
-### `getZone`
-
-Fetches a zone based on its ID, including store data and any associated assets.
-
-```typescript
-import { getZone } from "@permaweb/libs";
-
-const zone = await getZone(zoneId);
-```
-
-<details>
-  <summary><strong>Response</strong></summary>
-
-```typescript
-{ store: [], assets: [] };
+{
+  id: "ProfileProcessId",
+  walletAddress: "WalletAddress",
+  username: "Sample username",
+  displayName: "Sample display name",
+  description: "Sample description",
+  thumbnail: "ThumbnailTxId",
+  banner: "BannerTxId",
+  assets: [
+    { id: "AssetProcessId1", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+    { id: "AssetProcessId2", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+    { id: "AssetProcessId3", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+  ]
+}
 ```
 
 </details>
@@ -238,7 +181,7 @@ const zone = await getZone(zoneId);
 
 Atomic assets are unique digital item consisting of an AO process and its associated data which are stored together in a single transaction on Arweave.
 
-### `createAtomicAsset`
+#### `createAtomicAsset`
 
 Creates an atomic asset.
 
@@ -256,6 +199,15 @@ const assetId = await createAtomicAsset({
 ```
 
 <details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing profile details, including `title`, `description`, `type`, `topics`, `contentType`, and `data`
+- `wallet`: Wallet object
+- `callback (optional)`: Callback function for client use
+
+</details>
+
+<details>
   <summary>
     <strong>Response</strong>
   </summary>
@@ -266,15 +218,22 @@ AssetProcessId;
 
 </details>
 
-### `getAtomicAsset`
+#### `getAtomicAsset`
 
 Performs a lookup of an atomic asset by ID. This function also performs a dryrun on the asset process to receive the balances and other associated metadata of the atomic asset that is inside the AO process itself.
 
 ```typescript
 import { getAtomicAsset } from "@permaweb/libs";
 
-const asset = await getAtomicAsset(AssetProcessId);
+const asset = await getAtomicAsset(assetId);
 ```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `assetId`: The ID of the asset to fetch
+
+</details>
 
 <details>
   <summary>
@@ -319,17 +278,22 @@ const asset = await getAtomicAsset(AssetProcessId);
 
 </details>
 
-### `getAtomicAssets`
+#### `getAtomicAssets`
 
 Queries multiple atomic assets from the gateway.
 
 ```typescript
 import { getAtomicAssets } from "@permaweb/libs";
 
-const assets = await getAtomicAssets({
-  ids: ["AssetProcessId1", "AssetProcessId2"],
-});
+const assets = await getAtomicAssets(assetIds);
 ```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `assetIds`: A list of the asset IDs to fetch
+
+</details>
 
 <details>
   <summary>
@@ -391,6 +355,100 @@ const assets = await getAtomicAssets({
     tags: [{ name: "Remaining", value: "Tag" }],
   },
 ];
+```
+
+</details>
+
+## Zones
+
+Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity's behalf. A profile is an instance of a zone with specific metadata.
+
+#### `createZone`
+
+Creates a zone, setting up a key-value store and asset manager to track tokens created or transferred.
+
+```typescript
+import { createZone } from "@permaweb/libs";
+
+const zoneId = await createZone(wallet);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `wallet`: Wallet object
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ZoneProcessId;
+```
+
+</details>
+
+#### `updateZone`
+
+Updates a zone's key-value store with specified data.
+
+```typescript
+import { updateZone } from "@permaweb/libs";
+
+const zoneUpdateId = await updateZone(
+  {
+    name: "Sample Zone",
+    metadata: {
+      description: "A test zone for unit testing",
+      version: "1.0.0",
+    },
+  },
+  zoneId,
+  wallet
+);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Zone data to update, specified in an object
+- `zoneId`: The ID of the zone to update
+- `wallet`: Wallet object
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ZoneUpdateId;
+```
+
+</details>
+
+#### `getZone`
+
+Fetches a zone based on its ID, including store data and any associated assets.
+
+```typescript
+import { getZone } from "@permaweb/libs";
+
+const zone = await getZone(zoneId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to fetch
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+{ store: [], assets: [] };
 ```
 
 </details>

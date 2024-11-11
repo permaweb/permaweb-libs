@@ -19,7 +19,7 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 
 		if (src) {
 			src = src.replaceAll(`'<NAME>'`, `[[${args.title}]]`);
-			src = src.replaceAll('<CREATOR>', args.creator);
+			src = src.replaceAll('<CREATOR>', args.creator ?? await wallet.getActiveAddress()); // TODO: Support NodeJS / Browser
 			src = src.replaceAll('<TICKER>', 'ATOMIC');
 			src = src.replaceAll('<DENOMINATION>', args.denomination ? args.denomination.toString() : '1');
 			src = src.replaceAll('<SUPPLY>', args.supply ? args.supply.toString() : '1');
@@ -123,12 +123,12 @@ export async function getAtomicAsset(id: string): Promise<AssetDetailType | null
 	}
 }
 
-export async function getAtomicAssets(args: { ids?: string[] }): Promise<AssetHeaderType[] | null> {
+export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
 
 	try {
 		const gqlResponse = await getGQLData({
 			gateway: GATEWAYS.arweave,
-			ids: args.ids ?? null,
+			ids: ids ?? null,
 			tagFilters: null,
 			owners: null,
 			cursor: null,

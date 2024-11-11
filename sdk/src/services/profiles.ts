@@ -75,10 +75,7 @@ export async function updateProfile(args: ProfileArgsType, profileId: string, wa
 		}
 
 		try {
-			const profileUpdateId = await updateZone({
-				zoneId: profileId,
-				data: data
-			}, wallet);
+			const profileUpdateId = await updateZone(data, profileId, wallet);
 
 			return profileUpdateId;
 		}

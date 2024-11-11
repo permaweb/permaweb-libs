@@ -22,12 +22,12 @@ export async function createZone(args: { tags?: TagType[] }, wallet: any, callba
 	}
 }
 
-export async function updateZone(args: { zoneId: string, data: object }, wallet: any): Promise<string | null> {
+export async function updateZone(args: object, zoneId: string, wallet: any): Promise<string | null> {
 	try {
-		const mappedData = { entries: Object.entries(args.data).map(([key, value]) => ({ key, value })) };
+		const mappedData = { entries: Object.entries(args).map(([key, value]) => ({ key, value })) };
 
 		const zoneUpdateId = await aoSend({
-			processId: args.zoneId,
+			processId: zoneId,
 			wallet: wallet,
 			action: 'Update-Zone',
 			data: mappedData
