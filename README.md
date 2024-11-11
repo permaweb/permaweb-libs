@@ -233,3 +233,164 @@ const zone = await getZone(zoneId);
 ```
 
 </details>
+
+## Atomic Assets
+
+Atomic assets are unique digital item consisting of an AO process and its associated data which are stored together in a single transaction on Arweave.
+
+### `createAtomicAsset`
+
+Creates an atomic asset.
+
+```typescript
+import { createAtomicAsset } from '@permaweb/libs';
+
+const assetId = await createAtomicAsset({
+    title: 'Example Title',
+    description, 'Example Description',
+    type: 'Example Atomic Asset Type',
+    topics: ['Topic 1', 'Topic 2', 'Topic 3'],
+    contentType: 'text/html',
+    data: '1234'
+}, wallet);
+```
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+AssetProcessId;
+```
+
+</details>
+
+### `getAtomicAsset`
+
+Performs a lookup of an atomic asset by ID. This function also performs a dryrun on the asset process to receive the balances and other associated metadata of the atomic asset that is inside the AO process itself.
+
+```typescript
+import { getAtomicAsset } from "@permaweb/libs";
+
+const asset = await getAtomicAsset(AssetProcessId);
+```
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+ {
+  id: 'z0f2O9Fs3yb_EMXtPPwKeb2O0WueIG5r7JLs5UxsA4I',
+  title: 'City',
+  description: 'A collection of AI generated images of different settings and areas',
+  type: null,
+  topics: null,
+  contentType: 'image/png',
+  renderWith: null,
+  thumbnail: null,
+  udl: {
+    access: { value: 'One-Time-0.1' },
+    derivations: { value: 'Allowed-With-One-Time-Fee-0.1' },
+    commercialUse: { value: 'Allowed-With-One-Time-Fee-0.1' },
+    dataModelTraining: { value: 'Disallowed' },
+    paymentMode: 'Single',
+    paymentAddress: 'uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk',
+    currency: 'xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'
+  },
+  creator: 'SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M',
+  collectionId: 'XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc',
+  implementation: 'ANS-110',
+  dateCreated: 1717663091000,
+  blockHeight: 1439467,
+  ticker: 'ATOMIC',
+  denomination: '1',
+  balances: {
+    'SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M': '1',
+    cfQOZc7saMMizHtBKkBoF_QuH5ri0Bmb5KSf_kxQsZE: '1',
+    U3TjJAZWJjlWBB4KAXSHKzuky81jtyh0zqH8rUL4Wd0: '98'
+  },
+  transferable: true,
+  tags: [{ name: 'Remaining', value: 'Tag' }]
+}
+```
+
+</details>
+
+### `getAtomicAssets`
+
+Queries multiple atomic assets from the gateway.
+
+```typescript
+import { getAtomicAssets } from "@permaweb/libs";
+
+const assets = await getAtomicAssets({
+  ids: ["AssetProcessId1", "AssetProcessId2"],
+});
+```
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+[
+  {
+    id: "AssetProcessId1",
+    title: "City",
+    description:
+      "A collection of AI generated images of different settings and areas",
+    type: null,
+    topics: null,
+    contentType: "image/png",
+    renderWith: null,
+    thumbnail: null,
+    udl: {
+      access: { value: "One-Time-0.1" },
+      derivations: { value: "Allowed-With-One-Time-Fee-0.1" },
+      commercialUse: { value: "Allowed-With-One-Time-Fee-0.1" },
+      dataModelTraining: { value: "Disallowed" },
+      paymentMode: "Single",
+      paymentAddress: "uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk",
+      currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
+    },
+    creator: "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M",
+    collectionId: "XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc",
+    implementation: "ANS-110",
+    dateCreated: 1717663091000,
+    blockHeight: 1439467,
+    tags: [{ name: "Remaining", value: "Tag" }],
+  },
+  {
+    id: "AssetProcessId2",
+    title: "City",
+    description:
+      "A collection of AI generated images of different settings and areas",
+    type: null,
+    topics: null,
+    contentType: "image/png",
+    renderWith: null,
+    thumbnail: null,
+    udl: {
+      access: { value: "One-Time-0.1" },
+      derivations: { value: "Allowed-With-One-Time-Fee-0.1" },
+      commercialUse: { value: "Allowed-With-One-Time-Fee-0.1" },
+      dataModelTraining: { value: "Disallowed" },
+      paymentMode: "Single",
+      paymentAddress: "uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk",
+      currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
+    },
+    creator: "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M",
+    collectionId: "XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc",
+    implementation: "ANS-110",
+    dateCreated: 1717663091000,
+    blockHeight: 1439467,
+    tags: [{ name: "Remaining", value: "Tag" }],
+  },
+];
+```
+
+</details>
