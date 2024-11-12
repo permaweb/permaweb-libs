@@ -7,7 +7,8 @@ import { checkValidAddress, formatAddress, getTagValue } from 'helpers/utils';
 
 // TODO: License
 export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback?: (status: any) => void) {
-	if (!validateAssetCreateArgs(args)) throw new Error('Invalid arguments passed for atomic asset creation');
+	const validationError = getValidationErrorMessage(args);
+	if (validationError) throw new Error(validationError);
 	
 	const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
 	const tags = buildAssetTags(args);
@@ -268,29 +269,29 @@ function buildAssetTags(args: AssetCreateArgsType): { name: string; value: strin
 	return tags;
 }
 
-function validateAssetCreateArgs(args: AssetCreateArgsType): boolean {
-	if (typeof args !== 'object' || args === null) return false;
-
+function getValidationErrorMessage(args: AssetCreateArgsType): string | null {
+	if (typeof args !== 'object' || args === null) return 'The provided arguments are invalid or empty.';
+	
 	const requiredFields = ['title', 'description', 'type', 'topics', 'contentType', 'data'];
 	for (const field of requiredFields) {
-		if (!(field in args)) return false;
+		if (!(field in args)) return `Missing field '${field}'.`;
 	}
+	
+	if (typeof args.title !== 'string' || args.title.trim() === '') return 'Title is required.';
+	if (typeof args.description !== 'string') return 'The description must be a valid string.';
+	if (typeof args.type !== 'string' || args.type.trim() === '') return 'The type must be a non-empty string.';
+	if (!Array.isArray(args.topics) || args.topics.length === 0) return 'Topics are required.';
+	if (typeof args.contentType !== 'string' || args.contentType.trim() === '') return 'Content type must be a non-empty string.';
+	if (args.data === undefined || args.data === null) return 'The data field is required.';
 
-	if (typeof args.title !== 'string' || args.title.trim() === '') return false;
-	if (typeof args.description !== 'string') return false;
-	if (typeof args.type !== 'string' || args.type.trim() === '') return false;
-	if (!Array.isArray(args.topics) || args.topics.length === 0) return false;
-	if (typeof args.contentType !== 'string' || args.contentType.trim() === '') return false;
-	if (args.data === undefined || args.data === null) return false;
-
-	if ('creator' in args && typeof args.creator !== 'string') return false;
-	if ('collectionId' in args && typeof args.collectionId !== 'string') return false;
-	if ('renderWith' in args && typeof args.renderWith !== 'string') return false;
-	if ('thumbnail' in args && typeof args.thumbnail !== 'string') return false;
-	if ('supply' in args && (typeof args.supply !== 'number' || args.supply <= 0)) return false;
-	if ('transferable' in args && typeof args.transferable !== 'boolean') return false;
-	if ('tags' in args && (!Array.isArray(args.tags) || args.tags.some(tag => typeof tag !== 'object'))) return false;
-	if ('src' in args && typeof args.src !== 'string') return false;
-
-	return true;
+	if ('creator' in args && typeof args.creator !== 'string') return 'The creator, if specified, must be a valid string.';
+	if ('collectionId' in args && typeof args.collectionId !== 'string') return 'Collection ID, if provided, must be a valid string.';
+	if ('renderWith' in args && typeof args.renderWith !== 'string') return 'Render with value, if provided, must be a valid string.';
+	if ('thumbnail' in args && typeof args.thumbnail !== 'string') return 'Thumbnail, if provided, must be a valid string.';
+	if ('supply' in args && (typeof args.supply !== 'number' || args.supply <= 0)) return 'Supply must be a positive number.';
+	if ('transferable' in args && typeof args.transferable !== 'boolean') return 'Transferable must be a boolean value.';
+	if ('tags' in args && (!Array.isArray(args.tags) || args.tags.some(tag => typeof tag !== 'object'))) return 'Tags, if provided, must be an array of objects.';
+	if ('src' in args && typeof args.src !== 'string') return 'Source, if provided, must be a valid string.';
+	
+	return null; // All validations passed
 }

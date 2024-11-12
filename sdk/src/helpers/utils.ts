@@ -216,11 +216,15 @@ export function cleanTagValue(value: string) {
  * @param prefix The prefix to filter keys by (e.g., 'portal')
  * @returns Array of values whose keys match the prefix
  */
-export function getStoreNamespace<T = any>(store: Record<string, T>, prefix: string): T[] {
+export function getStoreNamespace<T = any>(prefix: string, store: Record<string, T>): T[] {
     if (!store) return [];
     
     const searchPrefix = `${prefix}:`;
     return Object.keys(store)
         .filter(key => key.startsWith(searchPrefix))
         .map(key => store[key]) as any;
+}
+
+export function buildStoreNamespace(prefix: string, value: string) {
+	return `${prefix}:${value.toLowerCase().replace(/\s+/g, '-')}`;
 }
