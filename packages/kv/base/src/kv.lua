@@ -31,11 +31,72 @@ function KV:dump()
 end
 
 function KV:get(keyString)
-    return self.store[keyString]
+    local keys = self:_splitKeyString(keyString)
+    local current = self.store
+
+    for _, key in ipairs(keys) do
+        if type(current) ~= "table" or current[key] == nil then
+            return nil
+        end
+        current = current[key]
+    end
+
+    return current
 end
 
 function KV:set(keyString, value)
-    self.store[keyString] = value
+    local keys = self:_splitKeyString(keyString)
+    local current = self.store
+
+    for i = 1, #keys - 1 do
+        local key = keys[i]
+        if type(current[key]) ~= "table" then
+            current[key] = {}  -- Create table if it doesn't exist
+        end
+        current = current[key]
+    end
+
+    current[keys[#keys]] = value
+end
+
+function KV:append(keyString, value)
+    local array = self:get(keyString)
+    if type(array) ~= "table" then
+        array = {}
+        self:set(keyString, array)
+    end
+
+    table.insert(array, value)
+end
+
+function KV:_splitKeyString(keyString)
+    local keys = {}
+    for key in string.gmatch(keyString, "[^%.]+") do
+        table.insert(keys, key)
+    end
+    return keys
+end
+
+function KV:append(keyString, value)
+    self.store[keyString] = self.store[keyString] or {}
+    table.insert(self.store[keyString], value)
+end
+
+function KV:remove(keyString)
+    local keys = self:_splitKeyString(keyString)
+    local current = self.store
+
+    -- Traverse to the second to last key
+    for i = 1, #keys - 1 do
+        local key = keys[i]
+        if type(current) ~= "table" or current[key] == nil then
+            return -- Key path doesn't exist, nothing to remove
+        end
+        current = current[key]
+    end
+
+    -- Remove the final key in the path
+    current[keys[#keys]] = nil
 end
 
 function KV:len()
@@ -46,16 +107,41 @@ function KV:len()
     return count
 end
 
-function KV:del(keyString)
-    self.store[keyString] = nil
-end
-
-function KV:keys()
-    local keys = {}
-    for k, _ in pairs(self.store) do
-        table.insert(keys, k)
+function KV:keys(path)
+    -- Helper function to recursively gather keys from a table
+    local function recurse(store)
+        local keys = {}
+        for k, _ in pairs(store) do
+            table.insert(keys, k)
+        end
+        return keys
     end
-    return keys
+
+    -- If a path is specified, traverse to that nested level
+    if path and type(path) == "string" then
+        local keys = self:_splitKeyString(path)
+        local current = self.store
+
+        -- Traverse the store according to the keys in the path
+        for _, key in ipairs(keys) do
+            if type(current) == "table" and current[key] then
+                current = current[key]
+            else
+                return {}  -- If the path does not exist, return an empty table
+            end
+        end
+
+        -- If the value at the path is not a table, return an empty table
+        if type(current) ~= "table" then
+            return {}
+        end
+
+        -- Return the keys of the nested object
+        return recurse(current)
+    else
+        -- If no path is specified, return top-level keys
+        return recurse(self.store)
+    end
 end
 
 function KV:registerPlugin(pluginName, pluginFunction)

@@ -59,30 +59,27 @@ function Zone.zoneGet(msg)
     })
 end
 
+function Zone.sendError(target, errorMessage)
+    ao.send({
+        Target = target,
+        Action = Zone.H_ZONE_ERROR,
+        Tags = {
+            Status = 'Error',
+            Message = errorMessage
+        }
+    })
+end
+
 function Zone.zoneUpdate(msg)
     if Zone.isAuthorized(msg) ~= true then
-        ao.send({
-            Target = msg.From,
-            Action = Zone.H_ZONE_ERROR,
-            Tags = {
-                Status = 'Error',
-                Message = 'Not Authorized'
-            }
-        })
+        Zone.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local decodedData = Zone.decodeMessageData(msg.Data)
 
     if not decodedData.valid then
-        ao.send({
-            Target = msg.From,
-            Action = Zone.H_ZONE_ERROR,
-            Tags = {
-                Status = 'Error',
-                Message = 'Invalid Data'
-            }
-        })
+        Zone.sendError(msg.From, 'Invalid Data')
         return
     end
 
