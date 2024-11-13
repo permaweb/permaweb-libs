@@ -40,7 +40,7 @@ export async function updateZone(args: object, zoneId: string, wallet: any): Pro
 	}
 }
 
-export async function getZone(zoneId: string): Promise<ZoneType | null> {
+export async function getZone(zoneId: string): Promise<any | null> { // TODO: ZoneType
 	try {
 		const processState = await aoDryRun({
 			processId: zoneId,
