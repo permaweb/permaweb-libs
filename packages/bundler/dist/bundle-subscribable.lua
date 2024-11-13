@@ -1135,6 +1135,9 @@ local KV = {}
 
 KV.__index = KV
 
+--- Creates a new KV instance.
+-- @param plugins Optional table of plugins, each with a register function.
+-- @return A new KV instance.
 function KV.new(plugins)
     if type(plugins) ~= "table" and type(plugins) ~= "nil" then
         print("invalid plugins")
@@ -1154,6 +1157,8 @@ function KV.new(plugins)
     return self
 end
 
+--- Returns a copy of the entire key-value store.
+-- @return A table representing the current state of the key-value store.
 function KV:dump()
     local copy = {}
     for k, v in pairs(self.store) do
@@ -1162,6 +1167,9 @@ function KV:dump()
     return copy
 end
 
+--- Retrieves a value from the key-value store.
+-- @param keyString A dot-separated string representing the key path.
+-- @return The value at the specified key path, or nil if not found.
 function KV:get(keyString)
     local keys = self:_splitKeyString(keyString)
     local current = self.store
@@ -1176,6 +1184,9 @@ function KV:get(keyString)
     return current
 end
 
+--- Sets a value in the key-value store.
+-- @param keyString A dot-separated string representing the key path.
+-- @param value The value to set at the specified key path.
 function KV:set(keyString, value)
     local keys = self:_splitKeyString(keyString)
     local current = self.store
@@ -1191,6 +1202,9 @@ function KV:set(keyString, value)
     current[keys[#keys]] = value
 end
 
+--- Appends a value to an array stored at the given key path.
+-- @param keyString A dot-separated string representing the key path.
+-- @param value The value to append to the array.
 function KV:append(keyString, value)
     local array = self:get(keyString)
     if type(array) ~= "table" then
@@ -1201,6 +1215,9 @@ function KV:append(keyString, value)
     table.insert(array, value)
 end
 
+--- Splits a dot-separated key string into individual keys.
+-- @param keyString The dot-separated key string.
+-- @return A table containing individual keys.
 function KV:_splitKeyString(keyString)
     local keys = {}
     for key in string.gmatch(keyString, "[^%.]+") do
@@ -1209,11 +1226,8 @@ function KV:_splitKeyString(keyString)
     return keys
 end
 
-function KV:append(keyString, value)
-    self.store[keyString] = self.store[keyString] or {}
-    table.insert(self.store[keyString], value)
-end
-
+--- Removes a value from the key-value store.
+-- @param keyString A dot-separated string representing the key path to be removed.
 function KV:remove(keyString)
     local keys = self:_splitKeyString(keyString)
     local current = self.store
@@ -1231,6 +1245,8 @@ function KV:remove(keyString)
     current[keys[#keys]] = nil
 end
 
+--- Returns the number of top-level keys in the store.
+-- @return The count of top-level keys in the key-value store.
 function KV:len()
     local count = 0
     for _ in pairs(self.store) do
@@ -1239,6 +1255,9 @@ function KV:len()
     return count
 end
 
+--- Returns a list of keys at a specified path.
+-- @param path Optional dot-separated string representing the key path.
+-- @return A table containing keys at the specified path, or top-level keys if no path is specified.
 function KV:keys(path)
     -- Helper function to recursively gather keys from a table
     local function recurse(store)
@@ -1276,6 +1295,9 @@ function KV:keys(path)
     end
 end
 
+--- Registers a new plugin function in the KV instance.
+-- @param pluginName The name of the plugin.
+-- @param pluginFunction The function to be registered as a plugin.
 function KV:registerPlugin(pluginName, pluginFunction)
     if type(pluginName) ~= "string" or type(pluginFunction) ~= "function" then
         error("Invalid plugin name or function")
@@ -1287,6 +1309,10 @@ function KV:registerPlugin(pluginName, pluginFunction)
     self[pluginName] = pluginFunction
 end
 
+--- Filters the store based on a given condition function.
+-- @param store The table to filter.
+-- @param fn The condition function that takes key and value and returns a boolean.
+-- @return A new table containing only the key-value pairs that match the condition.
 function KV.filter_store(store, fn)
     local results = {}
     for k, v in pairs(store) do
@@ -1297,10 +1323,17 @@ function KV.filter_store(store, fn)
     return results
 end
 
+--- Checks if a string starts with a specified prefix.
+-- @param str The string to check.
+-- @param prefix The prefix to look for.
+-- @return True if the string starts with the prefix, otherwise false.
 function KV.starts_with(str, prefix)
     return str:sub(1, #prefix) == prefix
 end
 
+--- Gets all keys that start with a specified prefix.
+-- @param str The prefix string to filter keys.
+-- @return A table containing all keys that start with the specified prefix.
 function KV:getPrefix(str)
     return KV.filter_store(self.store, function(k, _)
         return KV.starts_with(k, str)
@@ -1545,50 +1578,34 @@ if not AssetManager then
     error('AssetManager not found, install it')
 end
 
-local Subscribable = require 'subscribable' ({
-    useDB = false
-})
+local Subscribable = require 'subscribable'({ useDB = false })
 
-if not Zone then Zone = {} end
-if not Zone.zoneKV then Zone.zoneKV = KV.new({ BatchPlugin }) end
-if not Zone.assetManager then Zone.assetManager = AssetManager.new() end
-if not ZoneInitCompleted then ZoneInitCompleted = false end
+Zone = Zone or {}
+Zone.zoneKV = Zone.zoneKV or KV.new({ BatchPlugin })
+Zone.assetManager = Zone.assetManager or AssetManager.new()
+ZoneInitCompleted = ZoneInitCompleted or false
+
 
 -- Action handler and notice names
 Zone.H_ZONE_ERROR = 'Zone.Error'
 Zone.H_ZONE_SUCCESS = 'Zone.Success'
-
 Zone.H_ZONE_GET = 'Info'
 Zone.H_ZONE_UPDATE = 'Update-Zone'
 Zone.H_ZONE_CREDIT_NOTICE = 'Credit-Notice'
 Zone.H_ZONE_DEBIT_NOTICE = 'Debit-Notice'
 Zone.H_ZONE_RUN_ACTION = 'Run-Action'
 
+-- Utility Functions
 function Zone.decodeMessageData(data)
     local status, decodedData = pcall(json.decode, data)
     if not status or type(decodedData) ~= 'table' then
         return { success = false, data = nil }
     end
-
     return { success = true, data = decodedData }
 end
 
 function Zone.isAuthorized(msg)
-    if msg.From == Owner or msg.From == ao.id then
-        return true
-    end
-    return false
-end
-
-function Zone.zoneGet(msg)
-    msg.reply({
-        Target = msg.From,
-        Action = Zone.H_ZONE_SUCCESS,
-        Data = {
-            Store = Zone.zoneKV:dump(),
-            Assets = Zone.assetManager.assets
-        }
-    })
+    return msg.From == Owner or msg.From == ao.id
 end
 
 function Zone.sendError(target, errorMessage)
@@ -1602,41 +1619,45 @@ function Zone.sendError(target, errorMessage)
     })
 end
 
+-- Zone Actions
+function Zone.zoneGet(msg)
+    msg.reply({
+        Target = msg.From,
+        Action = Zone.H_ZONE_SUCCESS,
+        Data = {
+            Store = Zone.zoneKV:dump(),
+            Assets = Zone.assetManager.assets
+        }
+    })
+end
+
 function Zone.zoneUpdate(msg)
-    if Zone.isAuthorized(msg) ~= true then
+    if not Zone.isAuthorized(msg) then
         Zone.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local decodedData = Zone.decodeMessageData(msg.Data)
-
     if not decodedData.success then
         Zone.sendError(msg.From, 'Invalid Data')
         return
     end
 
     local entries = decodedData.data and decodedData.data.entries
-
     if entries and #entries then
         for _, entry in ipairs(entries) do
             if entry.key and entry.value then
-                local updateType = 'Add-Or-Update'
-
-                if msg.UpdateType then
-                    if msg.UpdateType == 'Add-Or-Update' then updateType = 'Add-Or-Update' end
-                    if msg.UpdateType == 'Remove' then updateType = 'Remove' end
+                local updateType = msg.UpdateType or 'Add-Or-Update'
+                if updateType == 'Add-Or-Update' then
+                    Zone.zoneKV:set(entry.key, entry.value)
                 end
-
-                if updateType == 'Add-Or-Update' then Zone.zoneKV:set(entry.key, entry.value) end
-                if updateType == 'Remove' then Zone.zoneKV:del(entry.key, entry.value) end
+                if updateType == 'Remove' then
+                    Zone.zoneKV:del(entry.key)
+                end
             end
         end
-        ao.send({
-            Target = msg.From,
-            Action = Zone.H_ZONE_SUCCESS,
-        })
+        ao.send({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
         Subscribable.notifySubscribers(Zone.H_ZONE_UPDATE, { UpdateTx = msg.Id })
-        return
     end
 end
 
@@ -1657,14 +1678,8 @@ function Zone.debitNotice(msg)
 end
 
 function Zone.runAction(msg)
-    if Zone.isAuthorized(msg) ~= true then
-        msg.reply({
-            Action = Zone.H_ZONE_ERROR,
-            Tags = {
-                Status = 'Error',
-                Message = 'Not Authorized'
-            }
-        })
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
         return
     end
 
@@ -1688,34 +1703,35 @@ function Zone.runAction(msg)
     })
 end
 
+-- Handler Registration
 Handlers.add(Zone.H_ZONE_GET, Zone.H_ZONE_GET, Zone.zoneGet)
 Handlers.add(Zone.H_ZONE_UPDATE, Zone.H_ZONE_UPDATE, Zone.zoneUpdate)
 Handlers.add(Zone.H_ZONE_CREDIT_NOTICE, Zone.H_ZONE_CREDIT_NOTICE, Zone.creditNotice)
-Handlers.add(Zone.H_ZONE_DEBIT_NOTICE, Zone.H_ZONE_DEBIT_NOTICE, Zone.creditNotice)
+Handlers.add(Zone.H_ZONE_DEBIT_NOTICE, Zone.H_ZONE_DEBIT_NOTICE, Zone.debitNotice)
 Handlers.add(Zone.H_ZONE_RUN_ACTION, Zone.H_ZONE_RUN_ACTION, Zone.runAction)
 
 Handlers.add(
-    'Register-Whitelisted-Subscriber',
-    Handlers.utils.hasMatchingTag('Action', 'Register-Whitelisted-Subscriber'),
-    Subscribable.handleRegisterWhitelistedSubscriber
+        'Register-Whitelisted-Subscriber',
+        Handlers.utils.hasMatchingTag('Action', 'Register-Whitelisted-Subscriber'),
+        Subscribable.handleRegisterWhitelistedSubscriber
 )
 
 Subscribable.configTopicsAndChecks({
-    ['Update-Zone'] = {
+    [Zone.H_ZONE_UPDATE] = {
         description = 'Zone updated',
         returns = '{ "UpdateTx" : string }',
         subscriptionBasis = 'Whitelisting'
     },
 })
 
+-- Boot Initialization
 if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
     local collectedValues = {}
     for _, tag in ipairs(Inbox[1].TagArray) do
         local prefix = "Bootloader-"
         if string.sub(tag.name, 1, string.len(prefix)) == prefix then
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
-
-            if collectedValues[keyWithoutPrefix] == nil then
+            if not collectedValues[keyWithoutPrefix] then
                 collectedValues[keyWithoutPrefix] = { tag.value }
             else
                 table.insert(collectedValues[keyWithoutPrefix], tag.value)

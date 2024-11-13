@@ -163,6 +163,5 @@ describe("KV:keys() functionality", function()
         local themeKeys = store:keys("settings.theme")
         assert.are.same(themeKeys, {})
     end)
-
 end)
 
