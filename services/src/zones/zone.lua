@@ -20,12 +20,17 @@ Zone.zoneKV = Zone.zoneKV or KV.new({ BatchPlugin })
 Zone.assetManager = Zone.assetManager or AssetManager.new()
 ZoneInitCompleted = ZoneInitCompleted or false
 
-
 -- Action handler and notice names
 Zone.H_ZONE_ERROR = 'Zone.Error'
 Zone.H_ZONE_SUCCESS = 'Zone.Success'
 Zone.H_ZONE_GET = 'Info'
 Zone.H_ZONE_UPDATE = 'Update-Zone'
+
+Zone.H_ZONE_SET = 'Zone-Set'
+Zone.H_ZONE_APPEND = 'Zone-Append'
+Zone.H_ZONE_REMOVE = 'Zone-Remove'
+Zone.H_ZONE_KEYS = 'Zone-Keys'
+
 Zone.H_ZONE_CREDIT_NOTICE = 'Credit-Notice'
 Zone.H_ZONE_DEBIT_NOTICE = 'Debit-Notice'
 Zone.H_ZONE_RUN_ACTION = 'Run-Action'
@@ -87,9 +92,8 @@ function Zone.zoneUpdate(msg)
                 local updateType = msg.UpdateType or 'Add-Or-Update'
                 if updateType == 'Add-Or-Update' then
                     Zone.zoneKV:set(entry.key, entry.value)
-                end
-                if updateType == 'Remove' then
-                    Zone.zoneKV:del(entry.key)
+                elseif updateType == 'Remove' then
+                    Zone.zoneKV:remove(entry.key)
                 end
             end
         end
@@ -140,12 +144,83 @@ function Zone.runAction(msg)
     })
 end
 
+function Zone.setHandler(msg)
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local path = msg.Tags.Path or ""
+    local decodedData = Zone.decodeMessageData(msg.Data)
+    if not decodedData.success or not decodedData.data then
+        Zone.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    Zone.zoneKV:set(path, decodedData.data)
+    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+end
+
+function Zone.appendHandler(msg)
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local path = msg.Tags.Path or ""
+    local decodedData = Zone.decodeMessageData(msg.Data)
+    if not decodedData.success or not decodedData.data then
+        Zone.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    Zone.zoneKV:append(path, decodedData.data)
+    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+end
+
+function Zone.removeHandler(msg)
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local path = msg.Tags.Path or ""
+    if path == "" then
+        Zone.sendError(msg.From, 'Invalid Path: Path required to remove')
+        return
+    end
+
+    Zone.zoneKV:remove(path)
+    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+end
+
+function Zone.keysHandler(msg)
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local path = msg.Tags.Path or nil
+    local keys = Zone.zoneKV:keys(path)
+
+    msg.reply({
+        Target = msg.From,
+        Action = Zone.H_ZONE_SUCCESS,
+        Data = { Keys = keys }
+    })
+end
+
+
 -- Handler Registration
 Handlers.add(Zone.H_ZONE_GET, Zone.H_ZONE_GET, Zone.zoneGet)
 Handlers.add(Zone.H_ZONE_UPDATE, Zone.H_ZONE_UPDATE, Zone.zoneUpdate)
 Handlers.add(Zone.H_ZONE_CREDIT_NOTICE, Zone.H_ZONE_CREDIT_NOTICE, Zone.creditNotice)
 Handlers.add(Zone.H_ZONE_DEBIT_NOTICE, Zone.H_ZONE_DEBIT_NOTICE, Zone.debitNotice)
 Handlers.add(Zone.H_ZONE_RUN_ACTION, Zone.H_ZONE_RUN_ACTION, Zone.runAction)
+Handlers.add(Zone.H_ZONE_SET, Zone.H_ZONE_SET, Zone.setHandler)
+Handlers.add(Zone.H_ZONE_APPEND, Zone.H_ZONE_APPEND, Zone.appendHandler)
+Handlers.add(Zone.H_ZONE_REMOVE, Zone.H_ZONE_REMOVE, Zone.removeHandler)
+Handlers.add(Zone.H_ZONE_KEYS, Zone.H_ZONE_KEYS, Zone.keysHandler)
 
 -- Register-Whitelisted-Subscriber
 -- looks for Tag: Subscriber-Process-Id = <registry_id>
