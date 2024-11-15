@@ -1481,10 +1481,10 @@ Zone.H_ZONE_RUN_ACTION = 'Run-Action'
 function Zone.decodeMessageData(data)
     local status, decodedData = pcall(json.decode, data)
     if not status or type(decodedData) ~= 'table' then
-        return false, nil
+        return { valid=false, data=nil }
     end
 
-    return true, decodedData
+    return { valid=true, data=decodedData }
 end
 
 function Zone.isAuthorized(msg)
@@ -1518,9 +1518,9 @@ function Zone.zoneUpdate(msg)
         return
     end
 
-    local decodeCheck, data = Zone.decodeMessageData(msg.Data)
+    local decodedData = Zone.decodeMessageData(msg.Data)
 
-    if not decodeCheck then
+    if not decodedData.valid then
         ao.send({
             Target = msg.From,
             Action = Zone.H_ZONE_ERROR,
@@ -1532,7 +1532,7 @@ function Zone.zoneUpdate(msg)
         return
     end
 
-    local entries = data and data.entries
+    local entries = decodedData.data and decodedData.data.entries
 
     if entries and #entries then
         for _, entry in ipairs(entries) do
