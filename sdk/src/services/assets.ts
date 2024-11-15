@@ -62,7 +62,7 @@ export async function getAtomicAsset(id: string): Promise<AssetDetailType | null
 		const gqlResponse = await getGQLData({
 			gateway: GATEWAYS.goldsky,
 			ids: [id],
-			tagFilters: null,
+			tags: null,
 			owners: null,
 			cursor: null,
 		});
@@ -130,7 +130,7 @@ export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] 
 		const gqlResponse = await getGQLData({
 			gateway: GATEWAYS.arweave,
 			ids: ids ?? null,
-			tagFilters: null,
+			tags: null,
 			owners: null,
 			cursor: null,
 		});

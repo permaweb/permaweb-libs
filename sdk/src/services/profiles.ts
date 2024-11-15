@@ -1,15 +1,18 @@
 import { resolveTransaction } from 'common/arweave';
+import { getGQLData } from 'common/gql';
 
-import { TAGS } from 'helpers/config';
-import { ProfileArgsType, ProfileType, ZoneType } from 'helpers/types';
+import { GATEWAYS, TAGS } from 'helpers/config';
+import { GQLNodeResponseType, ProfileArgsType, ProfileType, ZoneType } from 'helpers/types';
 
 import { createZone, getZone, updateZone } from './zones';
 
-// TODO: Bootloader
 export async function createProfile(args: ProfileArgsType, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	let profileId: string | null = null;
 
-	const tags: { name: string, value: string }[] = [];
+	const tags: { name: string, value: string }[] = [
+		{ name: TAGS.keys.dataProtocol, value: 'Zone' },
+		{ name: TAGS.keys.name, value: 'User' }
+	];
 
 	const addBootTag = (key: string, value: string | undefined) => {
 		if (value) {
@@ -38,13 +41,6 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 
 	try {
 		profileId = await createZone({ tags: tags }, wallet, callback);
-
-		// profileId = await createZone({}, wallet, callback);
-
-		// if (profileId) {
-		// 	const profileUpdateId = await updateProfile(args, profileId, wallet, callback ?? undefined);
-		// 	console.log(`Profile update: ${profileUpdateId}`);
-		// }
 	}
 	catch (e: any) {
 		throw new Error(e.message ?? 'Error creating profile');
@@ -120,12 +116,30 @@ export async function getProfileById(profileId: string): Promise<ProfileType & a
 	}
 }
 
-// TODO
 export async function getProfileByWalletAddress(walletAddress: string): Promise<ProfileType & any | null> {
-	console.log(`Get profile by wallet: ${walletAddress}`);
-	const profileId = 'OcqY7B_MHQ_3vkS5rQ_TXhG7vEv9rKz117fX147t5R0';
-	return await getProfileById(profileId);
-	// return {
-	// 	id: null
-	// }
+	try {
+		const gqlResponse = await getGQLData({
+			gateway: GATEWAYS.arweave,
+			tags: [
+				{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
+				{ name: TAGS.keys.name, values: ['User'] },
+			],
+			owners: [walletAddress]
+		});
+
+		if (gqlResponse?.data?.length > 0) {
+			gqlResponse.data.sort((a: GQLNodeResponseType, b: GQLNodeResponseType) => {
+				const timestampA = a.node.block?.timestamp ?? 0;
+				const timestampB = b.node.block?.timestamp ?? 0;
+				return timestampB - timestampA;
+			});
+
+			return await getProfileById(gqlResponse.data[0].node.id);
+		}
+
+		return null;
+	}
+	catch (e: any) {
+		throw new Error(e.message ?? 'Error fetching profile');
+	}
 }

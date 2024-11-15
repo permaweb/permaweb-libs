@@ -126,7 +126,7 @@ export type UDLicenseValueType = {
 
 export type BaseGQLArgsType = {
 	ids?: string[] | null;
-	tagFilters?: TagFilterType[] | null;
+	tags?: TagFilterType[] | null;
 	owners?: string[] | null;
 	cursor?: string | null;
 	paginator?: number;
