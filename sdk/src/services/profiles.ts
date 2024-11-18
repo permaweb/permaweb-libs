@@ -93,15 +93,9 @@ export async function getProfileById(profileId: string): Promise<ProfileType & a
 			let profile: any = {
 				id: profileId,
 				walletAddress: null, // TODO: Get owner
-<<<<<<< HEAD
 				username: zone.store.Username ?? 'None',
 				displayName: zone.store.DisplayName ?? 'None',
 				description: zone.store.Description ?? 'None',
-=======
-				username: zone.store.username ?? 'None',
-				displayName: zone.store.displayName ?? 'None',
-				description: zone.store.description ?? 'None',
->>>>>>> ea7772f (add title support to update post handler)
 			};
 
 			if (zone.store.Thumbnail) profile.thumbnail = zone.store.Thumbnail;
