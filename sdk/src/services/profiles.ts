@@ -51,15 +51,15 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 
 export async function updateProfile(args: ProfileArgsType, profileId: string, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	if (profileId) {
-		let data: ProfileArgsType = {
-			username: args.username,
-			displayName: args.displayName,
-			description: args.description
+		let data: any = {
+			Username: args.username,
+			DisplayName: args.displayName,
+			Description: args.description
 		};
 
 		if (args.thumbnail) {
 			try {
-				data.thumbnail = await resolveTransaction(args.thumbnail);
+				data.Thumbnail = await resolveTransaction(args.thumbnail);
 			} catch (e: any) {
 				if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
 			}
@@ -67,7 +67,7 @@ export async function updateProfile(args: ProfileArgsType, profileId: string, wa
 
 		if (args.banner) {
 			try {
-				data.banner = await resolveTransaction(args.banner);
+				data.Banner = await resolveTransaction(args.banner);
 			} catch (e: any) {
 				if (callback) callback(`Failed to resolve banner: ${e.message}`);
 			}
