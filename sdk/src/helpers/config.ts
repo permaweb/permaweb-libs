@@ -4,7 +4,7 @@ export const AO = {
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
 		asset: 'OM6b2xWw3Wo5YCYKhD_N5qslF9wCIUhu7fXoTq1Q3uU',
-		zone: 'KxQ_8dFRh6jPetR8b7-MjBE7PgEhvcptVuzusWL4L6g'
+		zone: 'BDLhlPu09LyrL5vSqI1s_aWM2IzIXMbXgafDdDx1aUo'
 	}
 };
 

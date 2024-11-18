@@ -13,21 +13,21 @@ if not AssetManager then
     error('AssetManager not found, install it')
 end
 
-local Subscribable = require('services.bundler.external-libs.subscribable')({ useDB = false })
+local Subscribable = require('subscribable')({ useDB = false })
 
 Zone = Zone or {}
 
 Zone.Functions = Zone.Functions or {}
 
 Zone.Constants = Zone.Constants or {
-    H_ZONE_ERROR = 'Zone.Error',
-    H_ZONE_SUCCESS = 'Zone.Success',
-    H_ZONE_GET = 'Info',
-    H_ZONE_UPDATE = 'Update-Zone',
+    H_ZONE_ERROR = 'Zone-Error',
+    H_ZONE_SUCCESS = 'Zone-Success',
+    H_ZONE_UPDATE = 'Zone-Update',
     H_ZONE_SET = 'Zone-Set',
     H_ZONE_APPEND = 'Zone-Append',
     H_ZONE_REMOVE = 'Zone-Remove',
     H_ZONE_KEYS = 'Zone-Keys',
+    H_ZONE_GET = 'Info',
     H_ZONE_CREDIT_NOTICE = 'Credit-Notice',
     H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
     H_ZONE_RUN_ACTION = 'Run-Action'
@@ -67,14 +67,7 @@ end
 
 -- Zone Actions
 function Zone.Functions.zoneGet(msg)
-    msg.reply({
-        Target = msg.From,
-        Action = Zone.H_ZONE_SUCCESS,
-        Data = {
-            Store = Zone.Data.KV:dump(),
-            Assets = Zone.Data.AssetManager:get()
-        }
-    })
+    msg.reply({ Action = Zone.H_ZONE_SUCCESS, Data = Zone.Data })
 end
 
 function Zone.Functions.zoneUpdate(msg)
@@ -232,7 +225,7 @@ Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functi
 Handlers.add('Register-Whitelisted-Subscriber', 'Register-Whitelisted-Subscriber', Subscribable.handleRegisterWhitelistedSubscriber)
 
 Subscribable.configTopicsAndChecks({
-    [Zone.H_ZONE_UPDATE] = {
+    [Zone.Constants.H_ZONE_UPDATE] = {
         description = 'Zone updated',
         returns = '{ "UpdateTx" : string }',
         subscriptionBasis = 'Whitelisting'
