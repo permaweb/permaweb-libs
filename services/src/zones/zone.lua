@@ -13,25 +13,29 @@ if not AssetManager then
     error('AssetManager not found, install it')
 end
 
-local Subscribable = require 'subscribable' ({
-    useDB = false
-})
+local Subscribable = require 'subscribable'({ useDB = false })
 
-if not Zone then Zone = {} end
-if not Zone.zoneKV then Zone.zoneKV = KV.new({ BatchPlugin }) end
-if not Zone.assetManager then Zone.assetManager = AssetManager.new() end
-if not ZoneInitCompleted then ZoneInitCompleted = false end
+Zone = Zone or {}
+Zone.zoneKV = Zone.zoneKV or KV.new({ BatchPlugin })
+Zone.assetManager = Zone.assetManager or AssetManager.new()
+ZoneInitCompleted = ZoneInitCompleted or false
 
 -- Action handler and notice names
 Zone.H_ZONE_ERROR = 'Zone.Error'
 Zone.H_ZONE_SUCCESS = 'Zone.Success'
-
 Zone.H_ZONE_GET = 'Info'
 Zone.H_ZONE_UPDATE = 'Update-Zone'
+
+Zone.H_ZONE_SET = 'Zone-Set'
+Zone.H_ZONE_APPEND = 'Zone-Append'
+Zone.H_ZONE_REMOVE = 'Zone-Remove'
+Zone.H_ZONE_KEYS = 'Zone-Keys'
+
 Zone.H_ZONE_CREDIT_NOTICE = 'Credit-Notice'
 Zone.H_ZONE_DEBIT_NOTICE = 'Debit-Notice'
 Zone.H_ZONE_RUN_ACTION = 'Run-Action'
 
+-- Utility Functions
 function Zone.decodeMessageData(data)
     local status, decodedData = pcall(json.decode, data)
     if not status or type(decodedData) ~= 'table' then
@@ -42,12 +46,21 @@ function Zone.decodeMessageData(data)
 end
 
 function Zone.isAuthorized(msg)
-    if msg.From == Owner or msg.From == ao.id then
-        return true
-    end
-    return false
+    return msg.From == Owner or msg.From == ao.id
 end
 
+function Zone.sendError(target, errorMessage)
+    ao.send({
+        Target = target,
+        Action = Zone.H_ZONE_ERROR,
+        Tags = {
+            Status = 'Error',
+            Message = errorMessage
+        }
+    })
+end
+
+-- Zone Actions
 function Zone.zoneGet(msg)
     msg.reply({
         Target = msg.From,
@@ -60,54 +73,32 @@ function Zone.zoneGet(msg)
 end
 
 function Zone.zoneUpdate(msg)
-    if Zone.isAuthorized(msg) ~= true then
-        ao.send({
-            Target = msg.From,
-            Action = Zone.H_ZONE_ERROR,
-            Tags = {
-                Status = 'Error',
-                Message = 'Not Authorized'
-            }
-        })
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local decodedData = Zone.decodeMessageData(msg.Data)
 
     if not decodedData.valid then
-        ao.send({
-            Target = msg.From,
-            Action = Zone.H_ZONE_ERROR,
-            Tags = {
-                Status = 'Error',
-                Message = 'Invalid Data'
-            }
-        })
+        Zone.sendError(msg.From, 'Invalid Data')
         return
     end
 
     local entries = decodedData.data and decodedData.data.entries
-
     if entries and #entries then
         for _, entry in ipairs(entries) do
             if entry.key and entry.value then
-                local updateType = 'Add-Or-Update'
-
-                if msg.UpdateType then
-                    if msg.UpdateType == 'Add-Or-Update' then updateType = 'Add-Or-Update' end
-                    if msg.UpdateType == 'Remove' then updateType = 'Remove' end
+                local updateType = msg.UpdateType or 'Add-Or-Update'
+                if updateType == 'Add-Or-Update' then
+                    Zone.zoneKV:set(entry.key, entry.value)
+                elseif updateType == 'Remove' then
+                    Zone.zoneKV:remove(entry.key)
                 end
-
-                if updateType == 'Add-Or-Update' then Zone.zoneKV:set(entry.key, entry.value) end
-                if updateType == 'Remove' then Zone.zoneKV:del(entry.key, entry.value) end
             end
         end
-        ao.send({
-            Target = msg.From,
-            Action = Zone.H_ZONE_SUCCESS,
-        })
+        ao.send({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
         Subscribable.notifySubscribers(Zone.H_ZONE_UPDATE, { UpdateTx = msg.Id })
-        return
     end
 end
 
@@ -128,14 +119,8 @@ function Zone.debitNotice(msg)
 end
 
 function Zone.runAction(msg)
-    if Zone.isAuthorized(msg) ~= true then
-        msg.reply({
-            Action = Zone.H_ZONE_ERROR,
-            Tags = {
-                Status = 'Error',
-                Message = 'Not Authorized'
-            }
-        })
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
         return
     end
 
@@ -159,36 +144,108 @@ function Zone.runAction(msg)
     })
 end
 
+function Zone.setHandler(msg)
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local path = msg.Tags.Path or ""
+    local decodedData = Zone.decodeMessageData(msg.Data)
+    if not decodedData.success or not decodedData.data then
+        Zone.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    Zone.zoneKV:set(path, decodedData.data)
+    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+end
+
+function Zone.appendHandler(msg)
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local path = msg.Tags.Path or ""
+    local decodedData = Zone.decodeMessageData(msg.Data)
+    if not decodedData.success or not decodedData.data then
+        Zone.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    Zone.zoneKV:append(path, decodedData.data)
+    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+end
+
+function Zone.removeHandler(msg)
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local path = msg.Tags.Path or ""
+    if path == "" then
+        Zone.sendError(msg.From, 'Invalid Path: Path required to remove')
+        return
+    end
+
+    Zone.zoneKV:remove(path)
+    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+end
+
+function Zone.keysHandler(msg)
+    if not Zone.isAuthorized(msg) then
+        Zone.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local path = msg.Tags.Path or nil
+    local keys = Zone.zoneKV:keys(path)
+
+    msg.reply({
+        Target = msg.From,
+        Action = Zone.H_ZONE_SUCCESS,
+        Data = { Keys = keys }
+    })
+end
+
+
+-- Handler Registration
 Handlers.add(Zone.H_ZONE_GET, Zone.H_ZONE_GET, Zone.zoneGet)
 Handlers.add(Zone.H_ZONE_UPDATE, Zone.H_ZONE_UPDATE, Zone.zoneUpdate)
 Handlers.add(Zone.H_ZONE_CREDIT_NOTICE, Zone.H_ZONE_CREDIT_NOTICE, Zone.creditNotice)
-Handlers.add(Zone.H_ZONE_DEBIT_NOTICE, Zone.H_ZONE_DEBIT_NOTICE, Zone.creditNotice)
+Handlers.add(Zone.H_ZONE_DEBIT_NOTICE, Zone.H_ZONE_DEBIT_NOTICE, Zone.debitNotice)
 Handlers.add(Zone.H_ZONE_RUN_ACTION, Zone.H_ZONE_RUN_ACTION, Zone.runAction)
+Handlers.add(Zone.H_ZONE_SET, Zone.H_ZONE_SET, Zone.setHandler)
+Handlers.add(Zone.H_ZONE_APPEND, Zone.H_ZONE_APPEND, Zone.appendHandler)
+Handlers.add(Zone.H_ZONE_REMOVE, Zone.H_ZONE_REMOVE, Zone.removeHandler)
+Handlers.add(Zone.H_ZONE_KEYS, Zone.H_ZONE_KEYS, Zone.keysHandler)
 
 -- Register-Whitelisted-Subscriber
 -- looks for Tag: Subscriber-Process-Id = <registry_id>
 Handlers.add(
-    'Register-Whitelisted-Subscriber',
-    Handlers.utils.hasMatchingTag('Action', 'Register-Whitelisted-Subscriber'),
-    Subscribable.handleRegisterWhitelistedSubscriber
+        'Register-Whitelisted-Subscriber',
+        Handlers.utils.hasMatchingTag('Action', 'Register-Whitelisted-Subscriber'),
+        Subscribable.handleRegisterWhitelistedSubscriber
 )
 
 Subscribable.configTopicsAndChecks({
-    ['Update-Zone'] = {
+    [Zone.H_ZONE_UPDATE] = {
         description = 'Zone updated',
         returns = '{ "UpdateTx" : string }',
         subscriptionBasis = 'Whitelisting'
     },
 })
 
+-- Boot Initialization
 if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
     local collectedValues = {}
     for _, tag in ipairs(Inbox[1].TagArray) do
         local prefix = "Bootloader-"
         if string.sub(tag.name, 1, string.len(prefix)) == prefix then
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
-
-            if collectedValues[keyWithoutPrefix] == nil then
+            if not collectedValues[keyWithoutPrefix] then
                 collectedValues[keyWithoutPrefix] = { tag.value }
             else
                 table.insert(collectedValues[keyWithoutPrefix], tag.value)
