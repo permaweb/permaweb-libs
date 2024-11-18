@@ -69,7 +69,7 @@ export type AssetCreateArgsType = {
 	topics: string[];
 	contentType: string;
 	data: any;
-	creator: string;
+	creator?: string;
 	collectionId?: string;
 	renderWith?: string;
 	thumbnail?: string;
@@ -126,7 +126,7 @@ export type UDLicenseValueType = {
 
 export type BaseGQLArgsType = {
 	ids?: string[] | null;
-	tagFilters?: TagFilterType[] | null;
+	tags?: TagFilterType[] | null;
 	owners?: string[] | null;
 	cursor?: string | null;
 	paginator?: number;

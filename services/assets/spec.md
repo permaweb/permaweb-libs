@@ -12,7 +12,7 @@ This document specifies atomic assets on AO / Arweave. An atomic asset is a uniq
 
 ## Motivation
 
-As atomic assets serve as a foundational building block for the permaweb, a clear specification is required to ensure consistency and interoperability across different implementations. Atomic assets provide a standardized way to represent ownable and tradeable items which can art, music, videos, applications, domain names, and more.
+As atomic assets serve as a foundational building block for the permaweb, a clear specification is required to ensure consistency and interoperability across different implementations. Atomic assets provide a standardized way to represent ownable and tradeable items which can art, music, videos, applications, domains names, and more.
 
 ## Specification
 
