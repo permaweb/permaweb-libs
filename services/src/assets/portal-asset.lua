@@ -265,10 +265,7 @@ Handlers.add('Get-Post', 'Get-Post', function(msg)
             creator = Creator,
             balances = Balances,
             status = Status,
-<<<<<<< HEAD
             categories = Categories,
-=======
->>>>>>> ea7772f (add title support to update post handler)
             topics = Topics,
             content = Content
         })
