@@ -12,10 +12,10 @@ TARGET_FILE="./dist/bundle-subscribable.lua"
 FILES=(
     "./apm_client.lua"
     "./subscribable.lua"
-    "../kv/base/src/kv.lua"
-    "../kv/batchplugin/src/batch.lua"
-    "../asset-manager/asset-manager.lua"
-    "../zone/src/zone.lua"
+    "../packages/kv/base/src/kv.lua"
+    "../packages/kv/batchplugin/src/batch.lua"
+    "../packages/asset-manager/asset-manager.lua"
+    "../src/zones/zone.lua"
 )
 
 # Array of corresponding package names

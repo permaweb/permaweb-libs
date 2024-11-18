@@ -19,6 +19,100 @@ or
 yarn add @permaweb/libs
 ```
 
+## Zones
+
+Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity's behalf. A profile is an instance of a zone with specific metadata.
+
+#### `createZone`
+
+Creates a zone, setting up a key-value store and asset manager to track tokens created or transferred.
+
+```typescript
+import { createZone } from "@permaweb/libs";
+
+const zoneId = await createZone(wallet);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `wallet`: Wallet object
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ZoneProcessId;
+```
+
+</details>
+
+#### `updateZone`
+
+Updates a zone's key-value store with specified data.
+
+```typescript
+import { updateZone } from "@permaweb/libs";
+
+const zoneUpdateId = await updateZone(
+  {
+    name: "Sample Zone",
+    metadata: {
+      description: "A test zone for unit testing",
+      version: "1.0.0",
+    },
+  },
+  zoneId,
+  wallet
+);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Zone data to update, specified in an object
+- `zoneId`: The ID of the zone to update
+- `wallet`: Wallet object
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ZoneUpdateId;
+```
+
+</details>
+
+#### `getZone`
+
+Fetches a zone based on its ID, including store data and any associated assets.
+
+```typescript
+import { getZone } from "@permaweb/libs";
+
+const zone = await getZone(zoneId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to fetch
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+{ store: [], assets: [] };
+```
+
+</details>
+
 ## Profiles
 
 Profiles are a digital representation of entities, such as users, organizations, or channels. They instantiate zones with specific metadata that describes the entity and can be associated with various digital assets and collections. Profiles are created, updated, and fetched using the following functions.
@@ -355,100 +449,6 @@ const assets = await getAtomicAssets(assetIds);
     tags: [{ name: "Remaining", value: "Tag" }],
   },
 ];
-```
-
-</details>
-
-## Zones
-
-Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity's behalf. A profile is an instance of a zone with specific metadata.
-
-#### `createZone`
-
-Creates a zone, setting up a key-value store and asset manager to track tokens created or transferred.
-
-```typescript
-import { createZone } from "@permaweb/libs";
-
-const zoneId = await createZone(wallet);
-```
-
-<details>
-  <summary><strong>Parameters</strong></summary>
-
-- `wallet`: Wallet object
-
-</details>
-
-<details>
-  <summary><strong>Response</strong></summary>
-
-```typescript
-ZoneProcessId;
-```
-
-</details>
-
-#### `updateZone`
-
-Updates a zone's key-value store with specified data.
-
-```typescript
-import { updateZone } from "@permaweb/libs";
-
-const zoneUpdateId = await updateZone(
-  {
-    name: "Sample Zone",
-    metadata: {
-      description: "A test zone for unit testing",
-      version: "1.0.0",
-    },
-  },
-  zoneId,
-  wallet
-);
-```
-
-<details>
-  <summary><strong>Parameters</strong></summary>
-
-- `args`: Zone data to update, specified in an object
-- `zoneId`: The ID of the zone to update
-- `wallet`: Wallet object
-
-</details>
-
-<details>
-  <summary><strong>Response</strong></summary>
-
-```typescript
-ZoneUpdateId;
-```
-
-</details>
-
-#### `getZone`
-
-Fetches a zone based on its ID, including store data and any associated assets.
-
-```typescript
-import { getZone } from "@permaweb/libs";
-
-const zone = await getZone(zoneId);
-```
-
-<details>
-  <summary><strong>Parameters</strong></summary>
-
-- `zoneId`: The ID of the zone to fetch
-
-</details>
-
-<details>
-  <summary><strong>Response</strong></summary>
-
-```typescript
-{ store: [], assets: [] };
 ```
 
 </details>
