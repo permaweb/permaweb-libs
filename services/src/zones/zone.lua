@@ -13,30 +13,35 @@ if not AssetManager then
     error('AssetManager not found, install it')
 end
 
-local Subscribable = require 'subscribable'({ useDB = false })
+local Subscribable = require('services.bundler.external-libs.subscribable')({ useDB = false })
 
 Zone = Zone or {}
-Zone.zoneKV = Zone.zoneKV or KV.new({ BatchPlugin })
-Zone.assetManager = Zone.assetManager or AssetManager.new()
+
+Zone.Functions = Zone.Functions or {}
+
+Zone.Constants = Zone.Constants or {
+    H_ZONE_ERROR = 'Zone.Error',
+    H_ZONE_SUCCESS = 'Zone.Success',
+    H_ZONE_GET = 'Info',
+    H_ZONE_UPDATE = 'Update-Zone',
+    H_ZONE_SET = 'Zone-Set',
+    H_ZONE_APPEND = 'Zone-Append',
+    H_ZONE_REMOVE = 'Zone-Remove',
+    H_ZONE_KEYS = 'Zone-Keys',
+    H_ZONE_CREDIT_NOTICE = 'Credit-Notice',
+    H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
+    H_ZONE_RUN_ACTION = 'Run-Action'
+}
+
+Zone.Data = Zone.Data or {
+    KV = KV.new({ BatchPlugin }),
+    AssetManager = AssetManager.new()
+}
+
 ZoneInitCompleted = ZoneInitCompleted or false
 
--- Action handler and notice names
-Zone.H_ZONE_ERROR = 'Zone.Error'
-Zone.H_ZONE_SUCCESS = 'Zone.Success'
-Zone.H_ZONE_GET = 'Info'
-Zone.H_ZONE_UPDATE = 'Update-Zone'
-
-Zone.H_ZONE_SET = 'Zone-Set'
-Zone.H_ZONE_APPEND = 'Zone-Append'
-Zone.H_ZONE_REMOVE = 'Zone-Remove'
-Zone.H_ZONE_KEYS = 'Zone-Keys'
-
-Zone.H_ZONE_CREDIT_NOTICE = 'Credit-Notice'
-Zone.H_ZONE_DEBIT_NOTICE = 'Debit-Notice'
-Zone.H_ZONE_RUN_ACTION = 'Run-Action'
-
 -- Utility Functions
-function Zone.decodeMessageData(data)
+function Zone.Functions.decodeMessageData(data)
     local status, decodedData = pcall(json.decode, data)
     if not status or type(decodedData) ~= 'table' then
         return { valid=false, data=nil }
@@ -45,11 +50,11 @@ function Zone.decodeMessageData(data)
     return { valid=true, data=decodedData }
 end
 
-function Zone.isAuthorized(msg)
+function Zone.Functions.isAuthorized(msg)
     return msg.From == Owner or msg.From == ao.id
 end
 
-function Zone.sendError(target, errorMessage)
+function Zone.Functions.sendError(target, errorMessage)
     ao.send({
         Target = target,
         Action = Zone.H_ZONE_ERROR,
@@ -61,39 +66,39 @@ function Zone.sendError(target, errorMessage)
 end
 
 -- Zone Actions
-function Zone.zoneGet(msg)
+function Zone.Functions.zoneGet(msg)
     msg.reply({
         Target = msg.From,
         Action = Zone.H_ZONE_SUCCESS,
         Data = {
-            Store = Zone.zoneKV:dump(),
-            Assets = Zone.assetManager.assets
+            Store = Zone.Data.KV:dump(),
+            Assets = Zone.Data.AssetManager:get()
         }
     })
 end
 
-function Zone.zoneUpdate(msg)
-    if not Zone.isAuthorized(msg) then
-        Zone.sendError(msg.From, 'Not Authorized')
+function Zone.Functions.zoneUpdate(msg)
+    if not Zone.Functions.isAuthorized(msg) then
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local decodedData = Zone.decodeMessageData(msg.Data)
 
     if not decodedData.valid then
-        Zone.sendError(msg.From, 'Invalid Data')
+        Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
 
-    local entries = decodedData.data and decodedData.data.entries
+    local entries = decodedData.data
     if entries and #entries then
         for _, entry in ipairs(entries) do
             if entry.key and entry.value then
                 local updateType = msg.UpdateType or 'Add-Or-Update'
                 if updateType == 'Add-Or-Update' then
-                    Zone.zoneKV:set(entry.key, entry.value)
+                    Zone.Data.KV:set(entry.key, entry.value)
                 elseif updateType == 'Remove' then
-                    Zone.zoneKV:remove(entry.key)
+                    Zone.Data.KV:remove(entry.key)
                 end
             end
         end
@@ -102,25 +107,25 @@ function Zone.zoneUpdate(msg)
     end
 end
 
-function Zone.creditNotice(msg)
-    Zone.assetManager:update({
+function Zone.Functions.creditNotice(msg)
+    Zone.Data.AssetManager:update({
         Type = 'Add',
         AssetId = msg.From,
         Timestamp = msg.Timestamp
     })
 end
 
-function Zone.debitNotice(msg)
-    Zone.assetManager:update({
+function Zone.Functions.debitNotice(msg)
+    Zone.Data.AssetManager:update({
         Type = 'Remove',
         AssetId = msg.From,
         Timestamp = msg.Timestamp
     })
 end
 
-function Zone.runAction(msg)
-    if not Zone.isAuthorized(msg) then
-        Zone.sendError(msg.From, 'Not Authorized')
+function Zone.Functions.runAction(msg)
+    if not Zone.Functions.isAuthorized(msg) then
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
@@ -144,43 +149,43 @@ function Zone.runAction(msg)
     })
 end
 
-function Zone.setHandler(msg)
+function Zone.Functions.setHandler(msg)
     if not Zone.isAuthorized(msg) then
-        Zone.sendError(msg.From, 'Not Authorized')
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local path = msg.Tags.Path or ""
     local decodedData = Zone.decodeMessageData(msg.Data)
     if not decodedData.success or not decodedData.data then
-        Zone.sendError(msg.From, 'Invalid Data')
+        Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
 
-    Zone.zoneKV:set(path, decodedData.data)
+    Zone.Data.KV:set(path, decodedData.data)
     msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
 end
 
-function Zone.appendHandler(msg)
+function Zone.Functions.appendHandler(msg)
     if not Zone.isAuthorized(msg) then
-        Zone.sendError(msg.From, 'Not Authorized')
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local path = msg.Tags.Path or ""
     local decodedData = Zone.decodeMessageData(msg.Data)
     if not decodedData.success or not decodedData.data then
-        Zone.sendError(msg.From, 'Invalid Data')
+        Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
 
-    Zone.zoneKV:append(path, decodedData.data)
+    Zone.Data.KV:append(path, decodedData.data)
     msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
 end
 
-function Zone.removeHandler(msg)
-    if not Zone.isAuthorized(msg) then
-        Zone.sendError(msg.From, 'Not Authorized')
+function Zone.Functions.removeHandler(msg)
+    if not Zone.Functions.isAuthorized(msg) then
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
@@ -190,18 +195,18 @@ function Zone.removeHandler(msg)
         return
     end
 
-    Zone.zoneKV:remove(path)
+    Zone.Data.KV:remove(path)
     msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
 end
 
-function Zone.keysHandler(msg)
-    if not Zone.isAuthorized(msg) then
-        Zone.sendError(msg.From, 'Not Authorized')
+function Zone.Functions.keysHandler(msg)
+    if not Zone.Functions.isAuthorized(msg) then
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local path = msg.Tags.Path or nil
-    local keys = Zone.zoneKV:keys(path)
+    local keys = Zone.Data.KV:keys(path)
 
     msg.reply({
         Target = msg.From,
@@ -212,23 +217,19 @@ end
 
 
 -- Handler Registration
-Handlers.add(Zone.H_ZONE_GET, Zone.H_ZONE_GET, Zone.zoneGet)
-Handlers.add(Zone.H_ZONE_UPDATE, Zone.H_ZONE_UPDATE, Zone.zoneUpdate)
-Handlers.add(Zone.H_ZONE_CREDIT_NOTICE, Zone.H_ZONE_CREDIT_NOTICE, Zone.creditNotice)
-Handlers.add(Zone.H_ZONE_DEBIT_NOTICE, Zone.H_ZONE_DEBIT_NOTICE, Zone.debitNotice)
-Handlers.add(Zone.H_ZONE_RUN_ACTION, Zone.H_ZONE_RUN_ACTION, Zone.runAction)
-Handlers.add(Zone.H_ZONE_SET, Zone.H_ZONE_SET, Zone.setHandler)
-Handlers.add(Zone.H_ZONE_APPEND, Zone.H_ZONE_APPEND, Zone.appendHandler)
-Handlers.add(Zone.H_ZONE_REMOVE, Zone.H_ZONE_REMOVE, Zone.removeHandler)
-Handlers.add(Zone.H_ZONE_KEYS, Zone.H_ZONE_KEYS, Zone.keysHandler)
+Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
+Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
+Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
+Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
+Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
+Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
+Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
+Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
+Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functions.keysHandler)
 
 -- Register-Whitelisted-Subscriber
--- looks for Tag: Subscriber-Process-Id = <registry_id>
-Handlers.add(
-        'Register-Whitelisted-Subscriber',
-        Handlers.utils.hasMatchingTag('Action', 'Register-Whitelisted-Subscriber'),
-        Subscribable.handleRegisterWhitelistedSubscriber
-)
+-- Looks for Tag: Subscriber-Process-Id = <registry_id>
+Handlers.add('Register-Whitelisted-Subscriber', 'Register-Whitelisted-Subscriber', Subscribable.handleRegisterWhitelistedSubscriber)
 
 Subscribable.configTopicsAndChecks({
     [Zone.H_ZONE_UPDATE] = {
@@ -255,9 +256,9 @@ if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
 
     for key, values in pairs(collectedValues) do
         if #values == 1 then
-            Zone.zoneKV:set(key, values[1])
+            Zone.Data.KV:set(key, values[1])
         else
-            Zone.zoneKV:set(key, values)
+            Zone.Data.KV:set(key, values)
         end
     end
 end

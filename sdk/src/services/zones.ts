@@ -24,13 +24,28 @@ export async function createZone(args: { tags?: TagType[] }, wallet: any, callba
 
 export async function updateZone(args: object, zoneId: string, wallet: any): Promise<string | null> {
 	try {
-		const mappedData = { entries: Object.entries(args).map(([key, value]) => ({ key, value })) };
-
 		const zoneUpdateId = await aoSend({
 			processId: zoneId,
 			wallet: wallet,
 			action: 'Update-Zone',
-			data: mappedData
+			data: args
+		});
+
+		return zoneUpdateId;
+	}
+	catch (e: any) {
+		throw new Error(e);
+	}
+}
+
+export async function addToZone(args: { path: string, data: object }, zoneId: string, wallet: any): Promise<string | null> {
+	try {
+		const zoneUpdateId = await aoSend({
+			processId: zoneId,
+			wallet: wallet,
+			action: 'Zone-Append',
+			tags: [{ name: 'Path', value: args.path }],
+			data: args.data
 		});
 
 		return zoneUpdateId;

@@ -7,7 +7,7 @@ AssetManager.__index = AssetManager
 
 function AssetManager.new()
     local self = setmetatable({}, AssetManager)
-    self.assets = {}
+    self.Assets = {}
     return self
 end
 
@@ -53,7 +53,7 @@ local function check_required_args(args, required_args)
 end
 
 local function get_asset_index(self, asset_id)
-    for i, asset in ipairs(self.assets) do
+    for i, asset in ipairs(self.Assets) do
         if asset.Id == asset_id then
             return i
         end
@@ -63,7 +63,7 @@ local function get_asset_index(self, asset_id)
 end
 
 function AssetManager:get()
-    return json.encode(self.assets)
+    return json.encode(self.Assets)
 end
 
 function AssetManager:update(args)
@@ -96,18 +96,18 @@ function AssetManager:update(args)
     if asset_index > -1 then
         print('Updating existing asset...')
         if args.Type == 'Add' then
-            self.assets[asset_index].Quantity = utils.add(self.assets[asset_index].Quantity, balance_result.Data)
+            self.Assets[asset_index].Quantity = utils.add(self.Assets[asset_index].Quantity, balance_result.Data)
         end
         if args.Type == 'Remove' then
-            self.assets[asset_index].Quantity = utils.subtract(self.assets[asset_index].Quantity, balance_result.Data)
+            self.Assets[asset_index].Quantity = utils.subtract(self.Assets[asset_index].Quantity, balance_result.Data)
         end
-        self.assets[asset_index].LastUpdate = args.Timestamp
+        self.Assets[asset_index].LastUpdate = args.Timestamp
         print('Asset updated')
     else
         if args.Type == 'Add' and utils.to_number(balance_result.Data) > 0 then
             print('Adding new asset...')
 
-            table.insert(self.assets, {
+            table.insert(self.Assets, {
                 id = args.AssetId,
                 quantity = utils.to_balance_value(balance_result.Data),
                 dateCreated = args.Timestamp,

@@ -8,7 +8,7 @@ KV.__index = KV
 -- @return A new KV instance.
 function KV.new(plugins)
     if type(plugins) ~= "table" and type(plugins) ~= "nil" then
-        print("invalid plugins")
+        print("Invalid plugins")
         error("Invalid plugins arg, must be table or nil")
     end
 
@@ -21,7 +21,7 @@ function KV.new(plugins)
             end
         end
     end
-    self.store = {}
+    self.Store = {}
     return self
 end
 
@@ -29,7 +29,7 @@ end
 -- @return A table representing the current state of the key-value store.
 function KV:dump()
     local copy = {}
-    for k, v in pairs(self.store) do
+    for k, v in pairs(self.Store) do
         copy[k] = v
     end
     return copy
@@ -40,7 +40,7 @@ end
 -- @return The value at the specified key path, or nil if not found.
 function KV:get(keyString)
     local keys = self:_splitKeyString(keyString)
-    local current = self.store
+    local current = self.Store
 
     for _, key in ipairs(keys) do
         if type(current) ~= "table" or current[key] == nil then
@@ -57,7 +57,7 @@ end
 -- @param value The value to set at the specified key path.
 function KV:set(keyString, value)
     local keys = self:_splitKeyString(keyString)
-    local current = self.store
+    local current = self.Store
 
     for i = 1, #keys - 1 do
         local key = keys[i]
@@ -98,7 +98,7 @@ end
 -- @param keyString A dot-separated string representing the key path to be removed.
 function KV:remove(keyString)
     local keys = self:_splitKeyString(keyString)
-    local current = self.store
+    local current = self.Store
 
     -- Traverse to the second to last key
     for i = 1, #keys - 1 do
@@ -117,7 +117,7 @@ end
 -- @return The count of top-level keys in the key-value store.
 function KV:len()
     local count = 0
-    for _ in pairs(self.store) do
+    for _ in pairs(self.Store) do
         count = count + 1
     end
     return count
@@ -139,7 +139,7 @@ function KV:keys(path)
     -- If a path is specified, traverse to that nested level
     if path and type(path) == "string" then
         local keys = self:_splitKeyString(path)
-        local current = self.store
+        local current = self.Store
 
         -- Traverse the store according to the keys in the path
         for _, key in ipairs(keys) do
@@ -159,7 +159,7 @@ function KV:keys(path)
         return recurse(current)
     else
         -- If no path is specified, return top-level keys
-        return recurse(self.store)
+        return recurse(self.Store)
     end
 end
 
@@ -203,7 +203,7 @@ end
 -- @param str The prefix string to filter keys.
 -- @return A table containing all keys that start with the specified prefix.
 function KV:getPrefix(str)
-    return KV.filter_store(self.store, function(k, _)
+    return KV.filter_store(self.Store, function(k, _)
         return KV.starts_with(k, str)
     end)
 end

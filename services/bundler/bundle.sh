@@ -3,18 +3,18 @@
 set -e
 
 # Define the target file
-TARGET_FILE="./dist/bundle-subscribable.lua"
+TARGET_FILE="./dist/bundle.lua"
 
 # Clear the target file if it exists
 > "$TARGET_FILE"
 
 # Array of files to bundle
 FILES=(
-    "./apm_client.lua"
-    "./subscribable.lua"
-    "../packages/kv/base/src/kv.lua"
-    "../packages/kv/batchplugin/src/batch.lua"
-    "../packages/asset-manager/asset-manager.lua"
+    "./external-libs/apm_client.lua"
+    "./external-libs/subscribable.lua"
+    "../../packages/kv/base/src/kv.lua"
+    "../../packages/kv/batchplugin/src/batch.lua"
+    "../../packages/asset-manager/asset-manager.lua"
     "../src/zones/zone.lua"
 )
 
