@@ -1,4 +1,4 @@
-# @permaweb/libs: Specifications and Protocols
+Specifications and Protocols
 
 This folder contains the specifications and / or data protocol of each library built inside @permaweb/libs.
 

@@ -14,7 +14,7 @@ import { getTagValue, globalLog } from 'helpers/utils';
 
 import { getGQLData } from './gql';
 
-export const RETRY_COUNT = 200;
+export const RETRY_COUNT = 1000;
 
 export async function aoSpawn(args: ProcessSpawnType): Promise<string> {
 

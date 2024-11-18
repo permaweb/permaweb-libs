@@ -21,7 +21,7 @@ yarn add @permaweb/libs
 
 ## Zones
 
-Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity's behalf. A profile is an instance of a zone with specific metadata.
+Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity's behalf. A profile is an instance of a zone with specific metadata ([Read the spec](./specs/spec-zones.md)).
 
 #### `createZone`
 
@@ -273,7 +273,7 @@ const profile = await getProfileByWalletAddress(walletAddress);
 
 ## Atomic Assets
 
-Atomic assets are unique digital item consisting of an AO process and its associated data which are stored together in a single transaction on Arweave.
+Atomic assets are unique digital item consisting of an AO process and its associated data which are stored together in a single transaction on Arweave ([Read the spec](./specs/spec-atomic-assets.md)).
 
 #### `createAtomicAsset`
 
