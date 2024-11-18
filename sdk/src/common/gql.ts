@@ -114,8 +114,8 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 		blockFilter.min = args.minBlock;
 	}
 	const blockFilterStr = blockFilter ? JSON.stringify(blockFilter).replace(/"([^"]+)":/g, '$1:') : null;
-	const tagFilters = args.tagFilters
-		? JSON.stringify(args.tagFilters)
+	const tags = args.tags
+		? JSON.stringify(args.tags)
 				.replace(/"(name)":/g, '$1:')
 				.replace(/"(values)":/g, '$1:')
 				.replace(/"FUZZY_OR"/g, 'FUZZY_OR')
@@ -139,7 +139,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 	let body = `
 		transactions(
 				ids: ${ids},
-				tags: ${tagFilters},
+				tags: ${tags},
 				${fetchCount}
 				owners: ${owners},
 				block: ${blockFilterStr},

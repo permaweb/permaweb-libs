@@ -15,6 +15,7 @@ Transferable = true
 Status = Status or 'Draft'
 Content = Content or {}
 Topics = Topics or {}
+Categories = Categories or {}
 
 local function checkValidAddress(address)
     if not address or type(address) ~= 'string' then
@@ -248,6 +249,7 @@ Handlers.add('Update-Post', 'Update-Post', function(msg)
         if data.Title then Name = data.Title end
         if data.Status then Status = data.Status end
         if data.Content then Content = data.Content end
+        if data.Categories then Categories = data.Categories end
         if data.Topics then Topics = data.Topics end
 
         msg.reply({ Action = 'Update-Post-Notice', Tags = { Status = 'Success', Message = 'Post updated' } })
@@ -263,6 +265,7 @@ Handlers.add('Get-Post', 'Get-Post', function(msg)
             creator = Creator,
             balances = Balances,
             status = Status,
+            categories = Categories,
             topics = Topics,
             content = Content
         })
