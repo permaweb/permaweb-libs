@@ -89,20 +89,20 @@ export async function getProfileById(profileId: string): Promise<ProfileType & a
 	try {
 		const zone = await getZone(profileId);
 
-		if (zone && zone.store) {
+		if (zone && zone.Store) {
 			let profile: any = {
 				id: profileId,
 				walletAddress: null, // TODO: Get owner
-				username: zone.store.Username ?? 'None',
-				displayName: zone.store.DisplayName ?? 'None',
-				description: zone.store.Description ?? 'None',
+				username: zone.Store.Username ?? 'None',
+				displayName: zone.Store.DisplayName ?? 'None',
+				description: zone.Store.Description ?? 'None',
 			};
 
-			if (zone.store.Thumbnail) profile.thumbnail = zone.store.Thumbnail;
-			if (zone.store.Banner) profile.banner = zone.store.Banner;
+			if (zone.Store.Thumbnail) profile.thumbnail = zone.Store.Thumbnail;
+			if (zone.Store.Banner) profile.banner = zone.Store.Banner;
 			if (zone.Assets) profile.assets = zone.Assets;
 
-			for (const [key, value] of Object.entries(zone.store)) {
+			for (const [key, value] of Object.entries(zone.Store)) {
 				if (!(key in profile)) {
 					profile[key] = value;
 				}
@@ -117,29 +117,30 @@ export async function getProfileById(profileId: string): Promise<ProfileType & a
 }
 
 export async function getProfileByWalletAddress(walletAddress: string): Promise<ProfileType & any | null> {
-	try {
-		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.arweave,
-			tags: [
-				{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
-				{ name: TAGS.keys.name, values: ['User'] },
-			],
-			owners: [walletAddress]
-		});
+	return { id: null }; // TODO
+	// try {
+	// 	const gqlResponse = await getGQLData({
+	// 		gateway: GATEWAYS.goldsky,
+	// 		tags: [
+	// 			{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
+	// 			{ name: TAGS.keys.name, values: ['User'] },
+	// 		],
+	// 		owners: [walletAddress]
+	// 	});
 
-		if (gqlResponse?.data?.length > 0) {
-			gqlResponse.data.sort((a: GQLNodeResponseType, b: GQLNodeResponseType) => {
-				const timestampA = a.node.block?.timestamp ?? 0;
-				const timestampB = b.node.block?.timestamp ?? 0;
-				return timestampB - timestampA;
-			});
+	// 	if (gqlResponse?.data?.length > 0) {
+	// 		gqlResponse.data.sort((a: GQLNodeResponseType, b: GQLNodeResponseType) => {
+	// 			const timestampA = a.node.block?.timestamp ?? 0;
+	// 			const timestampB = b.node.block?.timestamp ?? 0;
+	// 			return timestampB - timestampA;
+	// 		});
 
-			return await getProfileById(gqlResponse.data[0].node.id);
-		}
+	// 		return await getProfileById(gqlResponse.data[0].node.id);
+	// 	}
 
-		return null;
-	}
-	catch (e: any) {
-		throw new Error(e.message ?? 'Error fetching profile');
-	}
+	// 	return null;
+	// }
+	// catch (e: any) {
+	// 	throw new Error(e.message ?? 'Error fetching profile');
+	// }
 }

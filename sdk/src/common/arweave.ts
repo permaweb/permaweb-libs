@@ -2,7 +2,7 @@ import Arweave from 'arweave';
 
 import { TAGS, UPLOAD } from 'helpers/config';
 import { TagType } from 'helpers/types';
-import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType } from 'helpers/utils';
+import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType, globalLog } from 'helpers/utils';
 
 export async function createTransaction(args: {
 	data: any;
@@ -25,7 +25,7 @@ export async function createTransaction(args: {
 	if (content && contentType) {
 		const contentSize: number = getByteSize(content);
 
-		console.log(`Content upload size: ${contentSize}`);
+		globalLog(`Content upload size: ${contentSize}`);
 
 		if (contentSize < Number(UPLOAD.dispatchUploadSize)) {
 			const tx = await Arweave.init({}).createTransaction({ data: content }, 'use_wallet');

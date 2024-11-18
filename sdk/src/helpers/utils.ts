@@ -228,3 +228,7 @@ export function getStoreNamespace<T = any>(prefix: string, store: Record<string,
 export function buildStoreNamespace(prefix: string, value: string) {
 	return `${prefix}:${value.toLowerCase().replace(/\s+/g, '-')}`;
 }
+
+export const globalLog = (...args: any[]) => {
+    console.log('[@permaweb/libs]', ...args);
+};

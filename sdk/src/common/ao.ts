@@ -10,7 +10,7 @@ import {
 	ProcessSpawnType,
 	TagType,
 } from 'helpers/types';
-import { getTagValue } from 'helpers/utils';
+import { getTagValue, globalLog } from 'helpers/utils';
 
 import { getGQLData } from './gql';
 
@@ -237,10 +237,10 @@ async function waitForProcess(processId: string, _setStatus?: (status: any) => v
 
 		if (gqlResponse?.data?.length) {
 			const foundProcess = gqlResponse.data[0].node.id;
-			console.log(`Fetched transaction: ${foundProcess}`);
+			globalLog(`Fetched transaction: ${foundProcess} (Try ${retries + 1})`);
 			return foundProcess;
 		} else {
-			console.log(`Transaction not found: ${processId}`);
+			globalLog(`Transaction not found: ${processId} (Try ${retries + 1})`);
 			retries++;
 		}
 	}
@@ -280,7 +280,7 @@ async function handleProcessEval(args: {
 				useRawData: true,
 			});
 
-			console.log(`Eval: ${evalMessage}`);
+			globalLog(`Eval: ${evalMessage}`);
 
 			const evalResult = await aoMessageResult({
 				processId: args.processId,

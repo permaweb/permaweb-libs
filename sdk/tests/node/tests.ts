@@ -1,6 +1,5 @@
-import { readFileSync } from 'fs';
-
 import { createAtomicAsset, createZone, getAtomicAsset, getZone, updateZone } from '@permaweb/libs';
+import { readFileSync } from 'fs';
 
 function expect(actual: any) {
 	return {

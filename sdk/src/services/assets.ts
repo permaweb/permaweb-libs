@@ -3,7 +3,7 @@ import { getGQLData } from 'common/gql';
 
 import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
 import { AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, GQLNodeResponseType, TagType, UDLicenseType } from 'helpers/types';
-import { checkValidAddress, formatAddress, getTagValue } from 'helpers/utils';
+import { checkValidAddress, formatAddress, getTagValue, globalLog } from 'helpers/utils';
 
 // TODO: License
 export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback?: (status: any) => void) {
@@ -49,7 +49,7 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 			action: 'Add-Upload-To-Zone'
 		});
 
-		console.log(`Init upload message: ${initMessage}`)
+		globalLog(`Init upload message: ${initMessage}`)
 
 		return assetId;
 	} catch (e: any) {
