@@ -44,10 +44,10 @@ ZoneInitCompleted = ZoneInitCompleted or false
 function Zone.Functions.decodeMessageData(data)
     local status, decodedData = pcall(json.decode, data)
     if not status or type(decodedData) ~= 'table' then
-        return { valid = false, data = nil }
+        return { success = false, data = nil }
     end
 
-    return { valid = true, data = decodedData }
+    return { success = true, data = decodedData }
 end
 
 function Zone.Functions.isAuthorized(msg)
@@ -84,7 +84,7 @@ function Zone.Functions.zoneUpdate(msg)
 
     local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 
-    if not decodedData.valid then
+    if not decodedData.success then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
@@ -173,6 +173,9 @@ function Zone.Functions.appendHandler(msg)
 
     local path = msg.Tags.Path or ""
     local decodedData = Zone.Functions.decodeMessageData(msg.Data)
+
+    print(decodedData)
+
     if not decodedData.success or not decodedData.data then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
