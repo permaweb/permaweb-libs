@@ -48,10 +48,14 @@ print_header() {
     echo "-- $BORDER"
 }
 
-# Function to indent lines
+# Function to indent lines, skipping empty lines
 indent_lines() {
     while IFS= read -r line; do
-        echo "    $line"
+        if [[ -n "$line" ]]; then
+            echo "    $line"
+        else
+            echo ""
+        fi
     done
 }
 
@@ -65,7 +69,7 @@ for i in "${!FILES[@]}"; do
     if [[ "$FILE" == *"apm"* ]] || [[ "$FILE" == *"trusted"* ]] || [[ "$FILE" == *"subscribable"* ]]; then
         cat "$FILE" >> "$TARGET_FILE"
         echo "" >> "$TARGET_FILE"
-        echo " -- ENDFILE " >> "$TARGET_FILE"
+        echo "-- ENDFILE" >> "$TARGET_FILE"
         echo "" >> "$TARGET_FILE"   # Add a newline for separation
 
         continue
