@@ -27,7 +27,7 @@ export async function updateZone(args: object, zoneId: string, wallet: any): Pro
 		const zoneUpdateId = await aoSend({
 			processId: zoneId,
 			wallet: wallet,
-			action: 'Update-Zone',
+			action: 'Zone-Update',
 			data: args
 		});
 
@@ -62,7 +62,7 @@ export async function getZone(zoneId: string): Promise<any | null> { // TODO: Zo
 			action: 'Info',
 		});
 
-		return processState
+		return processState;
 	}
 	catch (e: any) {
 		throw new Error(e);

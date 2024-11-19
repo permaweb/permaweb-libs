@@ -44,10 +44,10 @@ ZoneInitCompleted = ZoneInitCompleted or false
 function Zone.Functions.decodeMessageData(data)
     local status, decodedData = pcall(json.decode, data)
     if not status or type(decodedData) ~= 'table' then
-        return { valid=false, data=nil }
+        return { valid = false, data = nil }
     end
 
-    return { valid=true, data=decodedData }
+    return { valid = true, data = decodedData }
 end
 
 function Zone.Functions.isAuthorized(msg)
@@ -67,7 +67,13 @@ end
 
 -- Zone Actions
 function Zone.Functions.zoneGet(msg)
-    msg.reply({ Action = Zone.H_ZONE_SUCCESS, Data = Zone.Data })
+    msg.reply({
+        Action = Zone.Constants.H_ZONE_SUCCESS,
+        Data = {
+            Store = Zone.Data.KV:dump(),
+            Assets = Zone.Data.AssetManager.Assets
+        }
+    })
 end
 
 function Zone.Functions.zoneUpdate(msg)
@@ -76,7 +82,7 @@ function Zone.Functions.zoneUpdate(msg)
         return
     end
 
-    local decodedData = Zone.decodeMessageData(msg.Data)
+    local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 
     if not decodedData.valid then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
@@ -95,8 +101,8 @@ function Zone.Functions.zoneUpdate(msg)
                 end
             end
         end
-        ao.send({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
-        Subscribable.notifySubscribers(Zone.H_ZONE_UPDATE, { UpdateTx = msg.Id })
+        ao.send({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+        Subscribable.notifySubscribers(Zone.Constants.H_ZONE_UPDATE, { UpdateTx = msg.Id })
     end
 end
 
@@ -143,37 +149,37 @@ function Zone.Functions.runAction(msg)
 end
 
 function Zone.Functions.setHandler(msg)
-    if not Zone.isAuthorized(msg) then
+    if not Zone.Functions.isAuthorized(msg) then
         Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local path = msg.Tags.Path or ""
-    local decodedData = Zone.decodeMessageData(msg.Data)
+    local decodedData = Zone.Functions.decodeMessageData(msg.Data)
     if not decodedData.success or not decodedData.data then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
 
     Zone.Data.KV:set(path, decodedData.data)
-    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+    msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
 function Zone.Functions.appendHandler(msg)
-    if not Zone.isAuthorized(msg) then
+    if not Zone.Functions.isAuthorized(msg) then
         Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
     local path = msg.Tags.Path or ""
-    local decodedData = Zone.decodeMessageData(msg.Data)
+    local decodedData = Zone.Functions.decodeMessageData(msg.Data)
     if not decodedData.success or not decodedData.data then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
 
     Zone.Data.KV:append(path, decodedData.data)
-    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+    msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
 function Zone.Functions.removeHandler(msg)
@@ -184,12 +190,12 @@ function Zone.Functions.removeHandler(msg)
 
     local path = msg.Tags.Path or ""
     if path == "" then
-        Zone.sendError(msg.From, 'Invalid Path: Path required to remove')
+        Zone.Functions.sendError(msg.From, 'Invalid Path: Path required to remove')
         return
     end
 
     Zone.Data.KV:remove(path)
-    msg.reply({ Target = msg.From, Action = Zone.H_ZONE_SUCCESS })
+    msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
 function Zone.Functions.keysHandler(msg)
@@ -203,11 +209,10 @@ function Zone.Functions.keysHandler(msg)
 
     msg.reply({
         Target = msg.From,
-        Action = Zone.H_ZONE_SUCCESS,
+        Action = Zone.Constants.H_ZONE_SUCCESS,
         Data = { Keys = keys }
     })
 end
-
 
 -- Handler Registration
 Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
@@ -222,7 +227,8 @@ Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functi
 
 -- Register-Whitelisted-Subscriber
 -- Looks for Tag: Subscriber-Process-Id = <registry_id>
-Handlers.add('Register-Whitelisted-Subscriber', 'Register-Whitelisted-Subscriber', Subscribable.handleRegisterWhitelistedSubscriber)
+Handlers.add('Register-Whitelisted-Subscriber', 'Register-Whitelisted-Subscriber',
+    Subscribable.handleRegisterWhitelistedSubscriber)
 
 Subscribable.configTopicsAndChecks({
     [Zone.Constants.H_ZONE_UPDATE] = {
