@@ -48,6 +48,13 @@ print_header() {
     echo "-- $BORDER"
 }
 
+# Function to indent lines
+indent_lines() {
+    while IFS= read -r line; do
+        echo "    $line"
+    done
+}
+
 # Append each file's content to the target file
 for i in "${!FILES[@]}"; do
     echo "Processing file: ${FILES[$i]}"
@@ -74,7 +81,7 @@ for i in "${!FILES[@]}"; do
         fi
 
         echo "local function $FUNCTION_NAME()" >> "$TARGET_FILE"
-        cat "$FILE" >> "$TARGET_FILE"
+        indent_lines < "$FILE" >> "$TARGET_FILE"
         echo "end" >> "$TARGET_FILE"
         echo "package.loaded['$PACKAGE_NAME'] = $FUNCTION_NAME()" >> "$TARGET_FILE"
         echo "" >> "$TARGET_FILE"  # Add a newline for separation
