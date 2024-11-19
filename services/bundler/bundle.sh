@@ -5,8 +5,13 @@ set -e
 # Define the target file
 TARGET_FILE="./dist/bundle.lua"
 
+# Create the target directory if it doesn't exist
+mkdir -p "dist"
+
 # Clear the target file if it exists
-> "$TARGET_FILE"
+if [ -f "$TARGET_FILE" ]; then
+  rm "$TARGET_FILE"
+fi
 
 # Array of files to bundle
 FILES=(
@@ -43,9 +48,20 @@ print_header() {
     echo "-- $BORDER"
 }
 
+# Function to indent lines, skipping empty lines
+indent_lines() {
+    while IFS= read -r line; do
+        if [[ -n "$line" ]]; then
+            echo "    $line"
+        else
+            echo ""
+        fi
+    done
+}
+
 # Append each file's content to the target file
 for i in "${!FILES[@]}"; do
-    echo "Processing file: $FILE"
+    echo "Processing file: ${FILES[$i]}"
 
     FILE="${FILES[$i]}"
     PACKAGE_NAME="${PACKAGE_NAMES[$i]}"
@@ -53,7 +69,7 @@ for i in "${!FILES[@]}"; do
     if [[ "$FILE" == *"apm"* ]] || [[ "$FILE" == *"trusted"* ]] || [[ "$FILE" == *"subscribable"* ]]; then
         cat "$FILE" >> "$TARGET_FILE"
         echo "" >> "$TARGET_FILE"
-        echo " -- ENDFILE " >> "$TARGET_FILE"
+        echo "-- ENDFILE" >> "$TARGET_FILE"
         echo "" >> "$TARGET_FILE"   # Add a newline for separation
 
         continue
@@ -69,7 +85,7 @@ for i in "${!FILES[@]}"; do
         fi
 
         echo "local function $FUNCTION_NAME()" >> "$TARGET_FILE"
-        cat "$FILE" >> "$TARGET_FILE"
+        indent_lines < "$FILE" >> "$TARGET_FILE"
         echo "end" >> "$TARGET_FILE"
         echo "package.loaded['$PACKAGE_NAME'] = $FUNCTION_NAME()" >> "$TARGET_FILE"
         echo "" >> "$TARGET_FILE"  # Add a newline for separation
