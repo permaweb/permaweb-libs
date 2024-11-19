@@ -115,7 +115,7 @@ describe("KV:keys() functionality", function()
 
         local keys = store:keys()
         table.sort(keys)  -- Sorting keys to ensure order consistency for testing
-        assert.are.same(keys, {"settings", "user"})
+        assert.are.same(keys, { "settings", "user" })
     end)
 
     it("should return nested keys when a valid path is provided", function()
@@ -126,10 +126,10 @@ describe("KV:keys() functionality", function()
 
         local userInfoKeys = store:keys("user.info")
         table.sort(userInfoKeys)  -- Sorting keys to ensure order consistency for testing
-        assert.are.same(userInfoKeys, {"age", "name"})
+        assert.are.same(userInfoKeys, { "age", "name" })
 
         local userAddressKeys = store:keys("user.address")
-        assert.are.same(userAddressKeys, {"city"})
+        assert.are.same(userAddressKeys, { "city" })
     end)
 
     it("should return an empty table if the specified path does not exist", function()
@@ -149,10 +149,10 @@ describe("KV:keys() functionality", function()
 
         local networkKeys = store:keys("config.system.network")
         table.sort(networkKeys)  -- Sorting keys to ensure order consistency for testing
-        assert.are.same(networkKeys, {"gateway", "ip"})
+        assert.are.same(networkKeys, { "gateway", "ip" })
 
         local displayKeys = store:keys("config.system.display")
-        assert.are.same(displayKeys, {"resolution"})
+        assert.are.same(displayKeys, { "resolution" })
     end)
 
     it("should return an empty table if called on a leaf node", function()
@@ -162,6 +162,13 @@ describe("KV:keys() functionality", function()
         -- Since "settings.theme" is a value, not an object, it should return an empty table
         local themeKeys = store:keys("settings.theme")
         assert.are.same(themeKeys, {})
+    end)
+    it("should set and get at the root level by passing an empty string", function()
+        local store = KV.new()
+        store:set("", { name = "Alice", age = 30 })
+
+        assert.are.same(store:get("name"), "Alice")
+        assert.are.same(store:get("age"), 30)
     end)
 end)
 

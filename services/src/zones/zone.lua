@@ -174,8 +174,6 @@ function Zone.Functions.appendHandler(msg)
     local path = msg.Tags.Path or ""
     local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 
-    print(decodedData)
-
     if not decodedData.success or not decodedData.data then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
         return

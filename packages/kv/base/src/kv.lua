@@ -56,6 +56,11 @@ end
 -- @param keyString A dot-separated string representing the key path.
 -- @param value The value to set at the specified key path.
 function KV:set(keyString, value)
+    if keyString == "" then
+        self.Store = value  -- Set the entire store to the value
+        return
+    end
+
     local keys = self:_splitKeyString(keyString)
     local current = self.Store
 
@@ -69,6 +74,7 @@ function KV:set(keyString, value)
 
     current[keys[#keys]] = value
 end
+
 
 --- Appends a value to an array stored at the given key path.
 -- @param keyString A dot-separated string representing the key path.
@@ -95,12 +101,21 @@ function KV:_splitKeyString(keyString)
 end
 
 --- Removes a value from the key-value store.
--- @param keyString A dot-separated string representing the key path to be removed.
+--- Use `"."` to clear the entire store (root level).
+-- @param keyString A dot-separated string for the key path, or `"."` to clear the root.
+-- @raise Error if `keyString` is `""`.
 function KV:remove(keyString)
+    if keyString == "." then
+        self.Store = {}  -- Clear the entire store
+        return
+    elseif keyString == "" then
+        error("Invalid keyString: an empty string is not allowed. Use '.' to clear the root.")
+    end
+
     local keys = self:_splitKeyString(keyString)
     local current = self.Store
 
-    -- Traverse to the second to last key
+    -- Traverse to the second-to-last key
     for i = 1, #keys - 1 do
         local key = keys[i]
         if type(current) ~= "table" or current[key] == nil then
@@ -112,6 +127,7 @@ function KV:remove(keyString)
     -- Remove the final key in the path
     current[keys[#keys]] = nil
 end
+
 
 --- Returns the number of top-level keys in the store.
 -- @return The count of top-level keys in the key-value store.
