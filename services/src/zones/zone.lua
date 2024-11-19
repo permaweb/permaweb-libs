@@ -44,10 +44,10 @@ ZoneInitCompleted = ZoneInitCompleted or false
 function Zone.Functions.decodeMessageData(data)
     local status, decodedData = pcall(json.decode, data)
     if not status or type(decodedData) ~= 'table' then
-        return { valid=false, data=nil }
+        return { valid = false, data = nil }
     end
 
-    return { valid=true, data=decodedData }
+    return { valid = true, data = decodedData }
 end
 
 function Zone.Functions.isAuthorized(msg)
