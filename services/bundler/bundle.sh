@@ -5,8 +5,13 @@ set -e
 # Define the target file
 TARGET_FILE="./dist/bundle.lua"
 
+# Create the target directory if it doesn't exist
+mkdir -p "dist"
+
 # Clear the target file if it exists
-> "$TARGET_FILE"
+if [ -f "$TARGET_FILE" ]; then
+  rm "$TARGET_FILE"
+fi
 
 # Array of files to bundle
 FILES=(
@@ -45,7 +50,7 @@ print_header() {
 
 # Append each file's content to the target file
 for i in "${!FILES[@]}"; do
-    echo "Processing file: $FILE"
+    echo "Processing file: ${FILES[$i]}"
 
     FILE="${FILES[$i]}"
     PACKAGE_NAME="${PACKAGE_NAMES[$i]}"
