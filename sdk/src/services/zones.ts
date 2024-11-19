@@ -40,6 +40,9 @@ export async function updateZone(args: object, zoneId: string, wallet: any): Pro
 
 export async function addToZone(args: { path: string, data: object }, zoneId: string, wallet: any): Promise<string | null> {
 	try {
+
+		console.log(args.data)
+
 		const zoneUpdateId = await aoSend({
 			processId: zoneId,
 			wallet: wallet,
