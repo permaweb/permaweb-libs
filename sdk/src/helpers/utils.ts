@@ -232,3 +232,39 @@ export function buildStoreNamespace(prefix: string, value: string) {
 export const globalLog = (...args: any[]) => {
     console.log('[@permaweb/libs]', ...args);
 };
+
+function toProcessCase(str: string): string {
+    return str.replace(/^[a-z]/, (match) => match.toUpperCase());
+}
+
+/* Maps an object from camel case to pascal case */
+export function mapToProcessCase(obj: any): any {
+    if (Array.isArray(obj)) {
+        return obj.map(mapToProcessCase);
+    } else if (obj && typeof obj === 'object') {
+        return Object.entries(obj).reduce((acc: any, [key, value]) => {
+            const toKey = toProcessCase(key);
+            acc[toKey] = mapToProcessCase(value);
+            return acc;
+        }, {});
+    }
+    return obj;
+}
+
+function fromProcessCase(str: string) {
+    return str.charAt(0).toLowerCase() + str.slice(1);
+}
+
+/* Maps an object from pascal case to camel case */
+export function mapFromProcessCase(obj: any): any {
+    if (Array.isArray(obj)) {
+        return obj.map(mapFromProcessCase);
+    } else if (obj && typeof obj === 'object') {
+        return Object.entries(obj).reduce((acc: any, [key, value]) => {
+            const fromKey = fromProcessCase(key);
+            acc[fromKey] = mapFromProcessCase(value);
+            return acc;
+        }, {});
+    }
+    return obj;
+}

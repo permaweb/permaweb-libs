@@ -261,13 +261,13 @@ Handlers.add('Get-Post', 'Get-Post', function(msg)
     msg.reply({
         Action = 'Post-Notice',
         Data = json.encode({
-            title = Name,
-            creator = Creator,
-            balances = Balances,
-            status = Status,
-            categories = Categories,
-            topics = Topics,
-            content = Content
+            Title = Name,
+            Creator = Creator,
+            Balances = Balances,
+            Status = Status,
+            Categories = Categories,
+            Topics = Topics,
+            Content = Content
         })
     })
 end)

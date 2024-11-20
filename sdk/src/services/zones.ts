@@ -1,7 +1,7 @@
 import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
 
 import { AO, TAGS } from 'helpers/config';
-import { TagType, ZoneType } from 'helpers/types';
+import { TagType } from 'helpers/types';
 
 export async function createZone(args: { tags?: TagType[] }, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	try {
@@ -24,11 +24,13 @@ export async function createZone(args: { tags?: TagType[] }, wallet: any, callba
 
 export async function updateZone(args: object, zoneId: string, wallet: any): Promise<string | null> {
 	try {
+		const mappedData = Object.entries(args).map(([key, value]) => ({ key, value }));
+
 		const zoneUpdateId = await aoSend({
 			processId: zoneId,
 			wallet: wallet,
 			action: 'Zone-Update',
-			data: args
+			data: mappedData
 		});
 
 		return zoneUpdateId;
@@ -40,9 +42,6 @@ export async function updateZone(args: object, zoneId: string, wallet: any): Pro
 
 export async function addToZone(args: { path: string, data: object }, zoneId: string, wallet: any): Promise<string | null> {
 	try {
-
-		console.log(args.data)
-
 		const zoneUpdateId = await aoSend({
 			processId: zoneId,
 			wallet: wallet,
@@ -58,7 +57,7 @@ export async function addToZone(args: { path: string, data: object }, zoneId: st
 	}
 }
 
-export async function getZone(zoneId: string): Promise<any | null> { // TODO: ZoneType
+export async function getZone(zoneId: string): Promise<any | null> {
 	try {
 		const processState = await aoDryRun({
 			processId: zoneId,
