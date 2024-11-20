@@ -59,6 +59,7 @@ export const TAGS = {
 		title: 'Title',
 		topic: 'Topic',
 		type: 'Type',
+		zoneType: 'Zone-Type'
 	}
 };
 

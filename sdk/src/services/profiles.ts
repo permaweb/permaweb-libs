@@ -13,7 +13,7 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 
 	const tags: { name: string, value: string }[] = [
 		{ name: TAGS.keys.dataProtocol, value: 'Zone' },
-		{ name: TAGS.keys.type, value: 'User' }
+		{ name: TAGS.keys.zoneType, value: 'User' }
 	];
 
 	const addBootTag = (key: string, value: string | undefined) => {
@@ -140,7 +140,7 @@ export async function getProfileByWalletAddress(walletAddress: string): Promise<
 			gateway: GATEWAYS.goldsky,
 			tags: [
 				{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
-				{ name: TAGS.keys.type, values: ['User'] },
+				{ name: TAGS.keys.zoneType, values: ['User'] },
 			],
 			owners: [walletAddress]
 		});
