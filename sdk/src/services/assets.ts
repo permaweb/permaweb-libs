@@ -3,7 +3,7 @@ import { getGQLData } from 'common/gql';
 
 import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
 import { AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, GQLNodeResponseType, TagType, UDLicenseType } from 'helpers/types';
-import { checkValidAddress, formatAddress, getTagValue, globalLog } from 'helpers/utils';
+import { checkValidAddress, formatAddress, getTagValue, globalLog, mapFromProcessCase } from 'helpers/utils';
 
 // TODO: License
 export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback?: (status: any) => void) {
@@ -57,7 +57,6 @@ export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, 
 	}
 }
 
-// TODO: Any additional fields from info handler
 export async function getAtomicAsset(id: string): Promise<AssetDetailType | null> {
 	try {
 		const gqlResponse = await getGQLData({
@@ -71,7 +70,7 @@ export async function getAtomicAsset(id: string): Promise<AssetDetailType | null
 		if (gqlResponse && gqlResponse.data.length) {
 			const asset: AssetHeaderType = buildAsset(gqlResponse.data[0]);
 
-			let state: AssetStateType = {
+			let state: AssetStateType & any = {
 				ticker: null,
 				denomination: null,
 				balances: null,
@@ -101,6 +100,12 @@ export async function getAtomicAsset(id: string): Promise<AssetDetailType | null
 				} else {
 					state.transferable = true;
 				}
+
+				for (const [key, value] of Object.entries(processState)) {
+					if (!(key in state)) {
+						state[key] = value;
+					}
+				}
 			}
 
 			if (!state.balances) {
@@ -116,7 +121,7 @@ export async function getAtomicAsset(id: string): Promise<AssetDetailType | null
 				}
 			}
 
-			return { ...asset, ...state };
+			return { ...asset, ...mapFromProcessCase(state) };
 		}
 
 		return null;

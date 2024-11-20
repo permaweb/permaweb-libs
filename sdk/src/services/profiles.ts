@@ -1,8 +1,10 @@
+import { aoSend } from 'common/ao';
 import { resolveTransaction } from 'common/arweave';
 import { getGQLData } from 'common/gql';
 
 import { GATEWAYS, TAGS } from 'helpers/config';
 import { GQLNodeResponseType, ProfileArgsType, ProfileType } from 'helpers/types';
+import { globalLog } from 'helpers/utils';
 
 import { createZone, getZone, updateZone } from './zones';
 
@@ -41,6 +43,22 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 
 	try {
 		profileId = await createZone({ tags: tags }, wallet, callback);
+
+		if (profileId) {
+			globalLog(`Profile ID: ${profileId}`);
+
+			const registerId = await aoSend({
+				processId: profileId,
+				wallet: wallet,
+				action: 'Register-Whitelisted-Subscriber',
+				tags: [
+					{ name: 'Topics', value: JSON.stringify(['Zone-Update']) },
+					{ name: 'Subscriber-Process-Id', value: 'Wl7pTf-UEp6SIIu3S5MsTX074Sg8MhCx40NuG_YEhmk' },
+				]
+			});
+
+			console.log(`Register ID: ${registerId}`);
+		}
 	}
 	catch (e: any) {
 		throw new Error(e.message ?? 'Error creating profile');

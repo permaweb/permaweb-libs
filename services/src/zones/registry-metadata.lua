@@ -15,7 +15,7 @@ local H_INIT_ZONE = "Init-Zone"
 local H_SUB_REG_CONFIRM = "Subscriber-Registration-Confirmation"
 
 -- handlers to be assigned
-local H_ZONE_UPDATE = 'Update-Zone'
+local H_ZONE_UPDATE = 'Zone-Update'
 local H_ZONE_BOOT = "Create-Zone"
 
 local ASSIGNABLES = {
