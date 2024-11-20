@@ -60,7 +60,7 @@ export type ProfileType = {
 	thumbnail?: any;
 	banner?: any;
 	assets: { id: string, quantity: string }[];
-};
+} & any;
 
 export type AssetCreateArgsType = {
 	title: string;

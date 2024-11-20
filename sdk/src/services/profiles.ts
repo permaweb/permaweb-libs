@@ -2,7 +2,7 @@ import { resolveTransaction } from 'common/arweave';
 import { getGQLData } from 'common/gql';
 
 import { GATEWAYS, TAGS } from 'helpers/config';
-import { GQLNodeResponseType, ProfileArgsType, ProfileType, ZoneType } from 'helpers/types';
+import { GQLNodeResponseType, ProfileArgsType, ProfileType } from 'helpers/types';
 
 import { createZone, getZone, updateZone } from './zones';
 
@@ -11,7 +11,7 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 
 	const tags: { name: string, value: string }[] = [
 		{ name: TAGS.keys.dataProtocol, value: 'Zone' },
-		{ name: TAGS.keys.name, value: 'User' }
+		{ name: TAGS.keys.type, value: 'User' }
 	];
 
 	const addBootTag = (key: string, value: string | undefined) => {
@@ -117,30 +117,29 @@ export async function getProfileById(profileId: string): Promise<ProfileType & a
 }
 
 export async function getProfileByWalletAddress(walletAddress: string): Promise<ProfileType & any | null> {
-	return { id: null }; // TODO
-	// try {
-	// 	const gqlResponse = await getGQLData({
-	// 		gateway: GATEWAYS.goldsky,
-	// 		tags: [
-	// 			{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
-	// 			{ name: TAGS.keys.name, values: ['User'] },
-	// 		],
-	// 		owners: [walletAddress]
-	// 	});
+	try {
+		const gqlResponse = await getGQLData({
+			gateway: GATEWAYS.goldsky,
+			tags: [
+				{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
+				{ name: TAGS.keys.type, values: ['User'] },
+			],
+			owners: [walletAddress]
+		});
 
-	// 	if (gqlResponse?.data?.length > 0) {
-	// 		gqlResponse.data.sort((a: GQLNodeResponseType, b: GQLNodeResponseType) => {
-	// 			const timestampA = a.node.block?.timestamp ?? 0;
-	// 			const timestampB = b.node.block?.timestamp ?? 0;
-	// 			return timestampB - timestampA;
-	// 		});
+		if (gqlResponse?.data?.length > 0) {
+			gqlResponse.data.sort((a: GQLNodeResponseType, b: GQLNodeResponseType) => {
+				const timestampA = a.node.block?.timestamp ?? 0;
+				const timestampB = b.node.block?.timestamp ?? 0;
+				return timestampB - timestampA;
+			});
 
-	// 		return await getProfileById(gqlResponse.data[0].node.id);
-	// 	}
+			return await getProfileById(gqlResponse.data[0].node.id);
+		}
 
-	// 	return null;
-	// }
-	// catch (e: any) {
-	// 	throw new Error(e.message ?? 'Error fetching profile');
-	// }
+		return { id: null };
+	}
+	catch (e: any) {
+		throw new Error(e.message ?? 'Error fetching profile');
+	}
 }
