@@ -85,7 +85,7 @@ function AssetManager:update(args)
 
     print('Reading balance...')
     Send({ Target = args.AssetId, Action = 'Balance', Recipient = ao.id, Data = json.encode({ Target = ao.id }) })
-
+    print('Balance requested...')
     local balance_result = Receive({ From = args.AssetId })
 
     print('Balance received')
@@ -108,10 +108,10 @@ function AssetManager:update(args)
             print('Adding new asset...')
 
             table.insert(self.Assets, {
-                id = args.AssetId,
-                quantity = utils.to_balance_value(balance_result.Data),
-                dateCreated = args.Timestamp,
-                lastUpdate = args.Timestamp
+                Id = args.AssetId,
+                Quantity = utils.to_balance_value(balance_result.Data),
+                DateCreated = args.Timestamp,
+                LastUpdate = args.Timestamp
             })
 
             print('Asset added')
