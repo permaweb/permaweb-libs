@@ -27,7 +27,7 @@ The transaction tags and relevant data structures that make up the **Zone Data-P
 | **Tag Name**  | **Required** | **Tag Value**                                |
 | ------------- | ------------ | -------------------------------------------- |
 | Data-Protocol | True         | Zone                                         |
-| Type          | True         | (Not limited to) User, Organization, Channel |
+| Zone-Type     | True         | (Not limited to) User, Organization, Channel |
 | Variant       | False        | (Label describing the variant)               |
 
 **Data Structures**

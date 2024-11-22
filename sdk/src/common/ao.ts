@@ -1,4 +1,4 @@
-import { createDataItemSigner, dryrun, message, result, results, spawn } from '@permaweb/aoconnect';
+import { connect, createDataItemSigner } from '@permaweb/aoconnect';
 
 import { AO, GATEWAYS } from 'helpers/config';
 import { getTxEndpoint } from 'helpers/endpoints';
@@ -14,7 +14,11 @@ import { getTagValue, globalLog } from 'helpers/utils';
 
 import { getGQLData } from './gql';
 
-export const RETRY_COUNT = 1000;
+const GATEWAY = GATEWAYS.goldsky;
+
+const GATEWAY_RETRY_COUNT = 1000;
+
+const { result, results, message, spawn, dryrun } = connect({  GATEWAY_URL: `https://${GATEWAY}` });
 
 export async function aoSpawn(args: ProcessSpawnType): Promise<string> {
 
@@ -92,8 +96,8 @@ export async function aoDryRun(args: MessageDryRunType): Promise<any> {
 				}
 			}
 		}
-	} catch (e) {
-		console.error(e);
+	} catch (e: any) {
+		throw new Error(e.message ?? 'Error dryrunning process')
 	}
 }
 
@@ -227,11 +231,11 @@ export async function aoMessageResults(args: {
 async function waitForProcess(processId: string, _setStatus?: (status: any) => void) {
 	let retries = 0;
 
-	while (retries < RETRY_COUNT) {
+	while (retries < GATEWAY_RETRY_COUNT) {
 		await new Promise((r) => setTimeout(r, 2000));
 
 		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.goldsky,
+			gateway: GATEWAY,
 			ids: [processId],
 		});
 

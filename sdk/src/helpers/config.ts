@@ -4,7 +4,7 @@ export const AO = {
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
 		asset: 'OM6b2xWw3Wo5YCYKhD_N5qslF9wCIUhu7fXoTq1Q3uU',
-		zone: 'aLeTNTxiefX5PI4ZhjWGgwrZSVVtNgADfLeE0jqYDdo'
+		zone: 'z8QT-mjFvfh4hJk1P51JnI6XU3S_fZNNCd7QzZAZubE'
 	}
 };
 
@@ -59,6 +59,7 @@ export const TAGS = {
 		title: 'Title',
 		topic: 'Topic',
 		type: 'Type',
+		zoneType: 'Zone-Type'
 	}
 };
 
