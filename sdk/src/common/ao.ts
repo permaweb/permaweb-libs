@@ -96,8 +96,8 @@ export async function aoDryRun(args: MessageDryRunType): Promise<any> {
 				}
 			}
 		}
-	} catch (e) {
-		console.error(e);
+	} catch (e: any) {
+		throw new Error(e.message ?? 'Error dryrunning process')
 	}
 }
 
