@@ -5,9 +5,13 @@ local AssetManagerPackageName = '@permaweb/asset-manager'
 local AssetManager = {}
 AssetManager.__index = AssetManager
 
-function AssetManager.new()
+local function DefaultAuthFunction(msg)
+    return msg.From == Owner or msg.From == ao.id, "Not Authorized"
+end
+function AssetManager.new(options) -- options: { authFn: fn }
     local self = setmetatable({}, AssetManager)
     self.Assets = {}
+    self.AuthFunction = options and options.authFn or DefaultAuthFunction
     return self
 end
 
@@ -127,7 +131,18 @@ end
 
 Handlers.add('Add-Upload', 'Add-Upload', function(msg)
     if not msg.AssetId then return end
-
+    local authorized, err = AssetManager.AuthFunction(msg)
+    if not authorized then
+        ao.send({
+            Target = target,
+            Action = "Add-Upload-Error",
+            Tags = {
+                Status = 'Error',
+                Message = err
+            }
+        })
+        return
+    end
     AssetManager:update({
         Type = 'Add',
         AssetId = msg.AssetId,
