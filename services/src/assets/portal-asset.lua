@@ -177,52 +177,27 @@ Handlers.add('Mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
     end
 end)
 
--- Read balance ({ Recipient | Target })
+-- Read balance (Data - { Recipient })
 Handlers.add('Balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), function(msg)
-    local data
+	local balance = '0'
 
-    if msg.Tags.Recipient then
-        data = { Target = msg.Tags.Recipient }
-    elseif msg.Tags.Target then
-        data = { Target = msg.Tags.Target }
-    else
-        data = { Target = msg.From }
-    end
+	-- If not Recipient is provided, then return the Senders balance
+	if (msg.Tags.Recipient) then
+		if (Balances[msg.Tags.Recipient]) then
+			balance = Balances[msg.Tags.Recipient]
+		end
+	elseif msg.Tags.Target and Balances[msg.Tags.Target] then
+		balance = Balances[msg.Tags.Target]
+	elseif Balances[msg.From] then
+		balance = Balances[msg.From]
+	end
 
-    if data then
-        -- Check if target is present
-        if not data.Target then
-            msg.reply({ Action = 'Input-Error', Tags = { Status = 'Error', Message = 'Invalid arguments, required { Target }' } })
-            return
-        end
-
-        -- Check if target is a valid address
-        if not checkValidAddress(data.Target) then
-            msg.reply({ Action = 'Validation-Error', Tags = { Status = 'Error', Message = 'Target is not a valid address' } })
-            return
-        end
-
-        local balance = Balances[data.Target] or '0'
-
-        msg.reply({
-            Action = 'Balance-Notice',
-            Tags = {
-                Status = 'Success',
-                Message = 'Balance received',
-                Account = data.Target
-            },
-            Data = balance
-        })
-    else
-        msg.reply({
-            Action = 'Input-Error',
-            Tags = {
-                Status = 'Error',
-                Message = string.format('Failed to parse data, received: %s. %s', msg.Data,
-                    'Data must be an object - { Target }')
-            }
-        })
-    end
+	msg.reply({
+		Balance = balance,
+		Ticker = Ticker,
+		Account = msg.Tags.Recipient or msg.From,
+		Data = balance
+	})
 end)
 
 -- Read balances
@@ -290,10 +265,12 @@ end)
 
 -- Initialize a request to add to creator zone
 Handlers.once('Add-Upload-To-Zone', 'Add-Upload-To-Zone', function(msg)
-    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
-    ao.send({
-        Target = Creator,
-        Action = 'Add-Upload',
-        AssetId = ao.id
-    })
+	if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
+	ao.send({
+		Target = Creator,
+		Action = 'Add-Upload',
+		AssetId = ao.id,
+		AssetType = msg.AssetType,
+		ContentType = msg.ContentType
+	})
 end)

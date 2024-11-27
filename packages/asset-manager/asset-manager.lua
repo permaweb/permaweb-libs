@@ -69,6 +69,8 @@ end
 function AssetManager:update(args)
     print('Running asset update...')
 
+    if not self.Assets then self.Assets = {} end
+
     if not check_required_args(args, { 'Type', 'AssetId', 'Timestamp' }) then
         return
     end
@@ -85,8 +87,15 @@ function AssetManager:update(args)
 
     print('Reading balance...')
     Send({ Target = args.AssetId, Action = 'Balance', Recipient = ao.id, Data = json.encode({ Target = ao.id }) })
+
     print('Balance requested...')
     local balance_result = Receive({ From = args.AssetId })
+
+    if not balance_result then
+        print(balance_result)
+        print('No balance result found')
+        return
+    end
 
     print('Balance received')
     print('Balance: ' .. balance_result.Data)
@@ -111,7 +120,9 @@ function AssetManager:update(args)
                 Id = args.AssetId,
                 Quantity = utils.to_balance_value(balance_result.Data),
                 DateCreated = args.Timestamp,
-                LastUpdate = args.Timestamp
+                LastUpdate = args.Timestamp,
+                Type = args.AssetType,
+                ContentType = args.ContentType
             })
 
             print('Asset added')
@@ -125,15 +136,18 @@ function AssetManager:update(args)
     end
 end
 
-Handlers.add('Add-Upload', 'Add-Upload', function(msg)
-    if not msg.AssetId then return end
+-- Handlers.add('Add-Upload', 'Add-Upload', function(msg)
+--     if not msg.AssetId then return end
 
-    AssetManager:update({
-        Type = 'Add',
-        AssetId = msg.AssetId,
-        Timestamp = msg.Timestamp
-    })
-end)
+--     AssetManager:update({
+--         Type = 'Add',
+--         AssetId = msg.AssetId,
+--         Timestamp = msg.Timestamp,
+--         AssetType = msg.AssetType,
+--         ContentType = msg.ContentType,
+
+--     })
+-- end)
 
 package.loaded[AssetManagerPackageName] = AssetManager
 

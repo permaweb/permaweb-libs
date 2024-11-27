@@ -135,6 +135,7 @@ export async function getProfileById(profileId: string): Promise<ProfileType & a
 }
 
 export async function getProfileByWalletAddress(walletAddress: string): Promise<ProfileType & any | null> {
+	return { id: null };
 	try {
 		const gqlResponse = await getGQLData({
 			gateway: GATEWAYS.goldsky,

@@ -28,6 +28,7 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_REMOVE = 'Zone-Remove',
     H_ZONE_KEYS = 'Zone-Keys',
     H_ZONE_GET = 'Info',
+    H_ZONE_ADD_UPLOAD = 'Add-Upload',
     H_ZONE_CREDIT_NOTICE = 'Credit-Notice',
     H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
     H_ZONE_RUN_ACTION = 'Run-Action'
@@ -104,6 +105,17 @@ function Zone.Functions.zoneUpdate(msg)
         ao.send({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
         Subscribable.notifySubscribers(Zone.Constants.H_ZONE_UPDATE, { UpdateTx = msg.Id })
     end
+end
+
+function Zone.Functions.addUpload(msg)
+    Zone.Data.AssetManager:update({
+        Type = 'Add',
+        AssetId = msg.AssetId,
+        Timestamp = msg.Timestamp,
+        AssetType = msg.AssetType,
+        ContentType = msg.ContentType,
+
+    })
 end
 
 function Zone.Functions.creditNotice(msg)
@@ -218,6 +230,7 @@ end
 -- Handler Registration
 Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
 Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
+Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
 Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
 Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
 Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
