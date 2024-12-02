@@ -39,6 +39,30 @@ local function decodeMessageData(data)
     return true, decodedData
 end
 
+local function mergeTables(t1, t2)
+    local merged = {}
+    for k, v in pairs(t1) do
+        merged[k] = v
+    end
+    for k, v in pairs(t2) do
+        merged[k] = v
+    end
+    return merged
+end
+
+local function getAssetData()
+    return {
+        Id = ao.id,
+        Title = Name,
+        Creator = Creator,
+        Balances = Balances,
+        Status = Status,
+        Categories = Categories,
+        Topics = Topics,
+        Content = Content
+    }
+end
+
 -- Read process state
 Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
     msg.reply({
@@ -46,13 +70,7 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
         Ticker = Ticker,
         Denomination = tostring(Denomination),
         Transferable = Transferable,
-        Data = json.encode({
-            Name = Name,
-            Ticker = Ticker,
-            Denomination = tostring(Denomination),
-            Balances = Balances,
-            Transferable = Transferable
-        })
+        Data = json.encode(getAssetData())
     })
 end)
 
@@ -179,25 +197,25 @@ end)
 
 -- Read balance (Data - { Recipient })
 Handlers.add('Balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), function(msg)
-	local balance = '0'
+    local balance = '0'
 
-	-- If not Recipient is provided, then return the Senders balance
-	if (msg.Tags.Recipient) then
-		if (Balances[msg.Tags.Recipient]) then
-			balance = Balances[msg.Tags.Recipient]
-		end
-	elseif msg.Tags.Target and Balances[msg.Tags.Target] then
-		balance = Balances[msg.Tags.Target]
-	elseif Balances[msg.From] then
-		balance = Balances[msg.From]
-	end
+    -- If not Recipient is provided, then return the Senders balance
+    if (msg.Tags.Recipient) then
+        if (Balances[msg.Tags.Recipient]) then
+            balance = Balances[msg.Tags.Recipient]
+        end
+    elseif msg.Tags.Target and Balances[msg.Tags.Target] then
+        balance = Balances[msg.Tags.Target]
+    elseif Balances[msg.From] then
+        balance = Balances[msg.From]
+    end
 
-	msg.reply({
-		Balance = balance,
-		Ticker = Ticker,
-		Account = msg.Tags.Recipient or msg.From,
-		Data = balance
-	})
+    msg.reply({
+        Balance = balance,
+        Ticker = Ticker,
+        Account = msg.Tags.Recipient or msg.From,
+        Data = balance
+    })
 end)
 
 -- Read balances
@@ -235,19 +253,40 @@ end)
 Handlers.add('Get-Post', 'Get-Post', function(msg)
     msg.reply({
         Action = 'Post-Notice',
-        Data = json.encode({
-            Title = Name,
-            Creator = Creator,
-            Balances = Balances,
-            Status = Status,
-            Categories = Categories,
-            Topics = Topics,
-            Content = Content
-        })
+        Data = json.encode(getAssetData())
     })
 end)
 
--- Get post content
+-- Initialize a request to index this asset data in another process
+Handlers.add('Add-Associations', 'Add-Associations', function(msg)
+    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
+    local decodeCheck, data = decodeMessageData(msg.Data)
+
+    if decodeCheck and data then
+        if data.Recipients then
+            local indexData = {
+                ProcessType = 'atomic-asset',
+                DateCreated = msg.Timestamp
+            }
+
+            if msg.AssetType then indexData.AssetType = msg.AssetType end
+            if msg.ContentType then indexData.ContentType = msg.ContentType end
+
+            indexData = mergeTables(indexData, getAssetData())
+
+            for _, recipient in ipairs(data.Recipients) do
+                ao.send({
+                    Target = recipient,
+                    Action = 'Index-Notice',
+                    Recipient = recipient,
+                    Data = json.encode(indexData)
+                })
+            end
+        end
+    end
+end)
+
+-- Add owners to this asset
 Handlers.add('Update-Post-Balance-Holders', 'Update-Post-Balance-Holders', function(msg)
     if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
     local decodeCheck, data = decodeMessageData(msg.Data)
@@ -265,12 +304,12 @@ end)
 
 -- Initialize a request to add to creator zone
 Handlers.once('Add-Upload-To-Zone', 'Add-Upload-To-Zone', function(msg)
-	if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
-	ao.send({
-		Target = Creator,
-		Action = 'Add-Upload',
-		AssetId = ao.id,
-		AssetType = msg.AssetType,
-		ContentType = msg.ContentType
-	})
+    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
+    ao.send({
+        Target = Creator,
+        Action = 'Add-Upload',
+        AssetId = ao.id,
+        AssetType = msg.AssetType,
+        ContentType = msg.ContentType
+    })
 end)

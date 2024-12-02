@@ -4,7 +4,7 @@ import { getGQLData } from 'common/gql';
 
 import { GATEWAYS, TAGS } from 'helpers/config';
 import { GQLNodeResponseType, ProfileArgsType, ProfileType } from 'helpers/types';
-import { globalLog } from 'helpers/utils';
+import { globalLog, mapFromProcessCase } from 'helpers/utils';
 
 import { createZone, getZone, updateZone } from './zones';
 
@@ -103,31 +103,10 @@ export async function updateProfile(args: ProfileArgsType, profileId: string, wa
 	}
 }
 
-export async function getProfileById(profileId: string): Promise<ProfileType & any | null> {
+export async function getProfileById(profileId: string): Promise<ProfileType | null> {
 	try {
 		const zone = await getZone(profileId);
-
-		if (zone && zone.Store) {
-			let profile: any = {
-				id: profileId,
-				walletAddress: null, // TODO: Get owner
-				username: zone.Store.Username ?? 'None',
-				displayName: zone.Store.DisplayName ?? 'None',
-				description: zone.Store.Description ?? 'None',
-			};
-
-			if (zone.Store.Thumbnail) profile.thumbnail = zone.Store.Thumbnail;
-			if (zone.Store.Banner) profile.banner = zone.Store.Banner;
-			if (zone.Assets) profile.assets = zone.Assets;
-
-			for (const [key, value] of Object.entries(zone.Store)) {
-				if (!(key in profile)) {
-					profile[key] = value;
-				}
-			}
-
-			return profile;
-		}
+		return { id: profileId, ...mapFromProcessCase(zone.Store ?? {}), assets: mapFromProcessCase(zone.Assets ?? []) };
 	}
 	catch (e: any) {
 		throw new Error(e.message ?? 'Error fetching profile');

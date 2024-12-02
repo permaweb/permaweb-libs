@@ -31,7 +31,8 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_ADD_UPLOAD = 'Add-Upload',
     H_ZONE_CREDIT_NOTICE = 'Credit-Notice',
     H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
-    H_ZONE_RUN_ACTION = 'Run-Action'
+    H_ZONE_RUN_ACTION = 'Run-Action',
+    H_ZONE_INDEX_NOTICE = 'Index-Notice',
 }
 
 Zone.Data = Zone.Data or {
@@ -160,6 +161,25 @@ function Zone.Functions.runAction(msg)
     })
 end
 
+-- TODO: Auth check
+-- TODO: Handle updates
+function Zone.Functions.indexNotice(msg)
+    -- if not Zone.Functions.isAuthorized(msg) then
+    --     Zone.Functions.sendError(msg.From, 'Not Authorized')
+    --     return
+    -- end
+
+    local path = msg.Tags.Path or "Index"
+    local decodedData = Zone.Functions.decodeMessageData(msg.Data)
+    if not decodedData.success or not decodedData.data then
+        Zone.Functions.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    Zone.Data.KV:append(path, decodedData.data)
+    msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+end
+
 function Zone.Functions.setHandler(msg)
     if not Zone.Functions.isAuthorized(msg) then
         Zone.Functions.sendError(msg.From, 'Not Authorized')
@@ -234,6 +254,7 @@ Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD,
 Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
 Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
 Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
+Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
 Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
 Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
 Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
