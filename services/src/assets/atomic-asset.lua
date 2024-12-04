@@ -241,6 +241,8 @@ Handlers.once('Add-Upload-To-Zone', 'Add-Upload-To-Zone', function(msg)
 	ao.send({
 		Target = Creator,
 		Action = 'Add-Upload',
-		AssetId = ao.id
+		AssetId = ao.id,
+		AssetType = msg.AssetType,
+		ContentType = msg.ContentType
 	})
 end)

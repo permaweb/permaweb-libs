@@ -28,9 +28,12 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_REMOVE = 'Zone-Remove',
     H_ZONE_KEYS = 'Zone-Keys',
     H_ZONE_GET = 'Info',
+    H_ZONE_ADD_UPLOAD = 'Add-Upload',
     H_ZONE_CREDIT_NOTICE = 'Credit-Notice',
     H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
-    H_ZONE_RUN_ACTION = 'Run-Action'
+    H_ZONE_RUN_ACTION = 'Run-Action',
+    H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
+    H_ZONE_INDEX_NOTICE = 'Index-Notice',
 }
 
 Zone.Data = Zone.Data or {
@@ -48,6 +51,17 @@ function Zone.Functions.decodeMessageData(data)
     end
 
     return { success = true, data = decodedData }
+end
+
+function Zone.Functions.mergeTables(original, updates)
+    for key, value in pairs(updates) do
+        if type(value) == 'table' and type(original[key]) == 'table' then
+            original[key] = Zone.Functions.mergeTables(original[key], value)
+        else
+            original[key] = value
+        end
+    end
+    return original
 end
 
 function Zone.Functions.isAuthorized(msg)
@@ -106,6 +120,17 @@ function Zone.Functions.zoneUpdate(msg)
     end
 end
 
+function Zone.Functions.addUpload(msg)
+    Zone.Data.AssetManager:update({
+        Type = 'Add',
+        AssetId = msg.AssetId,
+        Timestamp = msg.Timestamp,
+        AssetType = msg.AssetType,
+        ContentType = msg.ContentType,
+
+    })
+end
+
 function Zone.Functions.creditNotice(msg)
     Zone.Data.AssetManager:update({
         Type = 'Add',
@@ -148,13 +173,73 @@ function Zone.Functions.runAction(msg)
     })
 end
 
+function Zone.Functions.addIndexId(msg)
+    if not Zone.Functions.isAuthorized(msg) then
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    if not msg.IndexId then
+        Zone.Functions.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    if not Zone.Data.KV.Store.Index then Zone.Data.KV.Store.Index = {} end
+
+    for _, index in ipairs(Zone.Data.KV.Store.Index) do
+        if index.Id == msg.IndexId then
+            Zone.Functions.sendError(msg.From, 'Id already exists')
+            return
+        end
+    end
+
+    table.insert(Zone.Data.KV.Store.Index, { Id = msg.IndexId })
+    msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+end
+
+function Zone.Functions.indexNotice(msg)
+    local entryIndex = -1
+    for i, entry in ipairs(Zone.Data.KV.Store.Index) do
+        if entry.Id == msg.From then
+            entryIndex = i
+            break
+        end
+    end
+
+    if entryIndex > -1 then
+        -- Decode the message data
+        local decodedData = Zone.Functions.decodeMessageData(msg.Data)
+        if not decodedData.success or not decodedData.data then
+            Zone.Functions.sendError(msg.From, 'Invalid Data')
+            return
+        end
+
+        -- Get the existing entry and the new data
+        local existingEntry = Zone.Data.KV.Store.Index[entryIndex]
+        local newData = decodedData.data or {}
+
+        for key, value in pairs(newData) do
+            if type(value) == 'table' and type(existingEntry[key]) == 'table' then
+                existingEntry[key] = Zone.Functions.mergeTables(existingEntry[key], value)
+            else
+                existingEntry[key] = value
+            end
+        end
+
+        Zone.Data.KV.Store.Index[entryIndex] = existingEntry
+        msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+    else
+        Zone.Functions.sendError(msg.From, 'Entry not found')
+    end
+end
+
 function Zone.Functions.setHandler(msg)
     if not Zone.Functions.isAuthorized(msg) then
         Zone.Functions.sendError(msg.From, 'Not Authorized')
         return
     end
 
-    local path = msg.Tags.Path or ""
+    local path = msg.Tags.Path or ''
     local decodedData = Zone.Functions.decodeMessageData(msg.Data)
     if not decodedData.success or not decodedData.data then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
@@ -171,7 +256,7 @@ function Zone.Functions.appendHandler(msg)
         return
     end
 
-    local path = msg.Tags.Path or ""
+    local path = msg.Tags.Path or ''
     local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 
     if not decodedData.success or not decodedData.data then
@@ -189,8 +274,8 @@ function Zone.Functions.removeHandler(msg)
         return
     end
 
-    local path = msg.Tags.Path or ""
-    if path == "" then
+    local path = msg.Tags.Path or ''
+    if path == '' then
         Zone.Functions.sendError(msg.From, 'Invalid Path: Path required to remove')
         return
     end
@@ -218,9 +303,12 @@ end
 -- Handler Registration
 Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
 Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
+Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
 Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
 Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
 Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
+Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Functions.addIndexId)
+Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
 Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
 Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
 Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
@@ -240,10 +328,10 @@ Subscribable.configTopicsAndChecks({
 })
 
 -- Boot Initialization
-if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
+if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
     local collectedValues = {}
     for _, tag in ipairs(Inbox[1].TagArray) do
-        local prefix = "Bootloader-"
+        local prefix = 'Bootloader-'
         if string.sub(tag.name, 1, string.len(prefix)) == prefix then
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
             if not collectedValues[keyWithoutPrefix] then
