@@ -349,6 +349,13 @@ if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
             Zone.Data.KV:set(key, values)
         end
     end
+
+    ao.send({
+        Target = ao.id,
+        Action = 'Register-Whitelisted-Subscriber',
+        Topics = '["Zone-Update"]',
+        ['Subscriber-Process-Id'] = 'Wl7pTf-UEp6SIIu3S5MsTX074Sg8MhCx40NuG_YEhmk'
+    })
 end
 
 if not ZoneInitCompleted then
