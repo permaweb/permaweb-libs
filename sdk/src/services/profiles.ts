@@ -112,7 +112,7 @@ export async function getProfileById(profileId: string): Promise<ProfileType | n
 export async function getProfileByWalletAddress(walletAddress: string): Promise<ProfileType & any | null> {
 	try {
 		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.goldsky,
+			gateway: GATEWAYS.arweave,
 			tags: [
 				{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
 				{ name: TAGS.keys.zoneType, values: ['User'] },
