@@ -17,6 +17,8 @@ Content = Content or {}
 Topics = Topics or {}
 Categories = Categories or {}
 
+IndexRecipients = IndexRecipients or {}
+
 local function checkValidAddress(address)
     if not address or type(address) ~= 'string' then
         return false
@@ -50,8 +52,8 @@ local function mergeTables(t1, t2)
     return merged
 end
 
-local function getAssetData()
-    return {
+local function getAssetData(full)
+    local data = {
         Id = ao.id,
         Title = Name,
         Creator = Creator,
@@ -59,8 +61,13 @@ local function getAssetData()
         Status = Status,
         Categories = Categories,
         Topics = Topics,
-        Content = Content
     }
+
+    if full then
+        data.Content = Content
+    end
+
+    return data
 end
 
 -- Read process state
@@ -70,7 +77,7 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
         Ticker = Ticker,
         Denomination = tostring(Denomination),
         Transferable = Transferable,
-        Data = json.encode(getAssetData())
+        Data = json.encode(getAssetData(false))
     })
 end)
 
@@ -234,31 +241,55 @@ Handlers.add('Total-Supply', Handlers.utils.hasMatchingTag('Action', 'Total-Supp
 end)
 
 -- Update post content
-Handlers.add('Update-Post', 'Update-Post', function(msg)
+Handlers.add('Update-Asset', 'Update-Asset', function(msg)
     if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
     local decodeCheck, data = decodeMessageData(msg.Data)
 
     if decodeCheck and data then
-        if data.Title then Name = data.Title end
-        if data.Status then Status = data.Status end
-        if data.Content then Content = data.Content end
-        if data.Categories then Categories = data.Categories end
-        if data.Topics then Topics = data.Topics end
+        local indexData = {}
 
-        msg.reply({ Action = 'Update-Post-Notice', Tags = { Status = 'Success', Message = 'Post updated' } })
+        if data.Title then
+            Name = data.Title
+            indexData.Title = data.Title
+        end
+        if data.Status then
+            Status = data.Status
+            indexData.Status = data.Status
+        end
+        if data.Categories then
+            Categories = data.Categories
+            indexData.Categories = data.Categories
+        end
+        if data.Topics then
+            Topics = data.Topics
+            indexData.Topics = data.Topics
+        end
+
+        if data.Content then Content = data.Content end
+
+        for _, recipient in ipairs(IndexRecipients) do
+            ao.send({
+                Target = recipient,
+                Action = 'Index-Notice',
+                Recipient = recipient,
+                Data = json.encode(indexData)
+            })
+        end
+
+        msg.reply({ Action = 'Update-Asset-Notice', Tags = { Status = 'Success', Message = 'Asset updated' } })
     end
 end)
 
 -- Get post content
-Handlers.add('Get-Post', 'Get-Post', function(msg)
+Handlers.add('Get-Asset', 'Get-Asset', function(msg)
     msg.reply({
-        Action = 'Post-Notice',
-        Data = json.encode(getAssetData())
+        Action = 'Asset-Notice',
+        Data = json.encode(getAssetData(true))
     })
 end)
 
 -- Initialize a request to index this asset data in another process
-Handlers.add('Add-Associations', 'Add-Associations', function(msg)
+Handlers.add('Send-Index', 'Send-Index', function(msg)
     if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
     local decodeCheck, data = decodeMessageData(msg.Data)
 
@@ -272,31 +303,27 @@ Handlers.add('Add-Associations', 'Add-Associations', function(msg)
             if msg.AssetType then indexData.AssetType = msg.AssetType end
             if msg.ContentType then indexData.ContentType = msg.ContentType end
 
-            indexData = mergeTables(indexData, getAssetData())
+            indexData = mergeTables(indexData, getAssetData(false))
 
             for _, recipient in ipairs(data.Recipients) do
+                local exists = false
+                for _, existingRecipient in ipairs(IndexRecipients) do
+                    if existingRecipient == recipient then
+                        exists = true
+                        break
+                    end
+                end
+
+                if not exists then
+                    table.insert(IndexRecipients, recipient)
+                end
+
                 ao.send({
                     Target = recipient,
                     Action = 'Index-Notice',
                     Recipient = recipient,
                     Data = json.encode(indexData)
                 })
-            end
-        end
-    end
-end)
-
--- Add owners to this asset
-Handlers.add('Update-Post-Balance-Holders', 'Update-Post-Balance-Holders', function(msg)
-    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
-    local decodeCheck, data = decodeMessageData(msg.Data)
-
-    if decodeCheck and data then
-        if data.Recipients then
-            for _, recipient in ipairs(data.Recipients) do
-                if not Balances[ao.id] then Balances[ao.id] = '0' end
-                Balances[ao.id] = tostring(bint(Balances[ao.id]) + bint(1))
-                ao.send({ Target = ao.id, Action = 'Transfer', Recipient = recipient, Quantity = '1' })
             end
         end
     end
