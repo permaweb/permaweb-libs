@@ -136,19 +136,6 @@ function AssetManager:update(args)
     end
 end
 
--- Handlers.add('Add-Upload', 'Add-Upload', function(msg)
---     if not msg.AssetId then return end
-
---     AssetManager:update({
---         Type = 'Add',
---         AssetId = msg.AssetId,
---         Timestamp = msg.Timestamp,
---         AssetType = msg.AssetType,
---         ContentType = msg.ContentType,
-
---     })
--- end)
-
 package.loaded[AssetManagerPackageName] = AssetManager
 
 return AssetManager
