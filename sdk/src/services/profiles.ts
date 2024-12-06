@@ -1,13 +1,13 @@
-import { aoSend, waitForProcess } from 'common/ao';
 import { resolveTransaction } from 'common/arweave';
 import { getGQLData } from 'common/gql';
 
 import { GATEWAYS, TAGS } from 'helpers/config';
 import { GQLNodeResponseType, ProfileArgsType, ProfileType } from 'helpers/types';
-import { getBootTag, globalLog, mapFromProcessCase } from 'helpers/utils';
+import { getBootTag, mapFromProcessCase } from 'helpers/utils';
 
 import { createZone, getZone, updateZone } from './zones';
 
+// TODO: Bootloader registry
 export async function createProfile(args: ProfileArgsType, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	let profileId: string | null = null;
 
