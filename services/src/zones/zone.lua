@@ -56,6 +56,14 @@ if not Roles then
     Roles = {}
 end
 
+function Zone.Functions.tableLength(t)
+    local count = 0
+    for _ in pairs(t) do
+        count = count + 1
+    end
+    return count
+end
+
 function Zone.Functions.rolesHasValue(roles, role)
     for _, r in ipairs(roles) do
         if r == role then
@@ -116,7 +124,7 @@ HandlerSpecialRoles = HandlerSpecialRoles or {
 
 function Zone.Functions.isAuthorized(msg)
     -- If Roles is blank, the initial call should be from the owner
-    if msg.From ~= Owner and msg.From ~= ao.id and #Roles == 0 then
+    if msg.From ~= Owner and msg.From ~= ao.id and Zone.Functions.tableLength(Roles) == 0 then
         return false, "Not Authorized"
     end
 
