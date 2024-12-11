@@ -31,7 +31,7 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
     H_ZONE_INDEX_NOTICE = 'Index-Notice',
     H_ZONE_UPDATE = 'Zone-Update',
-    H_ZONE_ROLE_UPDATE = 'Update-Role',
+    H_ZONE_ROLE_SET = 'Role-Set',
     H_ZONE_SET = 'Zone-Set',
     H_ZONE_APPEND = 'Zone-Append',
     H_ZONE_REMOVE = 'Zone-Remove',
@@ -45,10 +45,10 @@ Zone.ROLE_NAMES = Zone.ROLE_NAMES or {
 }
 
 HandlerRoles = HandlerRoles or {
-    [Zone.Constants.H_ZONE_ROLE_UPDATE] = { 'Admin' }, -- could allow admin if specifically limit removing owner roles
+    [Zone.Constants.H_ZONE_ROLE_SET] = { 'Admin' }, -- could allow admin if specifically limit removing owner roles
     [Zone.Constants.H_ZONE_UPDATE] = { 'Admin' },
-    [Zone.Constants.H_ADD_UPLOAD] = { 'Admin', 'Contributor' },
-    [Zone.Constants.H_ZONE_RUN_ACTION] = {'Owner', 'Admin'},
+    [Zone.Constants.H_ZONE_ADD_UPLOAD] = { 'Admin', 'Contributor' },
+    [Zone.Constants.H_ZONE_RUN_ACTION] = { 'Admin' },
 }
 
 -- Roles: { <Id>: string = {...roles} } :. Roles[<id>] = {...}
@@ -263,49 +263,42 @@ function Zone.Functions.zoneRoleSet(msg)
 
     local authorized, message = Zone.Functions.isAuthorized(msg)
     if not authorized then
+        print('Not Authorized', message)
         Zone.Functions.sendError(msg.From, message)
         return
     end
 
-    local decodeResult = Zone.Functions.decodeResult(msg.Data)
+    local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
 
     if decodeResult.success and decodeResult.data then
-        local Id = decodeResult.data.Id
-        local roles = decodeResult.data.Roles
-        if not Id then
+        local actorId = decodeResult.data.id
+        local roles = decodeResult.data.roles
+        if not actorId then
+            print('noactor')
             ao.send({
                 Target = msg.From,
                 Action = 'Input-Error',
                 Tags = {
                     Status = 'Error',
-                    Message = 'Invalid arguments, required { Id, { <role>, <role> } in data or tags'
+                    Message = 'Invalid arguments, required { id=<id>, roles=<{ <role>, <role> }> or {} or nil} in data'
                 }
             })
             return
         end
 
-        if not check_valid_address(Id) then
+        if not check_valid_address(actorId) then
+            print('invalid address')
             Zone.Functions.sendError(msg.From, 'Id must be a valid address')
             return
         end
 
-        if not check_valid_roles(Roles) then
+        if not check_valid_roles(roles) then
+            print('invalid roles')
             Zone.Functions.sendError(msg.From, 'Role must be a table of strings')
             return
         end
 
-        -- Add, update, or remove role
-        local role_index = -1
-        local current_roles
-        for i, role in ipairs(Roles) do
-            if role.Id == Id then
-                role_index = i
-                current_roles = role.Role
-                break
-            end
-        end
-
-        Roles[role_index].Roles = Roles
+        Roles[actorId] = roles
 
         ao.send({
             Target = msg.From,
@@ -316,6 +309,7 @@ function Zone.Functions.zoneRoleSet(msg)
             }
         })
     else
+        print('Decode Error')
         Zone.Functions.sendError(msg.From, string.format(
                 'Failed to parse role update data, received: %s. %s.', msg.Data,
                 'Data must be an object - { Id, Op, Role }'))
@@ -397,7 +391,9 @@ function Zone.Functions.addIndexId(msg)
         return
     end
 
-    if not Zone.Data.KV.Store.Index then Zone.Data.KV.Store.Index = {} end
+    if not Zone.Data.KV.Store.Index then
+        Zone.Data.KV.Store.Index = {}
+    end
 
     for _, index in ipairs(Zone.Data.KV.Store.Index) do
         if index.Id == msg.IndexId then
@@ -515,25 +511,23 @@ end
 
 function Zone.Functions.getRoles(msg)
 
-    local decodeResult = Zone.Functions.decodeResult(msg.Data)
+    local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
 
-    if decodeResult.success and decodeResult.data then
+    if decodeResult.success and decodeResult.data and decodeResult.data.Actors then
         local actors = decodeResult.data.Actors
-        if not actors then
-            msg.reply({
-                Action = Zone.Constants.H_ZONE_SUCCESS,
-                Data = Roles
-            })
-        else
-            local actorRoles = {}
-            for _, actor in ipairs(actors) do
-                actorRoles[actor] = Zone.Functions.getActorRoles(actor)
-            end
-            msg.reply({
-                Action = Zone.Constants.H_ZONE_SUCCESS,
-                Data = actorRoles
-            })
+        local actorRoles = {}
+        for _, actor in ipairs(actors) do
+            actorRoles[actor] = Zone.Functions.getActorRoles(actor)
         end
+        msg.reply({
+            Action = Zone.Constants.H_ZONE_SUCCESS,
+            Data = actorRoles
+        })
+    else
+        msg.reply({
+            Action = Zone.Constants.H_ZONE_SUCCESS,
+            Data = Roles
+        })
     end
 end
 
@@ -553,13 +547,13 @@ Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOT
 Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
 Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
 Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
-Handlers.add(Zone.Constants.H_ZONE_ROLE_UPDATE, Zone.Constants.H_ZONE_ROLE_UPDATE, Zone.Functions.zoneRoleSet)
+Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zone.Functions.zoneRoleSet)
 
 
 -- Register-Whitelisted-Subscriber -- owner only
 -- Looks for Tag: Subscriber-Process-Id = <registry_id>
 Handlers.add('Register-Whitelisted-Subscriber', 'Register-Whitelisted-Subscriber',
-    Subscribable.handleRegisterWhitelistedSubscriber)
+        Subscribable.handleRegisterWhitelistedSubscriber)
 
 Subscribable.configTopicsAndChecks({
     [Zone.Constants.H_ZONE_UPDATE] = {
