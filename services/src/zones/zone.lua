@@ -45,10 +45,9 @@ Zone.ROLE_NAMES = Zone.ROLE_NAMES or {
 }
 
 HandlerRoles = HandlerRoles or {
-    [Zone.Constants.H_ZONE_ROLE_SET] = { 'Admin' }, -- could allow admin if specifically limit removing owner roles
+    [Zone.Constants.H_ZONE_ROLE_SET] = { 'Admin' },
     [Zone.Constants.H_ZONE_UPDATE] = { 'Admin' },
     [Zone.Constants.H_ZONE_ADD_UPLOAD] = { 'Admin', 'Contributor' },
-    [Zone.Constants.H_ZONE_RUN_ACTION] = { 'Admin' },
 }
 
 -- Roles: { <Id>: string = {...roles} } :. Roles[<id>] = {...}
