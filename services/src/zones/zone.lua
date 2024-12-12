@@ -122,7 +122,6 @@ HandlerSpecialRoles = HandlerSpecialRoles or {
 }
 
 function Zone.Functions.isAuthorized(msg)
-    -- If Roles is blank, the initial call should be from the owner
     if msg.From ~= Owner and msg.From ~= ao.id and Zone.Functions.tableLength(Roles) == 0 then
         return false, "Not Authorized"
     end
@@ -135,7 +134,6 @@ function Zone.Functions.isAuthorized(msg)
         return HandlerSpecialRoles[msg.Action](msg)
     end
 
-    -- is authorized if roles[msg.From] has a role that matches the handler roles
     local rolesForHandler = HandlerRoles[msg.Action]
     if not rolesForHandler then
         return msg.From == Owner or false, "AuthRoles: Sender " .. msg.From .. " not Authorized. Only Owner can access the handler " .. msg.Action
@@ -281,7 +279,6 @@ function Zone.Functions.zoneRoleSet(msg)
         local actorId = decodeResult.data.id
         local roles = decodeResult.data.roles
         if not actorId then
-            print('noactor')
             ao.send({
                 Target = msg.From,
                 Action = 'Input-Error',
@@ -294,13 +291,11 @@ function Zone.Functions.zoneRoleSet(msg)
         end
 
         if not check_valid_address(actorId) then
-            print('invalid address')
             Zone.Functions.sendError(msg.From, 'Id must be a valid address')
             return
         end
 
         if not check_valid_roles(roles) then
-            print('invalid roles')
             Zone.Functions.sendError(msg.From, 'Role must be a table of strings')
             return
         end
