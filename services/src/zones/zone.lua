@@ -238,7 +238,7 @@ function Zone.Functions.zoneUpdate(msg)
 end
 
 function Zone.Functions.zoneRoleSet(msg)
-
+    -- data: { id=<id>, roles=<{ <role>, <role> }> or {} or nil}
     local function check_valid_address(address)
         if not address or type(address) ~= 'string' then
             return false
