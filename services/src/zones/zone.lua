@@ -310,23 +310,13 @@ function Zone.Functions.zoneRoleSet(msg)
                 Message = 'Role updated'
             }
         })
+        Subscribable.notifySubscribers(Zone.Constants.H_ZONE_ROLE_SET, { UpdateTx = msg.Id })
     else
         print('Decode Error')
         Zone.Functions.sendError(msg.From, string.format(
                 'Failed to parse role update data, received: %s. %s.', msg.Data,
                 'Data must be an object - { Id, Op, Role }'))
     end
-end
-
-function Zone.Functions.addUpload(msg)
-    Zone.Data.AssetManager:update({
-        Type = 'Add',
-        AssetId = msg.AssetId,
-        Timestamp = msg.Timestamp,
-        AssetType = msg.AssetType,
-        ContentType = msg.ContentType,
-
-    })
 end
 
 function Zone.Functions.addUpload(msg)
@@ -560,6 +550,11 @@ Handlers.add('Register-Whitelisted-Subscriber', 'Register-Whitelisted-Subscriber
 Subscribable.configTopicsAndChecks({
     [Zone.Constants.H_ZONE_UPDATE] = {
         description = 'Zone updated',
+        returns = '{ "UpdateTx" : string }',
+        subscriptionBasis = 'Whitelisting'
+    },
+    [Zone.Constants.H_ZONE_ROLE_SET] = {
+        description = 'Zone role set',
         returns = '{ "UpdateTx" : string }',
         subscriptionBasis = 'Whitelisting'
     },
