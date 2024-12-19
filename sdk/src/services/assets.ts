@@ -78,7 +78,9 @@ export async function getAtomicAsset(id: string): Promise<AssetDetailType | null
 				ticker: null,
 				denomination: null,
 				balances: null,
-				transferable: null
+				transferable: null,
+				creator: null,
+				metadata: {},
 			}
 
 			const processState = await aoDryRun({
@@ -104,10 +106,14 @@ export async function getAtomicAsset(id: string): Promise<AssetDetailType | null
 				} else {
 					state.transferable = true;
 				}
-
-				for (const [key, value] of Object.entries(processState)) {
-					if (!(key in state)) {
-						state[key] = value;
+				if (processState.Creator || processState.creator) {
+					state.creator = processState.Creator || processState.creator;
+				}
+				if (processState.AssetMetadata) {
+					for (const [key, value] of Object.entries(processState.AssetMetadata)) {
+						if (!(key in state)) {
+							state.metadata[key] = value;
+						}
 					}
 				}
 			}
