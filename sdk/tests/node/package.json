@@ -1,10 +1,11 @@
 {
   "name": "node",
+	"type": "module",
   "version": "1.0.0",
   "description": "",
   "main": "tests.ts",
   "scripts": {
-    "tests": "ts-node tests.ts"
+    "tests": "node tests.js"
   },
   "keywords": [],
   "author": "",

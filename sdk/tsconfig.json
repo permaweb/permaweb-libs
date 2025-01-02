@@ -1,21 +1,22 @@
 {
 	"compilerOptions": {
-		"module": "ES2015",
-		"target": "ES6",
-		"declaration": true,
-		"sourceMap": true,
-		"strict": true,
-		"baseUrl": "src",
-		"rootDir": "./src",
-		"outDir": "./dist",
-		"moduleResolution": "Bundler",
-		"lib": ["dom", "dom.iterable", "esnext"],
-		"paths": {
+	  "target": "ES2020",                // Modern JS target for Node.js and browser compatibility
+	  "module": "ESNext",                // Use ESM for compatibility with esbuild
+	  "declaration": true,               // Generate type definitions
+	  "declarationDir": "dist/types",    // Output directory for type declarations
+	  "outDir": "dist",                  // Temporary directory for compiled files
+	  "strict": true,                    // Enable strict type-checking
+	  "esModuleInterop": true,           // Allow default imports for CommonJS modules
+	  "skipLibCheck": true,              // Skip type checks for node_modules
+	  "moduleResolution": "node",        // Use Node.js-style module resolution
+	  "baseUrl": "src",
+	  "paths": {
 			"common/*": ["common/*"],
 			"helpers/*": ["helpers/*"],
 			"services/*": ["services/*"]
 		}
 	},
-	"include": ["src"],
+	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist"]
-}
+  }
+  

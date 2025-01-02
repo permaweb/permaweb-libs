@@ -1,7 +1,7 @@
 import { createAtomicAsset, createZone, getAtomicAsset, getZone, updateZone } from '@permaweb/libs';
 import { readFileSync } from 'fs';
 
-function expect(actual: any) {
+function expect(actual) {
 	return {
 		toBeDefined: () => {
 			if (actual === undefined) {
@@ -9,13 +9,13 @@ function expect(actual: any) {
 			}
 			console.log('\x1b[32m%s\x1b[0m', 'Success: Value is defined');
 		},
-		toHaveProperty: (prop: string) => {
+		toHaveProperty: (prop) => {
 			if (!(prop in actual)) {
 				throw new Error(`Expected object to have property '${prop}', but it was not found`);
 			}
 			console.log('\x1b[32m%s\x1b[0m', `Success: Object has property '${prop}'`);
 		},
-		toEqualType: (expected: any) => {
+		toEqualType: (expected) => {
 			const actualType = typeof actual;
 			const expectedType = typeof expected;
 
@@ -30,7 +30,7 @@ function expect(actual: any) {
 			}
 			console.log('\x1b[32m%s\x1b[0m', `Success: Types match (${actualType})`);
 		},
-		toEqual: (expected: any) => {
+		toEqual: (expected) => {
 			const actualType = typeof actual;
 			const expectedType = typeof expected;
 
@@ -60,11 +60,11 @@ function expect(actual: any) {
 	};
 }
 
-function logTest(message: string) {
+function logTest(message) {
 	console.log('\x1b[33m%s\x1b[0m', `\n${message}`);
 }
 
-function logError(message: string) {
+function logError(message) {
 	console.error('\x1b[31m%s\x1b[0m', `Error (${message})`);
 }
 
@@ -74,7 +74,7 @@ async function runTests() {
 		const wallet = JSON.parse(readFileSync('./wallets/wallet.json', 'utf-8'));
 
 		logTest('Testing zone creation...');
-		const zoneId = await createZone(wallet, (status: any) => console.log(`Callback: ${status}`));
+		const zoneId = await createZone(wallet, (status) => console.log(`Callback: ${status}`));
 
 		expect(zoneId).toBeDefined();
 		expect(zoneId).toEqualType('string');
@@ -87,7 +87,6 @@ async function runTests() {
 
 		logTest('Testing zone update...');
 		const zoneUpdateId = await updateZone({
-			zoneId: zoneId,
 			data: {
 				name: 'Sample Zone',
 				metadata: {
@@ -95,7 +94,7 @@ async function runTests() {
 					version: '1.0.0'
 				}
 			}
-		}, wallet);
+		}, zoneId, wallet);
 
 		expect(zoneUpdateId).toBeDefined();
 		expect(zoneUpdateId).toEqualType('string');
@@ -126,7 +125,7 @@ async function runTests() {
 			supply: 100,
 			denomination: 1,
 			transferable: true
-		}, wallet, (status: any) => console.log(`Callback: ${status}`));
+		}, wallet, (status) => console.log(`Callback: ${status}`));
 
 		expect(assetId).toBeDefined();
 		expect(assetId).toEqualType('string');
@@ -141,7 +140,7 @@ async function runTests() {
 
 		console.log('All tests passed successfully!');
 	} catch (error) {
-		logError((error as Error).message);
+		logError(error.message);
 	}
 }
 
