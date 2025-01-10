@@ -1,63 +1,41 @@
-import { aoCreateProcess, aoDryRun, aoSend, fetchProcessSrc } from 'common/ao';
+import { aoCreateProcess, aoDryRun } from 'common/ao';
 import { getGQLData } from 'common/gql';
 
 import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
 import { AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, GQLNodeResponseType, TagType, UDLicenseType } from 'helpers/types';
-import { checkValidAddress, formatAddress, getTagValue, globalLog, mapFromProcessCase } from 'helpers/utils';
+import { checkValidAddress, formatAddress, getBootTag, getTagValue, mapFromProcessCase } from 'helpers/utils';
 
-// TODO: License
 export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback?: (status: any) => void) {
 	const validationError = getValidationErrorMessage(args);
 	if (validationError) throw new Error(validationError);
 
 	const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
-	const tags = buildAssetTags(args);
 
-	let src: string | null = null;
+	const tags = [{ name: TAGS.keys.bootloaderInit, value: AO.src.asset }];	
+	tags.push(...buildAssetTags(args));
 
-	try {
-		src = await fetchProcessSrc(args.src ?? AO.src.asset);
+	tags.push(getBootTag('Name', args.title));
+	tags.push(getBootTag('Ticker', 'ATOMIC'));
+	tags.push(getBootTag('Denomination', args.denomination ? args.denomination.toString() : '1'));
+	tags.push(getBootTag('TotalSupply', args.supply ? args.supply.toString() : '1'));
 
-		if (src) {
-			src = src.replaceAll(`'<NAME>'`, `[[${args.title}]]`);
-			src = src.replaceAll('<CREATOR>', args.creator ?? await wallet.getActiveAddress()); // TODO: Support NodeJS / Browser
-			src = src.replaceAll('<TICKER>', 'ATOMIC');
-			src = src.replaceAll('<DENOMINATION>', args.denomination ? args.denomination.toString() : '1');
-			src = src.replaceAll('<SUPPLY>', args.supply ? args.supply.toString() : '1');
-
-			if (args.collectionId) src = src.replaceAll('<COLLECTION>', args.collectionId);
-			if (!args.transferable) src = src.replace('Transferable = true', 'Transferable = false');
-		}
-	} catch (e: any) {
-		throw new Error(e);
-	}
+	if (args.creator) tags.push(getBootTag('Creator', args.creator));
+	if (args.collectionId) tags.push(getBootTag('Collection', args.collectionId));
+	if (!args.transferable) tags.push(getBootTag('Transferable', 'false'));
 
 	try {
 		const assetId = await aoCreateProcess(
 			{
-				spawnData: data,
-				spawnTags: tags,
 				wallet: wallet,
-				evalSrc: src,
+				spawnTags: tags,
+				spawnData: data
 			},
 			callback ? (status) => callback(status) : undefined,
 		);
-
-		const initMessage = await aoSend({
-			processId: assetId,
-			wallet: wallet,
-			action: 'Add-Upload-To-Zone',
-			tags: [
-				{ name: 'AssetType', value: args.type },
-				{ name: 'ContentType', value: args.contentType }
-			]
-		});
-
-		globalLog(`Init upload message: ${initMessage}`)
-
+		
 		return assetId;
 	} catch (e: any) {
-		throw new Error(e);
+		throw new Error(e.message ?? 'Error creating asset');
 	}
 }
 

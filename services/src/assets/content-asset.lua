@@ -1,23 +1,25 @@
 local bint = require('.bint')(256)
 local json = require('json')
 
-if Name ~= '<NAME>' then Name = '<NAME>' end
+UNSET_PLACEHOLDER = '<UNSET>'
 
-Creator = Creator or '<CREATOR>'
-Ticker = Ticker or '<TICKER>'
-Denomination = Denomination or '<DENOMINATION>'
-TotalSupply = TotalSupply or '<SUPPLY>'
-Balances = Balances or { ['<CREATOR>'] = '<SUPPLY>' }
-Collection = Collection or '<COLLECTION>'
+if Name ~= UNSET_PLACEHOLDER then Name = UNSET_PLACEHOLDER end
 
-Transferable = true
+Creator = Creator or UNSET_PLACEHOLDER
+Ticker = Ticker or UNSET_PLACEHOLDER
+Denomination = Denomination or UNSET_PLACEHOLDER
+TotalSupply = TotalSupply or UNSET_PLACEHOLDER
+Collection = Collection or UNSET_PLACEHOLDER
 
-Status = Status or 'Draft'
+Status = Status or UNSET_PLACEHOLDER
 Content = Content or {}
 Topics = Topics or {}
 Categories = Categories or {}
-
 IndexRecipients = IndexRecipients or {}
+
+Balances = Balances or { ['<CREATOR>'] = '<SUPPLY>' }
+
+Transferable = true
 
 local function checkValidAddress(address)
     if not address or type(address) ~= 'string' then
@@ -340,3 +342,49 @@ Handlers.once('Add-Upload-To-Zone', 'Add-Upload-To-Zone', function(msg)
         ContentType = msg.ContentType
     })
 end)
+
+-- Boot Initialization
+if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
+    local collectedValues = {}
+    for _, tag in ipairs(Inbox[1].TagArray) do
+        local prefix = 'Bootloader-'
+        if string.sub(tag.name, 1, string.len(prefix)) == prefix then
+            local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
+            if not collectedValues[keyWithoutPrefix] then
+                collectedValues[keyWithoutPrefix] = { tag.value }
+            else
+                table.insert(collectedValues[keyWithoutPrefix], tag.value)
+            end
+        end
+    end
+
+    for key, values in pairs(collectedValues) do
+        if _G[key] ~= nil then
+            if #values == 1 then
+                if type(_G[key]) == 'table' then
+                    table.insert(_G[key], values[1])
+                else
+                    _G[key] = values[1]
+                end
+            else
+                if type(_G[key]) == 'table' then
+                    for _, value in ipairs(values) do
+                        table.insert(_G[key], value)
+                    end
+                else
+                    _G[key] = values
+                end
+            end
+        end
+    end
+
+    for key, value in pairs(_G) do
+        if value == UNSET_PLACEHOLDER then
+            _G[key] = nil
+        end
+    end
+
+    Balances = { [Creator] = tostring(TotalSupply) }
+
+    ao.send({ Target = Creator, Action = 'Add-Upload', AssetId = ao.id })
+end

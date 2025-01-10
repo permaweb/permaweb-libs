@@ -1,23 +1,31 @@
 local json = require('json')
 local sqlite3 = require('lsqlite3')
 
--- primary registry should keep a list of wallet/zone-id pairs
 Db = Db or sqlite3.open_memory()
 
--- registry handlers
-local H_ADD_SUBSCRIBER = "Add-Subscriber"
-local H_READ_AUTH = "Read-Auth"
-local H_GET_USER_ZONES = "Get-Zones-For-User"
+-- action names
+local H_ZONE_ERROR = 'Zone.Error'
+local H_ZONE_SUCCESS = 'Zone.Success'
+local H_GET_ZONES_USERS = "Get-Zones-For-User"
+local H_GET_ZONES_METADATA = "Get-Zones-Metadata"
 local H_PREPARE_DB = "Prepare-Database"
+local H_INFO = "Info"
+local H_NOTIFY_ON_TOPIC = "Notify-On-Topic"
+local H_INIT_ZONE = "Init-Zone"
+local H_SUB_REG_CONFIRM = "Subscriber-Registration-Confirmation"
 
--- handlers to be forwarded
-local H_META_SET = "Zone-Metadata.Set"
-local H_ROLE_SET = "Zone-Role.Set"
-local H_CREATE_ZONE = "Create-Zone" -- from process spawn tx
+-- handlers to be assigned
+local H_ZONE_UPDATE = 'Zone-Update'
+local H_ZONE_BOOT = "Create-Zone"
 
 local ASSIGNABLES = {
-    H_META_SET, H_ROLE_SET, H_CREATE_ZONE, H_GET_USER_ZONES
-}
+    H_ZONE_UPDATE, H_ZONE_BOOT }
+
+local RELEVANT_METADATA = { "UserName", "DisplayName", "Description", "Banner", "Thumbnail", "Tags", "DateUpdated" }
+
+if not NotifiedPending then
+    NotifiedPending = {}
+end
 
 local function match_assignable_actions(a)
     for _, v in ipairs(ASSIGNABLES) do
@@ -27,27 +35,18 @@ local function match_assignable_actions(a)
     end
 end
 
-ao.addAssignable("AssignableActions", { Action = function(a) return match_assignable_actions(a) end } )
+ao.addAssignable("AssignableActions", { Action = function(a)
+    return match_assignable_actions(a)
+end })
 
-local HandlerRoles = {
-    [H_META_SET] = {'Owner', 'Admin'},
-    [H_ROLE_SET] = {'Owner'},
-    -- TODO add code to allow Admin to set roles as long as not updating Owner
-    -- legacy handlers:
-    --['Update-Profile'] = {'Owner', 'Admin'},
-    --['Add-Uploaded-Asset'] = {'Owner', 'Admin', 'Contributor'},
-    --['Add-Collection'] = {'Owner', 'Admin', 'Contributor'},
-    --['Update-Collection-Sort'] = {'Owner', 'Admin'},
-    --['Transfer'] = {'Owner', 'Admin'},
-    --['Debit-Notice'] = {'Owner', 'Admin'},
-    --['Credit-Notice'] = {'Owner', 'Admin'},
-    --['Action-Response'] = {'Owner', 'Admin'},
-    --['Run-Action'] = {'Owner', 'Admin'},
-    --['Proxy-Action'] = {'Owner', 'Admin'},
-}
-
--- a table storing a mapping from registry addresses to actions that should be forwarded
-local Subscribers = {}
+local function isInArray(table, value)
+    for _, v in ipairs(table) do
+        if v == value then
+            return true
+        end
+    end
+    return false
+end
 
 local function decode_message_data(data)
     local status, decoded_data = pcall(json.decode, data)
@@ -57,164 +56,215 @@ local function decode_message_data(data)
     return true, decoded_data
 end
 
-
-
-local function is_authorized(zone_id, user_id, roles)
-    if not zone_id then
-        return false
-    end
-    local query = [[
-        SELECT role
-        FROM zone_auth
-        WHERE zone_id = ? AND user_id = ?
-        LIMIT 1
-    ]]
-    local stmt = Db:prepare(query)
-    stmt:bind_values(zone_id, user_id)
-    local authorized = false
-    for row in stmt:nrows() do
-        for _, role in ipairs(roles) do
-            if row.role == role then
-                authorized = true
-                break
-            end
+local function cleanPending()
+    local newPending = {}
+    local now = os.time()
+    for _, pending in ipairs(NotifiedPending) do
+        -- pending: { UpdateTx = "abc", Timestamp = os.time() }
+        if now - pending.Timestamp < 300 then
+            table.insert(newPending, pending)
         end
     end
-    stmt:finalize()
-    return authorized
+    NotifiedPending = newPending
 end
 
-local function handle_subscribe(msg)
-    -- registry owner can subscribe downstream registries to actions
-    -- msg.from is the target
-    -- msg.data: { actions: {"Action-One", "Action-Two"}, subscriber: "subscriber_id" }
+local function removePendingId(id)
+    local newPending = {}
+    local found = false
+    for _, pending in ipairs(NotifiedPending) do
+        if pending.UpdateTx == id then
+            found = true
+        else
+            table.insert(newPending, pending)
+        end
+    end
+    NotifiedPending = newPending
+    return found
+end
+
+local function handle_notified_update_profile(msg)
     local decode_check, data = decode_message_data(msg.Data)
     if not decode_check then
-        ao.send({
-            Target = msg.From,
-            Action = 'ERROR',
-            Tags = {
-                Status = 'ERROR',
-                Message = "Failed to decode data"
-            }
-        })
+        --ao.send({
+        --    Target = msg.From,
+        --    Action = 'H_ZONE_ERROR',
+        --    Data = { Message = "Failed to decode data" }
+        --})
+
+        -- fail silently
         return
     end
 
+    local updateTx = data["UpdateTx"];
+    if not updateTx then
+        --ao.send({
+        --    Target = msg.From,
+        --    Action = 'H_ZONE_ERROR',
+        --    Data = { Message = "No UpdateTx found" }
+        --})
 
-    if not data or not data.actions or not #data.actions then
-        ao.send({
-            Target = msg.From,
-            Action = 'ERROR',
-            Tags = {
-                Status = 'DECODE_FAILED',
-                Message = "no subscribe actions found"
-            }
-        })
+        -- fail silently
         return
     end
-
-    -- ensure data.actions is a table of strings
-    for _, action in ipairs(data.actions) do
-        if type(action) ~= 'string' then
-            ao.send({
-                Target = msg.From,
-                Action = 'ERROR',
-                Tags = {
-                    Status = 'DECODE_FAILED',
-                    Message = "actions must be a table of strings"
-                }
-            })
-            return
-        end
-    end
-
-    if not data.subscriber_id then
-        ao.send({
-            Target = msg.From,
-            Action = 'ERROR',
-            Tags = {
-                Status = 'DECODE_FAILED',
-                Message = "no subscriber_id found"
-            },
-            Data = { Code = "DECODE_FAILED" }
-        })
-        return
-    end
-    Subscribers[data.subscriber_id] = data.actions
+    table.insert(NotifiedPending, { UpdateTx = updateTx, Timestamp = os.time() })
+    -- assign the txid containing the "Update-Zone" action
+    ao.assign({
+        Message = updateTx,
+        Processes = {
+            ao.id
+        }
+    })
 end
 
-local function handle_forward(msg)
-    local assignTargets = {}
-    -- for each Subscriber, add the subscriber to assignTargets if msg.Action is in Subscribers[subscriber_id]
-    for subscriber, actions in pairs(Subscribers) do
-        for _, action in ipairs(actions) do
-            if action == msg.Action then
-                table.insert(assignTargets, subscriber)
-            end
-        end
+-- get notification on topic, check topic, and send to handler
+local function handle_notified(msg)
+    print(msg.Tags.Topic)
+    cleanPending()
+    if msg.Tags.Topic == H_ZONE_UPDATE then
+        handle_notified_update_profile(msg)
     end
-    -- ao.assign to assignTargets
-    -- ao.assign({Processes = { ...assignTargets }, Message = msg.Id})
-    ao.assign({Processes = assignTargets, Message = msg.Id})
 end
 
--- on spawn, Action = Create-Zone, initializes owner role for userid on zoneId
--- make sure spawn is the correct type of thing
-local function handle_create_zone(msg)
-    local reply_to = msg.From
-    local decode_check, data = decode_message_data(msg.Data)
-    -- data may contain {"UserName":"x", ...etc}
-
-    if not decode_check then
-        ao.send({
-            Target = reply_to,
-            Action = 'ERROR',
-            Tags = {
-                Status = 'DECODE_FAILED',
-                Message = "Create-Zone: Failed to decode data"
-            }
-        })
-        return
-    end
+-- init a zone from spawn msg using tags
+local function handle_boot_zone(msg)
 
     local ZoneId = msg.Id -- create = msg.Id spawn
     local UserId = msg.From -- (assigned) -- AuthorizedAddress
 
-    local check = Db:prepare('SELECT 1 FROM zone_auth WHERE user_id = ? AND zone_id = ? LIMIT 1')
+    local check = Db:prepare('SELECT 1 FROM zone_users WHERE user_id = ? AND zone_id = ? LIMIT 1')
     check:bind_values(UserId, ZoneId)
     if check:step() ~= sqlite3.ROW then
-        is_update = false
         local insert_auth = Db:prepare(
-                'INSERT INTO zone_auth (zone_id, user_id, role) VALUES (?, ?, ?)')
+                'INSERT INTO zone_users (zone_id, user_id) VALUES (?, ?)')
         insert_auth:bind_values(ZoneId, UserId, 'Owner')
         insert_auth:step()
         insert_auth:finalize()
-        check:finalize()
     else
         ao.send({
             Target = reply_to,
-            Action = 'ERROR',
-            Tags = {
-                Status = 'CREATE_FAILED',
-                Message = "Create-Zone: Failed to insert data"
-            }
+            Action = 'Zone-Create-Notice',
+            Data = { Status = H_ZONE_ERROR,
+                     Message = "Zone already found, cannot insert",
+                     Code = "INSERT_FAILED" }
         })
-        check:finalize()
         return
     end
 
-    -- assign to subscribers
+    -- for each tag starting with "bootloader-", populate metadataValues
+    local columns = {}
+    local placeholders = {}
+    local params = {}
+    local metadataValues = {}
+
+    -- extract Tags array, other metadata
+    for _, tag in msg.Tags do
+        local zoneTags = {}
+        if string.match(tag, "Bootloader-") then
+            -- strip "bootloader-" from tag
+            local cleanedTag = string.sub(tag, 12)
+            if (isInArray(RELEVANT_METADATA, cleanedTag)) then
+                if (cleanedTag == "Tags") then
+                    table.insert(zoneTags, tag.value)
+                else
+                    metadataTags[cleanedTag] = tag.value
+                end
+            end
+        end
+        metadataValues["Tags"] = json.encode(zoneTags)
+    end
+
+    local function generateInsertQuery()
+        for key, val in pairs(metadataValues) do
+            if val ~= nil then
+                -- Include the field if provided
+                table.insert(columns, key)
+                if val == "" then
+                    -- If the field is an empty string, insert NULL
+                    table.insert(placeholders, "NULL")
+                else
+                    -- Otherwise, prepare to bind the actual value
+                    table.insert(placeholders, "?")
+                    table.insert(params, val)
+                end
+            else
+                -- If field is nil and not mandatory, insert NULL
+                if key ~= "id" then
+                    table.insert(columns, key)
+                    table.insert(placeholders, "NULL")
+                end
+            end
+        end
+
+        local sql = "INSERT INTO ao_zone_metadata (" .. table.concat(columns, ", ") .. ")"
+        sql = sql .. " VALUES (" .. table.concat(placeholders, ", ") .. ")"
+
+        return sql
+    end
+    local sql = generateInsertQuery()
+    local stmt = Db:prepare(sql)
+
+    if not stmt then
+        ao.send({
+            Target = reply_to,
+            Action = 'DB_CODE',
+            Data = { Code = "Failed to prepare insert statement",
+                     SQL = sql,
+                     ERROR = Db:errmsg(),
+                     Status = 'DB_PREPARE_FAILED',
+                     Message = "DB PREPARED QUERY FAILED"
+            }
+        })
+        print("Failed to prepare insert statement")
+    end
+
+    -- bind values for INSERT statement
+    local bindres = stmt:bind_values(table.unpack(params))
+
+    if not bindres then
+        ao.send({
+            Target = reply_to,
+            Action = 'Zone-Create-Notice',
+            Tags = {
+                Status = 'DB_PREPARE_FAILED',
+                Message = "DB BIND QUERY FAILED"
+            },
+            Data = { Code = "Failed to prepare insert statement",
+                     SQL = sql,
+                     ERROR = Db:errmsg()
+            }
+        })
+        print("Failed to prepare insert statement")
+        return json.encode({ Code = 'DB_PREPARE_FAILED' })
+    end
+    local step_status = stmt:step()
+
+    if step_status ~= sqlite3.OK and step_status ~= sqlite3.DONE and step_status ~= sqlite3.ROW then
+        stmt:finalize()
+        print("Error: " .. Db:errmsg())
+        print("SQL" .. sql)
+        ao.send({
+            Target = reply_to,
+            Action = 'DB_STEP_CODE',
+            Tags = {
+                Status = 'ERROR',
+                Message = 'sqlite step error'
+            },
+            Data = { DB_STEP_MSG = step_status }
+        })
+        return json.encode({ Code = step_status })
+    end
+    stmt:finalize()
+    print('db prepared')
     ao.send({
         Target = reply_to,
-        Action = 'Zone-Create-Success',
+        Action = 'Success',
         Tags = {
             Status = 'Success',
-            Message = "Create-Zone: Sucessfully Created Zone"
-        }
+            Message = is_update and 'Record Updated' or 'Record Inserted'
+        },
+        Data = json.encode(metadataValues)
     })
-    handle_forward(msg)
-    return
+
 end
 
 local function handle_prepare_db(msg)
@@ -229,16 +279,34 @@ local function handle_prepare_db(msg)
         })
         return
     end
-
     Db:exec [[
-                CREATE TABLE IF NOT EXISTS zone_auth (
-                    zone_id TEXT NOT NULL,
-                    user_id TEXT NOT NULL,
-                    role TEXT NOT NULL,
-                    PRIMARY KEY (zone_id, user_id)
+                CREATE TABLE IF NOT EXISTS ao_zone_metadata (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    username TEXT,
+                    display_name TEXT,
+                    description TEXT,
+                    thumbnail TEXT,
+                    banner TEXT,
+                    tags TEXT,
+                    date_updated INTEGER NOT NULL
                 );
             ]]
 
+    Db:exec [[
+                CREATE TABLE IF NOT EXISTS zone_users (
+                    zone_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    PRIMARY KEY (zone_id, user_id)
+                    FOREIGN KEY (zone_id) REFERENCES ao_zone_metadata (id) ON DELETE CASCADE
+                );
+            ]]
+
+    Db:exec [[
+        CREATE INDEX IF NOT EXISTS idx_zone_id ON zone_users (zone_id);
+        CREATE INDEX IF NOT EXISTS idx_user_id ON zone_users (user_id);
+    ]]
+
+    print("db prepared")
     ao.send({
         Target = Owner,
         Action = 'DB-Init-Success',
@@ -249,102 +317,280 @@ local function handle_prepare_db(msg)
     })
 end
 
-local function handle_update_role(msg)
+local function handle_meta_get(msg)
     local decode_check, data = decode_message_data(msg.Data)
-    local zone_id = msg.Target
-    local user_id = msg.From
+    local reply_to = ao.id
+    print("after decode")
     if decode_check and data then
-        if not data.Id or not data.Op then
+        if not data.ZoneIds then
             ao.send({
-                Target = zone_id,
+                Target = reply_to,
                 Action = 'Input-Error',
                 Tags = {
                     Status = 'Error',
-                    Message = 'Invalid arguments, required { Id, Op, Role }'
-                }
+                    Message = 'Invalid arguments, required { ProfileIds }'
+                },
+                Data = msg.Data
             })
             return
         end
-    end
 
-    if not is_authorized(zone_id, user_id, HandlerRoles['Zone.Update-Role']) then
+        local metadata = {}
+        if #data.ZoneIds > 0 then
+            local placeholders = {}
+
+            for _, _ in ipairs(data.ZoneIds) do
+                table.insert(placeholders, "?")
+            end
+
+            if #placeholders > 0 then
+                local stmt = Db:prepare([[
+                        SELECT *
+                        FROM ao_zone_metadata
+                        WHERE id IN (]] .. table.concat(placeholders, ',') .. [[)
+                        ]])
+
+                if not stmt then
+                    ao.send({
+                        Target = reply_to,
+                        Action = 'DB_CODE',
+                        Tags = {
+                            Status = 'DB_PREPARE_FAILED',
+                            Message = "DB PREPARED QUERY FAILED"
+                        },
+                        Data = { Code = "Failed to prepare insert statement" }
+                    })
+                    print("Failed to prepare insert statement")
+                    return json.encode({ Code = 'DB_PREPARE_FAILED' })
+                end
+
+                print(data.ZoneIds[1])
+                stmt:bind_values(table.unpack(data.ZoneIds))
+
+                local foundRows = false
+                for row in stmt:nrows() do
+                    foundRows = true
+                    table.insert(metadata, { ZoneId = row.id,
+                                             Username = row.username,
+                                             Thumbnail = row.thumbnail,
+                                             Banner = row.banner,
+                                             Description = row.description,
+                                             DisplayName = row.display_name,
+                                             Tags = row.tags and json.decode(row.tags) or nil,
+                                             DateUpdated = row.date_updated,
+                    })
+                end
+
+                if not foundRows then
+                    print('No rows found matching the criteria.')
+                end
+
+                ao.send({
+                    Target = reply_to,
+                    Action = 'Get-Metadata-Success',
+                    Tags = {
+                        Status = 'Success',
+                        Message = 'Metadata retrieved',
+                    },
+                    Data = json.encode(metadata)
+                })
+            else
+                print('Profile ID list is empty after validation.')
+            end
+        else
+            ao.send({
+                Target = reply_to,
+                Action = 'Input-Error',
+                Tags = {
+                    Status = 'Error',
+                    Message = 'No ZoneIds provided or the list is empty.'
+                }
+            })
+            print('No ZoneIds provided or the list is empty.')
+            return
+
+        end
+    else
         ao.send({
-            Target = zone_id,
-            Action = 'Authorization-Error',
-            Tags = {
-                Status = 'Error',
-                Message = 'Unauthorized to access this handler'
-            }
-        })
-        return
-    end
-
-    local Id = data.Id or msg.Tags.Id
-    local Role = data.Role or msg.Tags.Role
-    local Op = data.Op or msg.Tags.Op
-
-    if not Id or not Op then
-        ao.send({
-            Target = zone_id,
+            Target = reply_to,
             Action = 'Input-Error',
             Tags = {
                 Status = 'Error',
-                Message =
-                'Invalid arguments, required { Id, Op } in data or tags'
+                Message = string.format(
+                        'Failed to parse data, received: %s. %s.', msg.Data,
+                        'Data must be an object - { ZoneIds }')
             }
+        })
+    end
+end
+
+-- assignment of message from authorized wallet to zone_id
+local function handle_meta_set(msg)
+    local reply_to = ao.id
+    local decode_check, data = decode_message_data(msg.Data)
+    -- data.entries may contain {"UserName":"x", ...etc}
+
+    if not decode_check then
+        ao.send({
+            Target = reply_to,
+            Action = H_ZONE_ERROR,
+            Data = { Status = 'DECODE_FAILED',
+                     Message = "Failed to decode data", Code = "DECODE_FAILED" }
         })
         return
     end
-    -- handle add, update, or remove Ops
-    local stmt
-    if data.Op == 'Add' then
-        stmt = Db:prepare(
-                'INSERT INTO zone_auth (zone_id, user_id, role) VALUES (?, ?, ?)')
-        stmt:bind_values(zone_id, Id, Role)
-
-    elseif data.Op == 'Update' then
-        stmt = Db:prepare(
-                'UPDATE zone_auth SET role = ? WHERE zone_id = ? AND user_id = ?')
-        stmt:bind_values(Role, zone_id, Id)
-
-    elseif data.Op == 'Delete' then
-        stmt = Db:prepare(
-                'DELETE FROM zone_auth WHERE zone_id = ? AND user_id = ?')
-        stmt:bind_values(zone_id, Id)
+    if not data.entries or #data.entries < 1 then
+        ao.send({
+            Target = reply_to,
+            Action = H_ZONE_ERROR,
+            Data = { Status = "BAD_QUERY",
+                     Message = "data.entries contains no zone ids" }
+        })
+        return
     end
 
-    local step_status = stmt:step()
-    stmt:finalize()
-    if step_status ~= sqlite3.OK and step_status ~= sqlite3.DONE and step_status ~= sqlite3.ROW then
-        print("Error: " .. Db:errmsg())
+    local entries = data.entries
+
+    -- make sure msg.Id is in NotifiedPending from Zone
+    -- if NotifiedPending has msg.Id then
+    -- remove msg.Id from NotifiedPending and continue.
+    -- removed =
+    if not removePendingId(msg.Id) then
+        print("could not remove pending")
+        -- did not find notification confirmation from zone for this update
+        return
+    end
+
+    local ZoneId = msg.Target -- Is this original target? confirm.
+    local UserId = msg.From -- (assigned) -- AuthorizedAddress
+
+    local check = Db:prepare('SELECT 1 FROM zone_users WHERE user_id = ? AND zone_id = ? LIMIT 1')
+    check:bind_values(UserId, ZoneId)
+    if check:step() ~= sqlite3.ROW then
+        print("inserting users")
+        local insert_auth = Db:prepare(
+                'INSERT INTO zone_users (zone_id, user_id) VALUES (?, ?)')
+        insert_auth:bind_values(ZoneId, UserId)
+        insert_auth:step()
+        insert_auth:finalize()
+    end
+
+    local columns = {}
+    local placeholders = {}
+    local params = {}
+
+    local metadataKeysMap = {
+        UserName = "username",
+        Thumbnail = "thumbnail",
+        Banner = "banner",
+        Description = "description",
+        Tags = "tags",
+        DisplayName = "display_name",
+        DateUpdated = "date_updated"
+    }
+    local metadataValues = { id = ZoneId}
+    --local metadataValues = {
+    --    username = entries.UserName or nil,
+    --    thumbnail = entries.Thumbnail or nil,
+    --    banner = entries.Banner or nil,
+    --    description = entries.Description or nil,
+    --    tags = entries.Tags and json.encode(entries.Tags) or nil,
+    --    display_name = entries.DisplayName or nil,
+    --    date_updated = entries.DateUpdated and tonumber(entries.DateUpdated) or os.time()
+    --}
+
+
+    -- for each tuple in data.entries if it mathes relevant metadata, add it to metadataValues
+    for _, item in ipairs(entries) do
+        if isInArray(RELEVANT_METADATA, item.key) then
+            metadataValues[metadataKeysMap[item.key]] = item.value
+        end
+    end
+
+    local function generateUpdateQuery(m)
+        -- first create setclauses for everything but id
+        --    print(m.username .. m.thumbnail)
+        for key, val in pairs(m) do
+            if val ~= nil then
+                -- Include the field if provided
+                -- define columns
+                table.insert(columns, key)
+                -- provide placeholders or null
+                if val == "" then
+                    -- If the field is an empty string, insert NULL
+                    table.insert(placeholders, "NULL")
+                else
+                    -- Otherwise, prepare to bind the actual value
+                    table.insert(placeholders, "?")
+                    table.insert(params, val)
+                end
+            end
+        end
+
+        print("updating meta " .. table.concat(columns, ', ') .. table.concat(placeholders, ", "))
+        local sql = "INSERT OR REPLACE INTO ao_zone_metadata (" .. table.concat(columns, ", ") .. ")"
+        sql = sql .. " VALUES (" .. table.concat(placeholders, ", ") .. ")"
+        -- (key, key, key ..)
+
+        return sql
+    end
+    local sql = generateUpdateQuery(metadataValues)
+    local stmt = Db:prepare(sql)
+    print(sql)
+    if not stmt then
         ao.send({
-            Target = zone_id,
+            Target = reply_to,
+            Action = 'DB_CODE',
+            Tags = {
+                Status = 'DB_PREPARE_FAILED',
+                Message = "DB PREPARED QUERY FAILED"
+            },
+            Data = { Code = "Failed to prepare update statement",
+                     SQL = sql,
+                     ERROR = Db:errmsg()
+            }
+        })
+        print("Failed to prepare update statement")
+        return json.encode({ Code = 'DB_PREPARE_FAILED' })
+    end
+
+    stmt:bind_values(table.unpack(params))
+
+    local step_status = stmt:step()
+    if step_status ~= sqlite3.OK and step_status ~= sqlite3.DONE and step_status ~= sqlite3.ROW then
+        stmt:finalize()
+        print("Error: " .. Db:errmsg())
+        print("SQL" .. sql)
+        ao.send({
+            Target = reply_to,
             Action = 'DB_STEP_CODE',
             Tags = {
-                Status = 'ERROR',
+                Status = H_ZONE_ERROR,
                 Message = 'sqlite step error'
             },
             Data = { DB_STEP_MSG = step_status }
         })
         return json.encode({ Code = step_status })
     end
-
+    print('added metadata')
+    stmt:finalize()
     ao.send({
         Target = zone_id,
         Action = 'Success',
         Tags = {
             Status = 'Success',
-            Message = 'Auth Record Success'
+            Message = 'Metadata Record Success'
         },
-        Data = json.encode({ ProfileId = zone_id, DelegateAddress = Id, Role = Role })
+        Data = json.encode({ ZoneId = zone_id, DelegateAddress = Id })
     })
+    return
 end
 
 Handlers.add(H_PREPARE_DB, Handlers.utils.hasMatchingTag('Action', H_PREPARE_DB),
         handle_prepare_db)
 
 -- Data - { Address }
-Handlers.add(H_GET_USER_ZONES, Handlers.utils.hasMatchingTag('Action', H_GET_USER_ZONES),
+Handlers.add(H_GET_ZONES_USERS, Handlers.utils.hasMatchingTag('Action', H_GET_ZONES_USERS),
         function(msg)
             local decode_check, data = decode_message_data(msg.Data)
 
@@ -363,23 +609,22 @@ Handlers.add(H_GET_USER_ZONES, Handlers.utils.hasMatchingTag('Action', H_GET_USE
 
                 local associated_zones = {}
 
-                local authorization_lookup = Db:prepare([[
-                    SELECT zone_id, user_id, role
-                        FROM zone_auth
-                        WHERE user_id = ?
+                local query = Db:prepare([[
+                    SELECT zone_id, user_id
+                    FROM zone_users
+                    WHERE user_id = ?
 			    ]])
 
-                authorization_lookup:bind_values(data.Address)
+                query:bind_values(data.Address)
 
-                for row in authorization_lookup:nrows() do
+                for row in query:nrows() do
                     table.insert(associated_zones, {
                         ZoneId = row.zone_id,
-                        Address = row.user_id,
-                        Role = row.role
+                        Address = row.user_id
                     })
                 end
 
-                authorization_lookup:finalize()
+                query:finalize()
 
                 if #associated_zones > 0 then
                     ao.send({
@@ -415,47 +660,51 @@ Handlers.add(H_GET_USER_ZONES, Handlers.utils.hasMatchingTag('Action', H_GET_USE
             end
         end)
 
--- Create-Profile Handler: (assigned from original zone spawn message)
-Handlers.add(H_CREATE_ZONE, Handlers.utils.hasMatchingTag('Action', H_CREATE_ZONE),
-        handle_create_zone )
+-- Create-Zone Handler: (assigned from original zone spawn message)
+Handlers.add(H_ZONE_BOOT, Handlers.utils.hasMatchingTag('Action', H_ZONE_BOOT),
+        handle_boot_zone)
 
-Handlers.add(H_META_SET, Handlers.utils.hasMatchingTag('Action', H_META_SET),
-        handle_forward)
+Handlers.add(H_ZONE_UPDATE, Handlers.utils.hasMatchingTag('Action', H_ZONE_UPDATE),
+        handle_meta_set)
 
-Handlers.add(H_ROLE_SET, Handlers.utils.hasMatchingTag('Action', H_ROLE_SET),
-        handle_update_role)
+Handlers.add(H_GET_ZONES_METADATA, Handlers.utils.hasMatchingTag('Action', H_GET_ZONES_METADATA),
+        handle_meta_get)
 
-Handlers.add(H_ADD_SUBSCRIBER, Handlers.utils.hasMatchingTag('Action', H_ADD_SUBSCRIBER),
-        handle_subscribe)
+Handlers.add(H_NOTIFY_ON_TOPIC, Handlers.utils.hasMatchingTag('Action', H_NOTIFY_ON_TOPIC),
+        handle_notified)
 
-Handlers.add(H_READ_AUTH, Handlers.utils.hasMatchingTag('Action', H_READ_AUTH),
+Handlers.add(H_INFO, Handlers.utils.hasMatchingTag('Action', H_INFO),
         function(msg)
             local metadata = {}
-            local string = ''
-            local foundRows = false
-            local status, err = pcall(function()
-                for row in Db:nrows('SELECT zone_id, user_id, role FROM zone_auth') do
-                    foundRows = true
-                    table.insert(metadata, {
-                        ProfileId = row.zone_id,
-                        CallerAddress = row.user_id,
-                        Role = row.role,
-                    })
-                    string = string .. "ZoneId: " .. row.zone_id .. " UserId: " .. row.user_id .. " Role: " .. row.role .. "\n"
-                end
-            end)
-            if not status then
-                print("Error: ", err)
-                return
+
+            local query = Db:prepare([[
+                SELECT id, username
+                FROM ao_zone_metadata
+            ]])
+            for row in query:nrows() do
+                table.insert(metadata, {
+                    ZoneId = row.id,
+                    Username = row.username,
+                })
             end
+
             ao.send({
                 Target = msg.From,
                 Action = 'Read-Metadata-Success',
                 Tags = {
                     Status = 'Success',
-                    Message = 'Auth Data retrieved',
+                    Message = 'Metadata retrieved',
                 },
                 Data = json.encode(metadata)
             })
+
             return json.encode(metadata)
         end)
+
+Handlers.add(H_SUB_REG_CONFIRM, Handlers.utils.hasMatchingTag('Action', H_SUB_REG_CONFIRM),
+    function(msg)
+        -- do something with the subscription notice
+        -- possibly add 'role'
+        -- for now, no-op removes it from inbox
+    end
+)

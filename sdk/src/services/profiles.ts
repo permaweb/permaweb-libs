@@ -1,13 +1,13 @@
-import { aoSend } from 'common/ao';
 import { resolveTransaction } from 'common/arweave';
 import { getGQLData } from 'common/gql';
 
 import { GATEWAYS, TAGS } from 'helpers/config';
 import { GQLNodeResponseType, ProfileArgsType, ProfileType } from 'helpers/types';
-import { globalLog, mapFromProcessCase } from 'helpers/utils';
+import { getBootTag, mapFromProcessCase } from 'helpers/utils';
 
 import { createZone, getZone, updateZone } from './zones';
 
+// TODO: Bootloader registry
 export async function createProfile(args: ProfileArgsType, wallet: any, callback?: (status: any) => void): Promise<string | null> {
 	let profileId: string | null = null;
 
@@ -16,18 +16,12 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 		{ name: TAGS.keys.zoneType, value: 'User' }
 	];
 
-	const addBootTag = (key: string, value: string | undefined) => {
-		if (value) {
-			tags.push({ name: `${TAGS.keys.bootloader}-${key}`, value });
-		}
-	};
-
 	const addImageTag = async (imageKey: 'Thumbnail' | 'Banner') => {
 		const key: any = imageKey.toLowerCase();
 		if ((args as any)[key]) {
 			try {
 				const resolvedImage = await resolveTransaction((args as any)[key]);
-				addBootTag(imageKey, resolvedImage);
+				tags.push(getBootTag(imageKey, resolvedImage));
 			} catch (e: any) {
 				if (callback) callback(`Failed to resolve ${imageKey}: ${e.message}`);
 				else console.error(e);
@@ -35,30 +29,32 @@ export async function createProfile(args: ProfileArgsType, wallet: any, callback
 		}
 	};
 
-	addBootTag('Username', args.username);
-	addBootTag('DisplayName', args.displayName);
-	addBootTag('Description', args.description);
+	tags.push(getBootTag('Username', args.username));
+	tags.push(getBootTag('DisplayName', args.displayName));
+	tags.push(getBootTag('Description', args.description));
 
 	await Promise.all([addImageTag('Thumbnail'), addImageTag('Banner')]);
 
 	try {
 		profileId = await createZone({ tags: tags }, wallet, callback);
 
-		if (profileId) {
-			globalLog(`Profile ID: ${profileId}`);
+		// if (profileId) {
+		// 	globalLog(`Profile ID: ${profileId}`);
 
-			const registerId = await aoSend({
-				processId: profileId,
-				wallet: wallet,
-				action: 'Register-Whitelisted-Subscriber',
-				tags: [
-					{ name: 'Topics', value: JSON.stringify(['Zone-Update']) },
-					{ name: 'Subscriber-Process-Id', value: 'Wl7pTf-UEp6SIIu3S5MsTX074Sg8MhCx40NuG_YEhmk' },
-				]
-			});
+		// 	await waitForProcess(profileId);
 
-			console.log(`Register ID: ${registerId}`);
-		}
+		// 	const registerId = await aoSend({
+		// 		processId: profileId,
+		// 		wallet: wallet,
+		// 		action: 'Register-Whitelisted-Subscriber',
+		// 		tags: [
+		// 			{ name: 'Topics', value: JSON.stringify(['Zone-Update']) },
+		// 			{ name: 'Subscriber-Process-Id', value: 'Wl7pTf-UEp6SIIu3S5MsTX074Sg8MhCx40NuG_YEhmk' },
+		// 		]
+		// 	});
+
+		// 	console.log(`Register ID: ${registerId}`);
+		// }
 	}
 	catch (e: any) {
 		throw new Error(e.message ?? 'Error creating profile');
@@ -116,7 +112,7 @@ export async function getProfileById(profileId: string): Promise<ProfileType | n
 export async function getProfileByWalletAddress(walletAddress: string): Promise<ProfileType & any | null> {
 	try {
 		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.goldsky,
+			gateway: GATEWAYS.arweave,
 			tags: [
 				{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
 				{ name: TAGS.keys.zoneType, values: ['User'] },

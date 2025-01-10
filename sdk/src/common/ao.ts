@@ -18,7 +18,7 @@ const GATEWAY = GATEWAYS.goldsky;
 
 const GATEWAY_RETRY_COUNT = 1000;
 
-const { result, results, message, spawn, dryrun } = connect({  GATEWAY_URL: `https://${GATEWAY}` });
+const { result, results, message, spawn, dryrun } = connect({ GATEWAY_URL: `https://${GATEWAY}` });
 
 export async function aoSpawn(args: ProcessSpawnType): Promise<string> {
 
@@ -33,7 +33,7 @@ export async function aoSpawn(args: ProcessSpawnType): Promise<string> {
 			tags: tags,
 			data: args.data,
 		});
-	
+
 		return processId;
 	}
 	catch (e: any) {
@@ -228,7 +228,7 @@ export async function aoMessageResults(args: {
 	}
 }
 
-async function waitForProcess(processId: string, _setStatus?: (status: any) => void) {
+export async function waitForProcess(processId: string, _setStatus?: (status: any) => void) {
 	let retries = 0;
 
 	while (retries < GATEWAY_RETRY_COUNT) {
@@ -261,7 +261,7 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 	}
 }
 
-async function handleProcessEval(args: {
+export async function handleProcessEval(args: {
 	processId: string;
 	evalTxId: string | null;
 	evalSrc: string | null;
@@ -315,13 +315,13 @@ export async function aoCreateProcess(args: ProcessCreateType, statusCB?: (statu
 		statusCB && statusCB(`Spawning process...`);
 		const processId = await aoSpawn(spawnArgs);
 
-		statusCB && statusCB(`Retrieving process...`);
-		await waitForProcess(processId, statusCB);
-
-		statusCB && statusCB(`Process retrieved!`);
-
 		if (args.evalTxId || args.evalSrc) {
+			statusCB && statusCB(`Retrieving process...`);
+			await waitForProcess(processId, statusCB);
+
+			statusCB && statusCB(`Process retrieved!`);
 			statusCB && statusCB('Sending eval...');
+			
 			try {
 				const evalResult = await handleProcessEval({
 					processId: processId,

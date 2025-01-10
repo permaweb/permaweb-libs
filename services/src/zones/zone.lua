@@ -15,6 +15,8 @@ end
 
 local Subscribable = require('subscribable')({ useDB = false })
 
+REGISTRY = 'Wl7pTf-UEp6SIIu3S5MsTX074Sg8MhCx40NuG_YEhmk'
+
 Zone = Zone or {}
 
 Zone.Functions = Zone.Functions or {}
@@ -680,6 +682,13 @@ if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
             setStoreValue(keyWithoutPrefix, tag.value)
         end
     end
+
+    ao.send({
+        Target = ao.id,
+        Action = 'Register-Whitelisted-Subscriber',
+        Topics = '["Zone-Update"]',
+        ['Subscriber-Process-Id'] = REGISTRY
+    })
 end
 
 if not ZoneInitCompleted then

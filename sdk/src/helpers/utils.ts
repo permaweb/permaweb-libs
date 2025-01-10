@@ -1,3 +1,5 @@
+import { TAGS } from './config';
+
 declare const InstallTrigger: any;
 
 export function checkValidAddress(address: string | null) {
@@ -267,4 +269,8 @@ export function mapFromProcessCase(obj: any): any {
         }, {});
     }
     return obj;
+}
+
+export function getBootTag(key: string, value: string) {
+	return { name: `${TAGS.keys.bootloader}-${key}`, value };
 }
