@@ -24,19 +24,139 @@ Zone.Functions = Zone.Functions or {}
 Zone.Constants = Zone.Constants or {
     H_ZONE_ERROR = 'Zone-Error',
     H_ZONE_SUCCESS = 'Zone-Success',
-    H_ZONE_UPDATE = 'Zone-Update',
-    H_ZONE_SET = 'Zone-Set',
-    H_ZONE_APPEND = 'Zone-Append',
-    H_ZONE_REMOVE = 'Zone-Remove',
     H_ZONE_KEYS = 'Zone-Keys',
     H_ZONE_GET = 'Info',
-    H_ZONE_ADD_UPLOAD = 'Add-Upload',
+    H_ZONE_ROLES_GET = 'Get-Roles',
     H_ZONE_CREDIT_NOTICE = 'Credit-Notice',
     H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
     H_ZONE_RUN_ACTION = 'Run-Action',
     H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
     H_ZONE_INDEX_NOTICE = 'Index-Notice',
+    H_ZONE_UPDATE = 'Zone-Update',
+    H_ZONE_ROLE_SET = 'Role-Set',
+    H_ZONE_SET = 'Zone-Set',
+    H_ZONE_APPEND = 'Zone-Append',
+    H_ZONE_REMOVE = 'Zone-Remove',
+    H_ZONE_ADD_UPLOAD = 'Add-Upload',
 }
+
+Zone.ROLE_NAMES = Zone.ROLE_NAMES or {
+    ADMIN = 'Admin',
+    CONTRIBUTOR = 'Contributor',
+    MODERATOR = 'Moderator'
+}
+
+HandlerRoles = HandlerRoles or {
+    [Zone.Constants.H_ZONE_ROLE_SET] = { 'Admin' },
+    [Zone.Constants.H_ZONE_UPDATE] = { 'Admin' },
+    [Zone.Constants.H_ZONE_ADD_UPLOAD] = { 'Admin', 'Contributor' },
+}
+
+-- Roles: { <Id>: string = {...roles} } :. Roles[<id>] = {...}
+if not Roles then
+    Roles = {}
+end
+
+function Zone.Functions.tableLength(t)
+    local count = 0
+    for _ in pairs(t) do
+        count = count + 1
+    end
+    return count
+end
+
+function Zone.Functions.rolesHasValue(roles, role)
+    for _, r in ipairs(roles) do
+        if r == role then
+            return true
+        end
+    end
+    return false
+end
+
+function Zone.Functions.getActorRoles(actor)
+    for id, roles in pairs(Roles) do
+        if id == actor then
+            return roles
+        end
+    end
+    return nil
+end
+
+function Zone.Functions.actorHasRole(actor, role)
+    local actorRoles = Zone.Functions.getActorRoles(actor)
+    if rolesHasValue(actorRoles, role) then
+        return true
+    end
+    return false
+end
+
+function Zone.Functions.authRunAction(msg)
+    -- true if caller has role to  call forwardAction
+    if not msg.ForwardTo or not msg.ForwardAction then
+        return false, "ForwardTo and ForwardAction are required"
+    end
+    --A wallet user calling run-action must be an owner or admin
+    if msg.From == Owner or msg.From == ao.id then
+        return true
+    end
+
+    local rolesForHandler = Zone.Functions.getRolesForAction(msg.ForwardAction)
+    if not rolesForHandler then
+        return false, "AuthRoles: Sender " .. msg.From .. " not Authorized to run action " .. msg.ForwardAction .. "."
+    end
+
+    local actorRoles = Zone.Functions.getActorRoles(msg.From)
+
+    if actorRoles then
+        for _, role in pairs(rolesForHandler) do
+            if Zone.Functions.rolesHasValue(actorRoles, role) then
+                return true
+            end
+        end
+    end
+
+    return true
+end
+
+HandlerSpecialRoles = HandlerSpecialRoles or {
+    [Zone.Constants.H_ZONE_RUN_ACTION] = Zone.Functions.authRunAction
+}
+
+function Zone.Functions.isAuthorized(msg)
+    if msg.From ~= Owner and msg.From ~= ao.id and Zone.Functions.tableLength(Roles) == 0 then
+        return false, "Not Authorized"
+    end
+
+    if msg.From == Owner then
+        return true
+    end
+
+    if HandlerSpecialRoles[msg.Action] then
+        return HandlerSpecialRoles[msg.Action](msg)
+    end
+
+    local rolesForHandler = HandlerRoles[msg.Action]
+    if not rolesForHandler then
+        return msg.From == Owner or false, "AuthRoles: Sender " .. msg.From .. " not Authorized. Only Owner can access the handler " .. msg.Action
+    end
+
+    local actorRoles = Zone.Functions.getActorRoles(msg.From)
+
+    if actorRoles then
+        for _, role in pairs(rolesForHandler) do
+            if Zone.Functions.rolesHasValue(actorRoles, role) then
+                return true
+            end
+        end
+    end
+
+    if not actorRoles then
+        return false, "AuthRoles: " .. msg.From .. " Not Authorized"
+    end
+
+    return false, "AuthRoles: Sender " .. msg.From .. " not Authorized."
+end
 
 Zone.Data = Zone.Data or {
     KV = KV.new({ BatchPlugin }),
@@ -66,10 +186,6 @@ function Zone.Functions.mergeTables(original, updates)
     return original
 end
 
-function Zone.Functions.isAuthorized(msg)
-    return msg.From == Owner or msg.From == ao.id
-end
-
 function Zone.Functions.sendError(target, errorMessage)
     ao.send({
         Target = target,
@@ -93,8 +209,9 @@ function Zone.Functions.zoneGet(msg)
 end
 
 function Zone.Functions.zoneUpdate(msg)
-    if not Zone.Functions.isAuthorized(msg) then
-        Zone.Functions.sendError(msg.From, 'Not Authorized')
+    authorized, message = Zone.Functions.isAuthorized(msg)
+    if not authorized then
+        Zone.Functions.sendError(msg.From, 'Not Authorized' .. " " .. message)
         return
     end
 
@@ -120,6 +237,98 @@ function Zone.Functions.zoneUpdate(msg)
         ao.send({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
         Subscribable.notifySubscribers(Zone.Constants.H_ZONE_UPDATE, { UpdateTx = msg.Id })
     end
+end
+
+function Zone.Functions.zoneRoleSet(msg)
+    -- data: { id=<id>, roles=<{ <role>, <role> }> or {} or nil}
+    local function check_valid_address(address)
+        if not address or type(address) ~= 'string' then
+            return false
+        end
+        return string.match(address, "^[%w%-_]+$") ~= nil and #address == 43
+    end
+
+    local function check_valid_roles(roles)
+        -- nil is ok
+        if not roles then
+            return true
+        end
+
+        -- empty table is ok
+        if #roles == 0 then
+            return true
+        end
+
+        -- just make sure roles table is strings {}
+        for _, role in ipairs(roles) do
+            if type(role) ~= 'string' then
+                return false
+            end
+        end
+        return true
+    end
+
+    local authorized, message = Zone.Functions.isAuthorized(msg)
+    if not authorized then
+        print('Not Authorized', message)
+        Zone.Functions.sendError(msg.From, message)
+        return
+    end
+
+    local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
+
+    if decodeResult.success and decodeResult.data then
+        local actorId = decodeResult.data.id
+        local roles = decodeResult.data.roles
+        if not actorId then
+            ao.send({
+                Target = msg.From,
+                Action = 'Input-Error',
+                Tags = {
+                    Status = 'Error',
+                    Message = 'Invalid arguments, required { id=<id>, roles=<{ <role>, <role> }> or {} or nil} in data'
+                }
+            })
+            return
+        end
+
+        if not check_valid_address(actorId) then
+            Zone.Functions.sendError(msg.From, 'Id must be a valid address')
+            return
+        end
+
+        if not check_valid_roles(roles) then
+            Zone.Functions.sendError(msg.From, 'Role must be a table of strings')
+            return
+        end
+
+        Roles[actorId] = roles
+
+        ao.send({
+            Target = msg.From,
+            Action = Zone.Constants.H_ZONE_SUCCESS,
+            Tags = {
+                Status = 'Success',
+                Message = 'Role updated'
+            }
+        })
+    else
+        print('Decode Error')
+        Zone.Functions.sendError(msg.From, string.format(
+                'Failed to parse role update data, received: %s. %s.', msg.Data,
+                'Data must be an object - { Id, Op, Role }'))
+    end
+end
+
+function Zone.Functions.addUpload(msg)
+    Zone.Data.AssetManager:update({
+        Type = 'Add',
+        AssetId = msg.AssetId,
+        Timestamp = msg.Timestamp,
+        AssetType = msg.AssetType,
+        ContentType = msg.ContentType,
+
+    })
 end
 
 function Zone.Functions.addUpload(msg)
@@ -186,7 +395,9 @@ function Zone.Functions.addIndexId(msg)
         return
     end
 
-    if not Zone.Data.KV.Store.Index then Zone.Data.KV.Store.Index = {} end
+    if not Zone.Data.KV.Store.Index then
+        Zone.Data.KV.Store.Index = {}
+    end
 
     for _, index in ipairs(Zone.Data.KV.Store.Index) do
         if index.Id == msg.IndexId then
@@ -302,24 +513,51 @@ function Zone.Functions.keysHandler(msg)
     })
 end
 
+function Zone.Functions.getRoles(msg)
+
+    local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
+
+    if decodeResult.success and decodeResult.data and decodeResult.data.Actors then
+        local actors = decodeResult.data.Actors
+        local actorRoles = {}
+        for _, actor in ipairs(actors) do
+            actorRoles[actor] = Zone.Functions.getActorRoles(actor)
+        end
+        msg.reply({
+            Action = Zone.Constants.H_ZONE_SUCCESS,
+            Data = actorRoles
+        })
+    else
+        msg.reply({
+            Action = Zone.Constants.H_ZONE_SUCCESS,
+            Data = Roles
+        })
+    end
+end
+
 -- Handler Registration
+-- read
 Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
-Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
-Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
+Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functions.keysHandler)
+Handlers.add(Zone.Constants.H_ZONE_ROLES_GET, Zone.Constants.H_ZONE_ROLES_GET, Zone.Functions.getRoles)
 Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
 Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
+-- write
+Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
+Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
 Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
 Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Functions.addIndexId)
 Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
 Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
 Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
 Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
-Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functions.keysHandler)
+Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zone.Functions.zoneRoleSet)
 
--- Register-Whitelisted-Subscriber
+
+-- Register-Whitelisted-Subscriber -- owner only
 -- Looks for Tag: Subscriber-Process-Id = <registry_id>
 Handlers.add('Register-Whitelisted-Subscriber', 'Register-Whitelisted-Subscriber',
-    Subscribable.handleRegisterWhitelistedSubscriber)
+        Subscribable.handleRegisterWhitelistedSubscriber)
 
 Subscribable.configTopicsAndChecks({
     [Zone.Constants.H_ZONE_UPDATE] = {
@@ -329,26 +567,119 @@ Subscribable.configTopicsAndChecks({
     },
 })
 
--- Boot Initialization
-if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
-    local collectedValues = {}
-    for _, tag in ipairs(Inbox[1].TagArray) do
-        local prefix = 'Bootloader-'
-        if string.sub(tag.name, 1, string.len(prefix)) == prefix then
-            local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
-            if not collectedValues[keyWithoutPrefix] then
-                collectedValues[keyWithoutPrefix] = { tag.value }
-            else
-                table.insert(collectedValues[keyWithoutPrefix], tag.value)
-            end
+--------------------------------------------------------------------------------
+-- Helper function: setStoreValue
+-- This function takes a dot-notated key and a value, then sets it in the
+-- Zone.Data.KV store with the following behaviors:
+--   1) If the final segment ends with "[]", we treat it as an array field and
+--      append the new value.
+--   2) If the final segment ends with "+++", we treat it as an instruction to
+--      "append the string" to whatever already exists at that key. If it is an
+--      array field (with "[]"), we append to the last element.
+--   3) Otherwise, we just set/overwrite the value at that key in the KV store.
+--------------------------------------------------------------------------------
+local function setStoreValue(keyString, value)
+    -- 1) Split the input keyString on dots
+    local parts = {}
+    for part in string.gmatch(keyString, "[^%.]+") do
+        table.insert(parts, part)
+    end
+
+    -- 2) Check for trailing "+++" or "[]"
+    local lastPart = parts[#parts]
+
+    -- Check if we want to append to an existing string
+    local isStringAppend = false
+    if string.sub(lastPart, -3) == "+++" then
+        isStringAppend = true
+        lastPart = string.sub(lastPart, 1, -4)  -- remove '+++'
+    end
+
+    -- Check if we are dealing with an array
+    local isArray = false
+    if string.sub(lastPart, -2) == "[]" then
+        isArray = true
+        lastPart = string.sub(lastPart, 1, -3)  -- remove '[]'
+    end
+
+    -- Update the last segment in our parts table
+    parts[#parts] = lastPart
+
+    -- 3) Build a dot-notated key up to (but not including) the last part
+    --    We'll use this later to navigate or set in the KV store.
+    local pathUpToLast = table.concat(parts, ".", 1, #parts - 1)
+    local finalKey     = parts[#parts]
+
+    -- A small helper to rejoin the entire path so KV can handle the nested structure:
+    local function recombinePath(upTo, last)
+        if upTo == nil or upTo == "" then
+            return last
+        else
+            return upTo .. "." .. last
         end
     end
 
-    for key, values in pairs(collectedValues) do
-        if #values == 1 then
-            Zone.Data.KV:set(key, values[1])
+    local fullKey = recombinePath(pathUpToLast, finalKey)
+
+    --------------------------------------------------------------------
+    -- 4) Handling for the "+++" case (string appending)
+    --------------------------------------------------------------------
+    if isStringAppend then
+        local currentValue = Zone.Data.KV:get(fullKey)
+
+        if isArray then
+            -- If no array yet, create it with a single element
+            if type(currentValue) ~= "table" then
+                Zone.Data.KV:set(fullKey, { value })
+                return
+            end
+            -- Otherwise, append the incoming string to the last element
+            local lastIndex = #currentValue
+            if lastIndex == 0 then
+                -- If array is empty, just add this as the first element
+                table.insert(currentValue, value)
+            else
+                -- Append to the last string in the array
+                currentValue[lastIndex] = currentValue[lastIndex] .. value
+            end
+            Zone.Data.KV:set(fullKey, currentValue)
+
         else
-            Zone.Data.KV:set(key, values)
+            -- Not an array, just a single field
+            if currentValue == nil then
+                -- Nothing was there, just set it
+                Zone.Data.KV:set(fullKey, value)
+            elseif type(currentValue) == "string" then
+                -- Append to existing string
+                Zone.Data.KV:set(fullKey, currentValue .. value)
+            else
+                -- If it wasn't a string, simply overwrite
+                Zone.Data.KV:set(fullKey, value)
+            end
+        end
+
+        --------------------------------------------------------------------
+        -- 5) Handling for a normal set, with or without "[]"
+        --------------------------------------------------------------------
+    else
+        if isArray then
+            Zone.Data.KV:append(fullKey, value)
+        else
+            -- Normal field, just set (overwrite) it
+            Zone.Data.KV:set(fullKey, value)
+        end
+    end
+end
+
+-- Boot Initialization
+if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
+    for _, tag in ipairs(Inbox[1].TagArray) do
+        local prefix = "Bootloader-"
+        -- Check if this Tag is for the Bootloader
+        if string.sub(tag.name, 1, string.len(prefix)) == prefix then
+            -- keyWithoutPrefix is everything after "Bootloader-"
+            local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
+            setStoreValue(keyWithoutPrefix, tag.value)
         end
     end
 
