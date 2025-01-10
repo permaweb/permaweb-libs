@@ -4,8 +4,10 @@ export const AO = {
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
 		asset: 'gyvfBebLlNJw0_bdq6NLL_BK_dqpgj9nRTYebyoOmKI',
-		zone: 'UmDqxL8ufIj2Zj9eKDQfDj_hyJ8rWZn7VaTgpyeRT94'
-	}
+		zone: 'UmDqxL8ufIj2Zj9eKDQfDj_hyJ8rWZn7VaTgpyeRT94',
+    collection: '2ZDuM2VUCN8WHoAKOOjiH4_7Apq0ZHKnTWdLppxCdGY'
+	},
+  collectionsRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg'
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {
@@ -14,6 +16,9 @@ export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: a
 		serialize: (data: any) => JSON.stringify(data),
 	},
 };
+
+export const DEFAULT_UCM_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
+export const DEFAULT_UCM_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';
 
 export const GATEWAYS = {
 	arweave: 'arweave.net',
@@ -30,6 +35,14 @@ export const LICENSES = {
 export const TAGS = {
 	keys: {
 		access: 'Access-Fee',
+    ans110: {
+			title: 'Title',
+			description: 'Description',
+			topic: 'Topic:*',
+			type: 'Type',
+			implements: 'Implements',
+			license: 'License',
+		},
 		banner: 'Banner',
 		bootloader: 'Bootloader',
 		bootloaderInit: 'On-Boot',
@@ -52,6 +65,7 @@ export const TAGS = {
 		name: 'Name',
 		paymentAddress: 'Payment-Address',
 		paymentMode: 'Payment-Mode',
+    profileCreator: 'Profile-Creator',
 		profileIndex: 'Profile-Index',
 		protocolName: 'Protocol-Name',
 		renderWith: 'Render-With',
@@ -60,7 +74,10 @@ export const TAGS = {
 		topic: 'Topic',
 		type: 'Type',
 		zoneType: 'Zone-Type'
-	}
+	},
+  values: {
+    document: 'Document',
+  }
 };
 
 export const UPLOAD = {

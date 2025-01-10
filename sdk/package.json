@@ -28,7 +28,6 @@
 		"build": "node build.js"
 	},
 	"dependencies": {
-		"@permaweb/aoconnect": "^0.0.59",
 		"process": "^0.11.10",
 		"tsc-alias": "^1.8.10"
 	},
