@@ -565,26 +565,119 @@ Subscribable.configTopicsAndChecks({
     },
 })
 
--- Boot Initialization
-if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
-    local collectedValues = {}
-    for _, tag in ipairs(Inbox[1].TagArray) do
-        local prefix = 'Bootloader-'
-        if string.sub(tag.name, 1, string.len(prefix)) == prefix then
-            local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
-            if not collectedValues[keyWithoutPrefix] then
-                collectedValues[keyWithoutPrefix] = { tag.value }
-            else
-                table.insert(collectedValues[keyWithoutPrefix], tag.value)
-            end
+--------------------------------------------------------------------------------
+-- Helper function: setStoreValue
+-- This function takes a dot-notated key and a value, then sets it in the
+-- Zone.Data.KV store with the following behaviors:
+--   1) If the final segment ends with "[]", we treat it as an array field and
+--      append the new value.
+--   2) If the final segment ends with "+++", we treat it as an instruction to
+--      "append the string" to whatever already exists at that key. If it is an
+--      array field (with "[]"), we append to the last element.
+--   3) Otherwise, we just set/overwrite the value at that key in the KV store.
+--------------------------------------------------------------------------------
+local function setStoreValue(keyString, value)
+    -- 1) Split the input keyString on dots
+    local parts = {}
+    for part in string.gmatch(keyString, "[^%.]+") do
+        table.insert(parts, part)
+    end
+
+    -- 2) Check for trailing "+++" or "[]"
+    local lastPart = parts[#parts]
+
+    -- Check if we want to append to an existing string
+    local isStringAppend = false
+    if string.sub(lastPart, -3) == "+++" then
+        isStringAppend = true
+        lastPart = string.sub(lastPart, 1, -4)  -- remove '+++'
+    end
+
+    -- Check if we are dealing with an array
+    local isArray = false
+    if string.sub(lastPart, -2) == "[]" then
+        isArray = true
+        lastPart = string.sub(lastPart, 1, -3)  -- remove '[]'
+    end
+
+    -- Update the last segment in our parts table
+    parts[#parts] = lastPart
+
+    -- 3) Build a dot-notated key up to (but not including) the last part
+    --    We'll use this later to navigate or set in the KV store.
+    local pathUpToLast = table.concat(parts, ".", 1, #parts - 1)
+    local finalKey     = parts[#parts]
+
+    -- A small helper to rejoin the entire path so KV can handle the nested structure:
+    local function recombinePath(upTo, last)
+        if upTo == nil or upTo == "" then
+            return last
+        else
+            return upTo .. "." .. last
         end
     end
 
-    for key, values in pairs(collectedValues) do
-        if #values == 1 then
-            Zone.Data.KV:set(key, values[1])
+    local fullKey = recombinePath(pathUpToLast, finalKey)
+
+    --------------------------------------------------------------------
+    -- 4) Handling for the "+++" case (string appending)
+    --------------------------------------------------------------------
+    if isStringAppend then
+        local currentValue = Zone.Data.KV:get(fullKey)
+
+        if isArray then
+            -- If no array yet, create it with a single element
+            if type(currentValue) ~= "table" then
+                Zone.Data.KV:set(fullKey, { value })
+                return
+            end
+            -- Otherwise, append the incoming string to the last element
+            local lastIndex = #currentValue
+            if lastIndex == 0 then
+                -- If array is empty, just add this as the first element
+                table.insert(currentValue, value)
+            else
+                -- Append to the last string in the array
+                currentValue[lastIndex] = currentValue[lastIndex] .. value
+            end
+            Zone.Data.KV:set(fullKey, currentValue)
+
         else
-            Zone.Data.KV:set(key, values)
+            -- Not an array, just a single field
+            if currentValue == nil then
+                -- Nothing was there, just set it
+                Zone.Data.KV:set(fullKey, value)
+            elseif type(currentValue) == "string" then
+                -- Append to existing string
+                Zone.Data.KV:set(fullKey, currentValue .. value)
+            else
+                -- If it wasn't a string, simply overwrite
+                Zone.Data.KV:set(fullKey, value)
+            end
+        end
+
+        --------------------------------------------------------------------
+        -- 5) Handling for a normal set, with or without "[]"
+        --------------------------------------------------------------------
+    else
+        if isArray then
+            Zone.Data.KV:append(fullKey, value)
+        else
+            -- Normal field, just set (overwrite) it
+            Zone.Data.KV:set(fullKey, value)
+        end
+    end
+end
+
+-- Boot Initialization
+if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
+    for _, tag in ipairs(Inbox[1].TagArray) do
+        local prefix = "Bootloader-"
+        -- Check if this Tag is for the Bootloader
+        if string.sub(tag.name, 1, string.len(prefix)) == prefix then
+            -- keyWithoutPrefix is everything after "Bootloader-"
+            local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
+            setStoreValue(keyWithoutPrefix, tag.value)
         end
     end
 end

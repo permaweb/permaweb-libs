@@ -166,7 +166,7 @@ Handlers.add('Mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
 			Tags = {
 				Status = 'Error',
 				Message = string.format('Failed to parse data, received: %s. %s', msg.Data,
-					'Data must be an object - { Quantity }')
+						'Data must be an object - { Quantity }')
 			}
 		})
 	end
@@ -214,7 +214,7 @@ Handlers.add('Balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), func
 			Tags = {
 				Status = 'Error',
 				Message = string.format('Failed to parse data, received: %s. %s', msg.Data,
-					'Data must be an object - { Target }')
+						'Data must be an object - { Target }')
 			}
 		})
 	end
@@ -222,7 +222,7 @@ end)
 
 -- Read balances
 Handlers.add('Balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
-	function(msg) msg.reply({ Data = json.encode(Balances) }) end)
+		function(msg) msg.reply({ Data = json.encode(Balances) }) end)
 
 -- Read total supply of token
 Handlers.add('Total-Supply', Handlers.utils.hasMatchingTag('Action', 'Total-Supply'), function(msg)
