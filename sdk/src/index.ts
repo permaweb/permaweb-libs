@@ -24,7 +24,6 @@ function init(deps: DependencyType) {
     getCollections: Services.getCollectionsWith(deps),
 
     createComment: Services.getCommentWith(deps),
-    updateComment: Services.updateCommentWith(deps),
     getComment: Services.getCommentWith(deps),
     getComments: Services.getCommentsWith(deps)
   }

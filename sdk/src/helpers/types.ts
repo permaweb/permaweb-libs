@@ -112,7 +112,13 @@ export type AssetStateType = {
 
 export type AssetDetailType = AssetHeaderType & AssetStateType;
 
-export type CommentCreateArgType = AssetCreateArgsType & { dataSource: string, rootSouce: string };
+export type CommentHeaderType = AssetHeaderType & { dataSource: string, rootSource: string };
+
+export type CommentStateType = AssetStateType;
+
+export type CommentDetailType = CommentHeaderType & CommentStateType;
+
+export type CommentCreateArgType = AssetCreateArgsType & { dataSource: string, rootSource: string };
 
 export type UDLicenseType = {
 	access: UDLicenseValueType | null;
