@@ -106,6 +106,20 @@ export type AssetStateType = {
 	transferable: boolean | null;
 }
 
+export type AoAssetType = {
+	ticker: string;
+	denomination: string;
+	balances: {
+		[key: string]: string;
+	};
+	transferable: boolean;
+	name: string;
+	creator: string;
+	assetMetadata: {
+		[key: string]: any;
+	};
+};
+
 export type AssetDetailType = AssetHeaderType & AssetStateType;
 
 export type UDLicenseType = {
