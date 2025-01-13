@@ -1,3 +1,4 @@
+import { aoDryRun, aoMessageResult, aoSend } from "common/ao";
 import { resolveTransaction } from "common/arweave";
 import { getGQLData } from "common/gql";
 import { 
@@ -9,10 +10,10 @@ import {
   GATEWAYS
 } from "helpers/config";
 import { getTxEndpoint } from "helpers/endpoints";
-import { DependencyType, TagType } from "helpers/types";
+import { AssetDetailType, CollectionDetailType, CollectionType, DependencyType, TagType } from "helpers/types";
 import { cleanTagValue, cleanProcessField } from "helpers/utils";
 
-export async function createCollectionWith(deps: DependencyType) {
+export function createCollectionWith(deps: DependencyType) {
   return async (
     args: { 
       walletAddress: string, 
@@ -160,15 +161,82 @@ export async function createCollectionWith(deps: DependencyType) {
   }
 }
 
-// take a list of assets and add them
-export async function updateCollectionWith(deps: DependencyType) {
-
+export function updateCollectionWith(deps: DependencyType) {
+  return async(args: { 
+    profileId: string, 
+    collectionId: string, 
+    assetIds: string[] 
+  }): Promise<string> => {
+    return await aoSend(deps, {
+      processId: args.profileId,
+      action: 'Run-Action',
+      tags: null,
+      data: {
+        Target: args.collectionId,
+        Action: 'Update-Assets',
+        Input: JSON.stringify({
+          AssetIds: args.assetIds,
+          UpdateType: 'Add',
+        }),
+      }
+    });
+  }
 }
 
-export async function getCollectionWith(deps: DependencyType) {
+export function getCollectionWith(deps: DependencyType) {
+  return async(args: { id: string }): Promise<CollectionDetailType | null> => {
+    const response = await aoDryRun(deps, {
+      processId: args.id,
+      action: 'Info',
+    });
 
+    const collection: CollectionType = {
+      id: args.id,
+      title: response.Name,
+      description: response.Description,
+      creator: response.Creator,
+      dateCreated: response.DateCreated,
+      banner: response.Banner ?? DEFAULT_UCM_BANNER,
+      thumbnail: response.Thumbnail ?? DEFAULT_UCM_THUMBNAIL,
+    };
+
+    let assetIds: string[] = response.Assets;
+
+    const collectionDetail = {
+      ...collection,
+      assetIds: assetIds,
+      creatorProfile: null,
+    };
+    return collectionDetail;
+  }
 }
 
 export async function getCollectionsWith(deps: DependencyType) {
-  
+  return async (args: {creator?: string}): Promise<CollectionType[] | null> => {
+    const action = args.creator ? 'Get-Collections-By-User' : 'Get-Collections';
+
+    const response = await aoDryRun(deps, {
+      processId: AO.collectionsRegistry,
+      action: action,
+      tags: args.creator ? [{ name: 'Creator', value: args.creator }] : null,
+    });
+
+    if (response && response.Collections && response.Collections.length) {
+      const collections = response.Collections.map((collection: any) => {
+        return {
+          id: collection.Id,
+          title: collection.Name.replace(/\[|\]/g, ''),
+          description: collection.Description,
+          creator: collection.Creator,
+          dateCreated: collection.DateCreated,
+          banner: collection.Banner,
+          thumbnail: collection.Thumbnail,
+        };
+      });
+
+      return collections;
+    }
+
+    return null;
+  }
 }

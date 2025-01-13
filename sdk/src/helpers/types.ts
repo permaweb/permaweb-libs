@@ -112,6 +112,26 @@ export type AssetStateType = {
 
 export type AssetDetailType = AssetHeaderType & AssetStateType;
 
+export type CollectionManifestType = {
+	type: string;
+	items: string[];
+};
+
+export type CollectionType = {
+	id: string;
+	title: string;
+	description: string | null;
+	creator: string;
+	dateCreated: string;
+	banner: string | null;
+	thumbnail: string | null;
+};
+
+export type CollectionDetailType = CollectionType & {
+	assetIds: string[];
+	creatorProfile: ProfileType;
+};
+
 export type CommentHeaderType = AssetHeaderType & { dataSource: string, rootSource: string };
 
 export type CommentStateType = AssetStateType;
