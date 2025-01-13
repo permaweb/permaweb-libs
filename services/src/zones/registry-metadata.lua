@@ -12,8 +12,8 @@ local H_GET_ZONES_METADATA = "Get-Zones-Metadata"
 local H_PREPARE_DB = "Prepare-Database"
 local H_INFO = "Info"
 local H_NOTIFY_ON_TOPIC = "Notify-On-Topic"
-local H_INIT_ZONE = "Init-Zone"
 local H_SUB_REG_CONFIRM = "Subscriber-Registration-Confirmation"
+local H_SUB_TOP_CONFIRM = "Subscriber-Topics-Confirmation"
 
 -- handlers to be assigned
 local H_ZONE_UPDATE = 'Zone-Update'
@@ -143,7 +143,7 @@ local function handle_boot_zone(msg)
     if check:step() ~= sqlite3.ROW then
         local insert_auth = Db:prepare(
                 'INSERT INTO zone_users (zone_id, user_id) VALUES (?, ?)')
-        insert_auth:bind_values(ZoneId, UserId, 'Owner')
+        insert_auth:bind_values(ZoneId, UserId)
         insert_auth:step()
         insert_auth:finalize()
     else
@@ -173,7 +173,7 @@ local function handle_boot_zone(msg)
                 if (cleanedTag == "Tags") then
                     table.insert(zoneTags, tag.value)
                 else
-                    metadataTags[cleanedTag] = tag.value
+                    metadataValues[cleanedTag] = tag.value
                 end
             end
         end
@@ -271,7 +271,6 @@ local function handle_boot_zone(msg)
         },
         Data = json.encode(metadataValues)
     })
-
 end
 
 local function handle_prepare_db(msg)
@@ -850,8 +849,8 @@ Handlers.add(H_GET_ZONES_USERS, Handlers.utils.hasMatchingTag('Action', H_GET_ZO
         end)
 
 -- Create-Zone Handler: (assigned from original zone spawn message)
-Handlers.add(H_ZONE_BOOT, Handlers.utils.hasMatchingTag('Action', H_ZONE_BOOT),
-        handle_boot_zone)
+--Handlers.add(H_ZONE_BOOT, Handlers.utils.hasMatchingTag('Action', H_ZONE_BOOT),
+--        handle_test_boot)
 
 Handlers.add(H_ZONE_UPDATE, Handlers.utils.hasMatchingTag('Action', H_ZONE_UPDATE),
         handle_meta_set)
@@ -895,8 +894,12 @@ Handlers.add(H_INFO, Handlers.utils.hasMatchingTag('Action', H_INFO),
 
 Handlers.add(H_SUB_REG_CONFIRM, Handlers.utils.hasMatchingTag('Action', H_SUB_REG_CONFIRM),
     function(msg)
-        -- do something with the subscription notice
-        -- possibly add 'role'
-        -- for now, no-op removes it from inbox
+        print("Whitelist-Confirmation")
     end
+)
+
+Handlers.add(H_SUB_TOP_CONFIRM, Handlers.utils.hasMatchingTag('Response-For', "Subscribe-To-Topics"),
+        function(msg)
+            print("Topics-Confirmation")
+        end
 )

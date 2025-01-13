@@ -32,6 +32,7 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_RUN_ACTION = 'Run-Action',
     H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
     H_ZONE_INDEX_NOTICE = 'Index-Notice',
+    -- mutations
     H_ZONE_UPDATE = 'Zone-Update',
     H_ZONE_ROLE_SET = 'Role-Set',
     H_ZONE_SET = 'Zone-Set',
@@ -668,6 +669,8 @@ end
 
 -- Boot Initialization
 if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
+    --TODO add registries at boot
+    --local registry_ids = {}
     for _, tag in ipairs(Inbox[1].TagArray) do
         local prefix = "Bootloader-"
         -- Check if this Tag is for the Bootloader
@@ -676,6 +679,10 @@ if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
             setStoreValue(keyWithoutPrefix, tag.value)
         end
+        -- TODO add registries at boot
+        --if tag.name == 'Registry-Id' then
+        --    table.insert(registry_ids, tag.value)
+        --end
     end
 
     ao.send({
