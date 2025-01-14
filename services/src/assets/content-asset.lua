@@ -5,16 +5,18 @@ UNSET_PLACEHOLDER = '<UNSET>'
 
 if Name ~= UNSET_PLACEHOLDER then Name = UNSET_PLACEHOLDER end
 
-Creator = Creator or UNSET_PLACEHOLDER
 Ticker = Ticker or UNSET_PLACEHOLDER
 Denomination = Denomination or UNSET_PLACEHOLDER
 TotalSupply = TotalSupply or UNSET_PLACEHOLDER
-Collection = Collection or UNSET_PLACEHOLDER
 
+Creator = Creator or UNSET_PLACEHOLDER
+Collection = Collection or UNSET_PLACEHOLDER
 Status = Status or UNSET_PLACEHOLDER
 Content = Content or {}
 Topics = Topics or {}
 Categories = Categories or {}
+Thumbnail = Thumbnail or UNSET_PLACEHOLDER
+Description = Description or UNSET_PLACEHOLDER
 IndexRecipients = IndexRecipients or {}
 
 Balances = Balances or { ['<CREATOR>'] = '<SUPPLY>' }
@@ -253,6 +255,14 @@ Handlers.add('Update-Asset', 'Update-Asset', function(msg)
         if data.Title then
             Name = data.Title
             indexData.Title = data.Title
+        end
+        if data.Thumbnail then
+            Thumbanail = data.Thumbnail
+            indexData.Thumbnail = data.Thumbnail
+        end
+        if data.Description then
+            Description = data.Description
+            indexData.Description = data.Description
         end
         if data.Status then
             Status = data.Status

@@ -1,8 +1,8 @@
-import { aoCreateProcess, aoDryRun } from 'common/ao';
-import { getGQLData } from 'common/gql';
+import {aoCreateProcess, aoDryRun} from 'common/ao';
+import {getGQLData} from 'common/gql';
 
 import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
-import { AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, DependencyType, GQLNodeResponseType, TagType, UDLicenseType } from 'helpers/types';
+import { AoAssetType, AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, DependencyType, GQLNodeResponseType, TagType, UDLicenseType } from 'helpers/types';
 import { checkValidAddress, formatAddress, getBootTag, getTagValue, mapFromProcessCase } from 'helpers/utils';
 
 export function createAtomicAssetWith(deps: DependencyType) {
@@ -122,6 +122,31 @@ export function getAtomicAssetWith(deps: DependencyType) {
   }
 }
 
+export function getAoAtomicAssetWith(deps: DependencyType) {
+  return async(processId: string): Promise<AoAssetType> => {
+    try {
+      const processState = await aoDryRun(deps, {
+        processId: processId,
+        action: 'Info',
+      });
+      if (processState) {
+        return {
+          ticker: processState.Ticker,
+          denomination: processState.Denomination,
+          balances: processState.Balances,
+          transferable: processState.Transferable,
+          name: processState.Name,
+          creator: processState.Creator,
+          assetMetadata: mapFromProcessCase(processState.AssetMetadata),
+        };
+      }
+      return Promise.reject('Error fetching atomic asset');
+    } catch (e: any) {
+      throw new Error(e.message || 'Error fetching atomic asset');
+    }
+  }
+}
+
 export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
 	try {
 		const gqlResponse = await getGQLData({
@@ -137,9 +162,7 @@ export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] 
 		}
 
 		return null;
-	}
-
-	catch (e: any) {
+	} catch (e: any) {
 		throw new Error(e);
 	}
 }
@@ -221,10 +244,10 @@ function getLicense(element: GQLNodeResponseType): UDLicenseType | null {
 
 	if (license && license === LICENSES.udl.address) {
 		return {
-			access: { value: getTagValue(element.node.tags, TAGS.keys.access) },
-			derivations: { value: getTagValue(element.node.tags, TAGS.keys.derivations) },
-			commercialUse: { value: getTagValue(element.node.tags, TAGS.keys.commericalUse) },
-			dataModelTraining: { value: getTagValue(element.node.tags, TAGS.keys.dataModelTraining) },
+			access: {value: getTagValue(element.node.tags, TAGS.keys.access)},
+			derivations: {value: getTagValue(element.node.tags, TAGS.keys.derivations)},
+			commercialUse: {value: getTagValue(element.node.tags, TAGS.keys.commericalUse)},
+			dataModelTraining: {value: getTagValue(element.node.tags, TAGS.keys.dataModelTraining)},
 			paymentMode: getTagValue(element.node.tags, TAGS.keys.paymentMode),
 			paymentAddress: getTagValue(element.node.tags, TAGS.keys.paymentAddress),
 			currency: getTagValue(element.node.tags, TAGS.keys.currency),
@@ -235,30 +258,30 @@ function getLicense(element: GQLNodeResponseType): UDLicenseType | null {
 
 function buildAssetTags(args: AssetCreateArgsType): { name: string; value: string }[] {
 	const tags = [
-		{ name: TAGS.keys.title, value: args.title },
-		{ name: TAGS.keys.description, value: args.description },
-		{ name: TAGS.keys.type, value: args.type },
-		{ name: TAGS.keys.contentType, value: args.contentType },
-		{ name: TAGS.keys.implements, value: 'ANS-110' },
-		{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
+		{name: TAGS.keys.title, value: args.title},
+		{name: TAGS.keys.description, value: args.description},
+		{name: TAGS.keys.type, value: args.type},
+		{name: TAGS.keys.contentType, value: args.contentType},
+		{name: TAGS.keys.implements, value: 'ANS-110'},
+		{name: TAGS.keys.dateCreated, value: new Date().getTime().toString()},
 	];
 
-	args.topics.forEach((topic: string) => tags.push({ name: TAGS.keys.topic, value: topic }));
+	args.topics.forEach((topic: string) => tags.push({name: TAGS.keys.topic, value: topic}));
 
 	if (args.creator) {
-		tags.push({ name: TAGS.keys.creator, value: args.creator });
+		tags.push({name: TAGS.keys.creator, value: args.creator});
 	}
 
 	if (args.collectionId) {
-		tags.push({ name: TAGS.keys.collectionId, value: args.collectionId });
+		tags.push({name: TAGS.keys.collectionId, value: args.collectionId});
 	}
 
 	if (args.renderWith) {
-		tags.push({ name: TAGS.keys.renderWith, value: args.renderWith });
+		tags.push({name: TAGS.keys.renderWith, value: args.renderWith});
 	}
 
 	if (args.thumbnail && checkValidAddress(args.thumbnail)) {
-		tags.push({ name: TAGS.keys.thumbnail, value: args.thumbnail });
+		tags.push({name: TAGS.keys.thumbnail, value: args.thumbnail});
 	}
 
 	if (args.tags) args.tags.forEach((tag: TagType) => tags.push(tag));

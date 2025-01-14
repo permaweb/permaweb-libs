@@ -14,6 +14,7 @@ function init(deps: DependencyType) {
     createAtomicAsset: Services.createAtomicAssetWith(deps),
     getAtomicAsset: Services.getAtomicAssetWith(deps),
     getAtomicAssets: Services.getAtomicAssets,
+    getAoAtomicAsset: Services.getAoAtomicAssetWith(deps),
     buildAsset: Services.buildAsset,
 
     createProfile: Services.createProfileWith(deps),
