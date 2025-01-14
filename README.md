@@ -105,15 +105,13 @@ ZoneProcessId;
 #### `updateZone`
 
 ```typescript
-const zoneUpdateId = await permaweb.updateZone(
-  {
+const zoneUpdateId = await permaweb.updateZone({
     name: "Sample Zone",
     metadata: {
       description: "A sample zone for testing",
       version: "1.0.0",
     },
-  },
-  zoneId
+  }, zoneId
 );
 ```
 
@@ -192,15 +190,13 @@ ProfileProcessId;
 #### `updateProfile`
 
 ```typescript
-const profileId = await permaweb.updateProfile(
-  {
+const profileId = await permaweb.updateProfile({
     username: "Sample Zone",
     displayName: "Sample Zone",
     description: "Sample description",
     thumbnail: "Thumbnail image data",
     banner: "Banner image data",
-  },
-  profileId
+  }, profileId
 );
 ```
 
@@ -689,7 +685,7 @@ const collection = await permaweb.getCollection(collectionId);
 #### `getCollections`
 
 ```typescript
-const collections = await permaweb.getCollections(collectionId);
+const collections = await permaweb.getCollections();
 ```
 
 <details>
@@ -740,9 +736,7 @@ import Arweave from "arweave";
 import { connect, createDataItemSigner } from "@permaweb/aoconnect";
 import Permaweb from "@permaweb/libs";
 
-const PermawebContext = React.createContext<PermawebContextState>({
-  libs: null,
-});
+const PermawebContext = React.createContext<PermawebContextState>({ libs: null });
 
 export function usePermawebProvider(): PermawebContextState {
   return React.useContext(PermawebContext);
