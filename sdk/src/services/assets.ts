@@ -1,144 +1,150 @@
 import {aoCreateProcess, aoDryRun} from 'common/ao';
 import {getGQLData} from 'common/gql';
 
-import {AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS} from 'helpers/config';
-import {AoAssetType, AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, GQLNodeResponseType, TagType, UDLicenseType} from 'helpers/types';
-import {checkValidAddress, formatAddress, getBootTag, getTagValue, mapFromProcessCase} from 'helpers/utils';
+import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
+import { AoAssetType, AssetCreateArgsType, AssetDetailType, AssetHeaderType, AssetStateType, DependencyType, GQLNodeResponseType, TagType, UDLicenseType } from 'helpers/types';
+import { checkValidAddress, formatAddress, getBootTag, getTagValue, mapFromProcessCase } from 'helpers/utils';
 
-export async function createAtomicAsset(args: AssetCreateArgsType, wallet: any, callback?: (status: any) => void) {
-	const validationError = getValidationErrorMessage(args);
-	if (validationError) throw new Error(validationError);
-
-	const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
-
-	const tags = [{name: TAGS.keys.bootloaderInit, value: AO.src.asset}];
-	tags.push(...buildAssetTags(args));
-
-	tags.push(getBootTag('Name', args.title));
-	tags.push(getBootTag('Ticker', 'ATOMIC'));
-	tags.push(getBootTag('Denomination', args.denomination ? args.denomination.toString() : '1'));
-	tags.push(getBootTag('TotalSupply', args.supply ? args.supply.toString() : '1'));
-
-	if (args.creator) tags.push(getBootTag('Creator', args.creator));
-	if (args.collectionId) tags.push(getBootTag('Collection', args.collectionId));
-	if (!args.transferable) tags.push(getBootTag('Transferable', 'false'));
-
-	try {
-		const assetId = await aoCreateProcess(
-			{
-				wallet: wallet,
-				spawnTags: tags,
-				spawnData: data
-			},
-			callback ? (status) => callback(status) : undefined,
-		);
-
-		return assetId;
-	} catch (e: any) {
-		throw new Error(e.message ?? 'Error creating asset');
-	}
+export function createAtomicAssetWith(deps: DependencyType) {
+  return async (args: AssetCreateArgsType, callback?: (status: any) => void) => {
+    const validationError = getValidationErrorMessage(args);
+    if (validationError) throw new Error(validationError);
+  
+    const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
+  
+    const tags = [{ name: TAGS.keys.bootloaderInit, value: args.src ?? AO.src.asset }];	
+    tags.push(...buildAssetTags(args));
+  
+    tags.push(getBootTag('Name', args.title));
+    tags.push(getBootTag('Ticker', 'ATOMIC'));
+    tags.push(getBootTag('Denomination', args.denomination ? args.denomination.toString() : '1'));
+    tags.push(getBootTag('TotalSupply', args.supply ? args.supply.toString() : '1'));
+  
+    if (args.creator) tags.push(getBootTag('Creator', args.creator));
+    if (args.collectionId) tags.push(getBootTag('Collection', args.collectionId));
+    if (!args.transferable) tags.push(getBootTag('Transferable', 'false'));
+  
+    try {
+      const assetId = await aoCreateProcess(
+        deps,
+        {
+          spawnTags: tags,
+          spawnData: data
+        },
+        callback ? (status) => callback(status) : undefined,
+      );
+      
+      return assetId;
+    } catch (e: any) {
+      throw new Error(e.message ?? 'Error creating asset');
+    }
+  }
 }
 
-export async function getAoAtomicAsset(processId: string): Promise<AoAssetType> {
-	try {
-		const processState = await aoDryRun({
-			processId: processId,
-			action: 'Info',
-		});
-		if (processState) {
-			return {
-				ticker: processState.Ticker,
-				denomination: processState.Denomination,
-				balances: processState.Balances,
-				transferable: processState.Transferable,
-				name: processState.Name,
-				creator: processState.Creator,
-				assetMetadata: mapFromProcessCase(processState.AssetMetadata),
-			};
-		}
-		return Promise.reject('Error fetching atomic asset');
-	} catch (e: any) {
-		throw new Error(e.message || 'Error fetching atomic asset');
-	}
+export function getAtomicAssetWith(deps: DependencyType) {
+  return async (id: string): Promise<AssetDetailType | null> => {
+    try {
+      const gqlResponse = await getGQLData({
+        gateway: GATEWAYS.goldsky,
+        ids: [id],
+        tags: null,
+        owners: null,
+        cursor: null,
+      });
+  
+      if (gqlResponse && gqlResponse.data.length) {
+        const asset: AssetHeaderType = buildAsset(gqlResponse.data[0]);
+  
+        let state: AssetStateType & any = {
+          ticker: null,
+          denomination: null,
+          balances: null,
+          transferable: null,
+          creator: null,
+          metadata: {},
+        }
+  
+        const processState = await aoDryRun(deps, {
+          processId: asset.id,
+          action: 'Info',
+        });
+  
+        if (processState) {
+          if (processState.Name || processState.name) {
+            asset.title = processState.Name || processState.name;
+          }
+          if (processState.Ticker || processState.ticker) state.ticker = processState.Ticker || processState.ticker;
+          if (processState.Denomination || processState.denomination)
+            state.denomination = processState.Denomination || processState.denomination;
+          if (processState.Logo || processState.logo) asset.thumbnail = processState.Logo || processState.logo;
+          if (processState.Balances) {
+            state.balances = Object.fromEntries(
+              Object.entries(processState.Balances).filter(([_, value]) => Number(value) !== 0)
+            ) as any;
+          }
+          if (processState.Transferable !== undefined) {
+            state.transferable = processState.Transferable;
+          } else {
+            state.transferable = true;
+          }
+          if (processState.Creator || processState.creator) {
+            state.creator = processState.Creator || processState.creator;
+          }
+          if (processState.AssetMetadata) {
+            for (const [key, value] of Object.entries(processState.AssetMetadata)) {
+              if (!(key in state)) {
+                state.metadata[key] = value;
+              }
+            }
+          }
+        }
+  
+        if (!state.balances) {
+          try {
+            const processBalances = await aoDryRun(deps, {
+              processId: asset.id,
+              action: 'Balances',
+            });
+  
+            if (processBalances) state.balances = processBalances;
+          } catch (e: any) {
+            console.error(e);
+          }
+        }
+  
+        return { ...asset, ...mapFromProcessCase(state) };
+      }
+  
+      return null;
+    } catch (e: any) {
+      throw new Error(e.message || 'Error fetching atomic asset');
+    }
+  }
 }
 
-export async function getAtomicAsset(id: string): Promise<AssetDetailType | null> {
-	try {
-		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.goldsky,
-			ids: [id],
-			tags: null,
-			owners: null,
-			cursor: null,
-		});
-
-		if (gqlResponse && gqlResponse.data.length) {
-			const asset: AssetHeaderType = buildAsset(gqlResponse.data[0]);
-
-			let state: AssetStateType & any = {
-				ticker: null,
-				denomination: null,
-				balances: null,
-				transferable: null,
-				creator: null,
-				metadata: {},
-			}
-
-			const processState = await aoDryRun({
-				processId: asset.id,
-				action: 'Info',
-			});
-
-			if (processState) {
-				if (processState.Name || processState.name) {
-					asset.title = processState.Name || processState.name;
-				}
-				if (processState.Ticker || processState.ticker) state.ticker = processState.Ticker || processState.ticker;
-				if (processState.Denomination || processState.denomination)
-					state.denomination = processState.Denomination || processState.denomination;
-				if (processState.Logo || processState.logo) asset.thumbnail = processState.Logo || processState.logo;
-				if (processState.Balances) {
-					state.balances = Object.fromEntries(
-						Object.entries(processState.Balances).filter(([_, value]) => Number(value) !== 0)
-					) as any;
-				}
-				if (processState.Transferable !== undefined) {
-					state.transferable = processState.Transferable;
-				} else {
-					state.transferable = true;
-				}
-				if (processState.Creator || processState.creator) {
-					state.creator = processState.Creator || processState.creator;
-				}
-				if (processState.AssetMetadata) {
-					for (const [key, value] of Object.entries(processState.AssetMetadata)) {
-						if (!(key in state)) {
-							state.metadata[key] = value;
-						}
-					}
-				}
-			}
-
-			if (!state.balances) {
-				try {
-					const processBalances = await aoDryRun({
-						processId: asset.id,
-						action: 'Balances',
-					});
-
-					if (processBalances) state.balances = processBalances;
-				} catch (e: any) {
-					console.error(e);
-				}
-			}
-
-			return {...asset, ...mapFromProcessCase(state)};
-		}
-
-		return null;
-	} catch (e: any) {
-		throw new Error(e.message || 'Error fetching atomic asset');
-	}
+export function getAoAtomicAssetWith(deps: DependencyType) {
+  return async(processId: string): Promise<AoAssetType> => {
+    try {
+      const processState = await aoDryRun(deps, {
+        processId: processId,
+        action: 'Info',
+      });
+      if (processState) {
+        return {
+          ticker: processState.Ticker,
+          denomination: processState.Denomination,
+          balances: processState.Balances,
+          transferable: processState.Transferable,
+          name: processState.Name,
+          creator: processState.Creator,
+          assetMetadata: mapFromProcessCase(processState.AssetMetadata),
+        };
+      }
+      return Promise.reject('Error fetching atomic asset');
+    } catch (e: any) {
+      throw new Error(e.message || 'Error fetching atomic asset');
+    }
+  }
 }
 
 export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {

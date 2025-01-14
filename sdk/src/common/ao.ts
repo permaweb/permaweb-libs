@@ -1,8 +1,7 @@
-import { connect, createDataItemSigner } from '@permaweb/aoconnect';
-
 import { AO, GATEWAYS } from 'helpers/config';
 import { getTxEndpoint } from 'helpers/endpoints';
 import {
+  DependencyType,
 	MessageDryRunType,
 	MessageResultType,
 	MessageSendType,
@@ -18,18 +17,16 @@ const GATEWAY = GATEWAYS.goldsky;
 
 const GATEWAY_RETRY_COUNT = 1000;
 
-const { result, results, message, spawn, dryrun } = connect({ GATEWAY_URL: `https://${GATEWAY}` });
-
-export async function aoSpawn(args: ProcessSpawnType): Promise<string> {
+export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
 
 	const tags = [{ name: 'Authority', value: AO.mu }];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	try {
-		const processId = await spawn({
+		const processId = await deps.ao.spawn({
 			module: args.module,
 			scheduler: args.scheduler,
-			signer: createDataItemSigner(args.wallet),
+			signer: deps.signer,
 			tags: tags,
 			data: args.data,
 		});
@@ -41,16 +38,16 @@ export async function aoSpawn(args: ProcessSpawnType): Promise<string> {
 	}
 }
 
-export async function aoSend(args: MessageSendType): Promise<string> {
+export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
 	try {
 		const tags: TagType[] = [{ name: 'Action', value: args.action }];
 		if (args.tags) tags.push(...args.tags);
 
 		const data = args.useRawData ? args.data : JSON.stringify(args.data);
 
-		const txId = await message({
+		const txId = await deps.ao.message({
 			process: args.processId,
-			signer: createDataItemSigner(args.wallet),
+			signer: deps.signer,
 			tags: tags,
 			data: data,
 		});
@@ -61,7 +58,7 @@ export async function aoSend(args: MessageSendType): Promise<string> {
 	}
 }
 
-export async function aoDryRun(args: MessageDryRunType): Promise<any> {
+export async function aoDryRun(deps: DependencyType, args: MessageDryRunType): Promise<any> {
 	try {
 		const tags = [{ name: 'Action', value: args.action }];
 		if (args.tags) tags.push(...args.tags);
@@ -78,7 +75,7 @@ export async function aoDryRun(args: MessageDryRunType): Promise<any> {
 			dataPayload = args.data;
 		}
 
-		const response = await dryrun({
+		const response = await deps.ao.dryrun({
 			process: args.processId,
 			tags: tags,
 			data: dataPayload,
@@ -101,9 +98,9 @@ export async function aoDryRun(args: MessageDryRunType): Promise<any> {
 	}
 }
 
-export async function aoMessageResult(args: MessageResultType): Promise<any> {
+export async function aoMessageResult(deps: DependencyType, args: MessageResultType): Promise<any> {
 	try {
-		const { Messages } = await result({ message: args.messageId, process: args.processId });
+		const { Messages } = await deps.ao.result({ message: args.messageId, process: args.processId });
 
 		if (Messages && Messages.length) {
 			const response: { [key: string]: any } = {};
@@ -140,29 +137,31 @@ export async function aoMessageResult(args: MessageResultType): Promise<any> {
 	}
 }
 
-export async function aoMessageResults(args: {
-	processId: string;
-	wallet: any;
-	action: string;
-	tags: TagType[] | null;
-	data: any;
-	responses?: string[];
-	handler?: string;
-}): Promise<any> {
+export async function aoMessageResults(
+  deps: DependencyType, 
+  args: {
+    processId: string;
+    action: string;
+    tags: TagType[] | null;
+    data: any;
+    responses?: string[];
+    handler?: string;
+  }
+): Promise<any> {
 	try {
 		const tags = [{ name: 'Action', value: args.action }];
 		if (args.tags) tags.push(...args.tags);
 
-		await message({
+		await deps.ao.message({
 			process: args.processId,
-			signer: createDataItemSigner(args.wallet),
+			signer: deps.signer,
 			tags: tags,
 			data: JSON.stringify(args.data),
 		});
 
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
-		const messageResults = await results({
+		const messageResults = await deps.ao.results({
 			process: args.processId,
 			sort: 'DESC',
 			limit: 100,
@@ -261,13 +260,15 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 	}
 }
 
-export async function handleProcessEval(args: {
-	processId: string;
-	evalTxId: string | null;
-	evalSrc: string | null;
-	evalTags?: TagType[];
-	wallet: any;
-}): Promise<string | null> {
+export async function handleProcessEval(
+  deps: DependencyType, 
+  args: {
+    processId: string;
+    evalTxId: string | null;
+    evalSrc: string | null;
+    evalTags?: TagType[];
+  }
+): Promise<string | null> {
 	let src: string | null = null;
 
 	if (args.evalSrc) src = args.evalSrc;
@@ -275,9 +276,8 @@ export async function handleProcessEval(args: {
 
 	if (src) {
 		try {
-			const evalMessage = await aoSend({
+			const evalMessage = await aoSend(deps, {
 				processId: args.processId,
-				wallet: args.wallet,
 				action: 'Eval',
 				data: src,
 				tags: args.evalTags || null,
@@ -286,7 +286,7 @@ export async function handleProcessEval(args: {
 
 			globalLog(`Eval: ${evalMessage}`);
 
-			const evalResult = await aoMessageResult({
+			const evalResult = await aoMessageResult(deps, {
 				processId: args.processId,
 				messageId: evalMessage,
 				action: 'Eval',
@@ -301,19 +301,18 @@ export async function handleProcessEval(args: {
 	return null;
 }
 
-export async function aoCreateProcess(args: ProcessCreateType, statusCB?: (status: any) => void): Promise<string> {
+export async function aoCreateProcess(deps: DependencyType, args: ProcessCreateType, statusCB?: (status: any) => void): Promise<string> {
 	try {
 		const spawnArgs: any = {
 			module: args.module || AO.module,
 			scheduler: args.scheduler || AO.scheduler,
-			wallet: args.wallet,
 		};
 
 		if (args.spawnData) spawnArgs.data = args.spawnData;
 		if (args.spawnTags) spawnArgs.tags = args.spawnTags;
 
 		statusCB && statusCB(`Spawning process...`);
-		const processId = await aoSpawn(spawnArgs);
+		const processId = await aoSpawn(deps, spawnArgs);
 
 		if (args.evalTxId || args.evalSrc) {
 			statusCB && statusCB(`Retrieving process...`);
@@ -323,12 +322,11 @@ export async function aoCreateProcess(args: ProcessCreateType, statusCB?: (statu
 			statusCB && statusCB('Sending eval...');
 			
 			try {
-				const evalResult = await handleProcessEval({
+				const evalResult = await handleProcessEval(deps, {
 					processId: processId,
 					evalTxId: args.evalTxId || null,
 					evalSrc: args.evalSrc || null,
 					evalTags: args.evalTags,
-					wallet: args.wallet,
 				});
 
 				if (evalResult && statusCB) statusCB('Eval complete');

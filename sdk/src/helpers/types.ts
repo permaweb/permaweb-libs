@@ -1,3 +1,9 @@
+export type DependencyType = {
+  ao: any,
+  signer?: any,
+  arweave?: any
+};
+
 export type ProcessSpawnType = {
 	module: string;
 	scheduler: string;
@@ -14,12 +20,10 @@ export type ProcessCreateType = {
 	evalTags?: TagType[];
 	evalTxId?: string;
 	evalSrc?: string;
-	wallet: any;
 };
 
 export type MessageSendType = {
 	processId: string;
-	wallet: any;
 	action: string;
 	tags?: TagType[] | null;
 	data?: any;
@@ -121,6 +125,34 @@ export type AoAssetType = {
 };
 
 export type AssetDetailType = AssetHeaderType & AssetStateType;
+
+export type CollectionManifestType = {
+	type: string;
+	items: string[];
+};
+
+export type CollectionType = {
+	id: string;
+	title: string;
+	description: string | null;
+	creator: string;
+	dateCreated: string;
+	banner: string | null;
+	thumbnail: string | null;
+};
+
+export type CollectionDetailType = CollectionType & {
+	assetIds: string[];
+	creatorProfile: ProfileType;
+};
+
+export type CommentHeaderType = AssetHeaderType & { dataSource: string, rootSource: string };
+
+export type CommentStateType = AssetStateType;
+
+export type CommentDetailType = CommentHeaderType & CommentStateType;
+
+export type CommentCreateArgType = AssetCreateArgsType & { dataSource: string, rootSource: string };
 
 export type UDLicenseType = {
 	access: UDLicenseValueType | null;

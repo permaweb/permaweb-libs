@@ -1,10 +1,10 @@
 import Arweave from 'arweave';
 
 import { TAGS, UPLOAD } from 'helpers/config';
-import { TagType } from 'helpers/types';
+import { DependencyType, TagType } from 'helpers/types';
 import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType, globalLog } from 'helpers/utils';
 
-export async function createTransaction(args: {
+export async function createTransaction(deps: DependencyType, args: {
 	data: any;
 	tags?: TagType[];
 	uploadMethod?: 'default' | 'turbo';
@@ -21,14 +21,14 @@ export async function createTransaction(args: {
 	catch (e: any) {
 		throw new Error(e);
 	}
-
+  
 	if (content && contentType) {
 		const contentSize: number = getByteSize(content);
 
 		globalLog(`Content upload size: ${contentSize}`);
 
 		if (contentSize < Number(UPLOAD.dispatchUploadSize)) {
-			const tx = await Arweave.init({}).createTransaction({ data: content }, 'use_wallet');
+			const tx = await deps.arweave.createTransaction({ data: content }, 'use_wallet');
 			tx.addTag(TAGS.keys.contentType, contentType)
 			if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tx.addTag(tag.name, tag.value));
 
@@ -44,13 +44,12 @@ export async function createTransaction(args: {
 	}
 }
 
-export async function resolveTransaction(data: any): Promise<string> {
+export async function resolveTransaction(deps: DependencyType, data: any): Promise<string> {
 	if (checkValidAddress(data)) return data;
-	else {
-		try {
-			return await createTransaction({ data: data });
-		} catch (e: any) {
-			throw new Error(e.message ?? 'Error resolving transaction');
-		}
-	}
+  if(!deps.arweave) throw new Error(`Must initialize with Arweave in order to create transactions`);
+	try {
+    return await createTransaction(deps, { data: data });
+  } catch (e: any) {
+    throw new Error(e.message ?? 'Error resolving transaction');
+  }
 }
