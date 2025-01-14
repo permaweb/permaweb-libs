@@ -10,7 +10,7 @@ import {
   GATEWAYS
 } from "helpers/config";
 import { getTxEndpoint } from "helpers/endpoints";
-import { AssetDetailType, CollectionDetailType, CollectionType, DependencyType, TagType } from "helpers/types";
+import { CollectionDetailType, CollectionType, DependencyType, TagType } from "helpers/types";
 import { cleanTagValue, cleanProcessField } from "helpers/utils";
 
 export function createCollectionWith(deps: DependencyType) {
@@ -50,8 +50,8 @@ export function createCollectionWith(deps: DependencyType) {
       { name: 'Action', value: 'Add-Collection' },
     ];
 
-    const bannerTx = await resolveTransaction(deps, args.banner);
-    const thumbnailTx = await resolveTransaction(deps, args.thumbnail) ;
+    const bannerTx = args.banner ? await resolveTransaction(deps, args.banner) : DEFAULT_UCM_BANNER;
+    const thumbnailTx = args.banner ? await resolveTransaction(deps, args.thumbnail) : DEFAULT_UCM_THUMBNAIL;
   
     if (args.banner) collectionTags.push({ 
       name: TAGS.keys.banner, 
@@ -190,7 +190,7 @@ export function getCollectionWith(deps: DependencyType) {
       action: 'Info',
     });
 
-    const collection: CollectionType = {
+    const collection = {
       id: args.id,
       title: response.Name,
       description: response.Description,
@@ -200,18 +200,15 @@ export function getCollectionWith(deps: DependencyType) {
       thumbnail: response.Thumbnail ?? DEFAULT_UCM_THUMBNAIL,
     };
 
-    let assetIds: string[] = response.Assets;
-
-    const collectionDetail = {
+    return {
       ...collection,
-      assetIds: assetIds,
+      assetIds: response.Assets,
       creatorProfile: null,
     };
-    return collectionDetail;
   }
 }
 
-export async function getCollectionsWith(deps: DependencyType) {
+export function getCollectionsWith(deps: DependencyType) {
   return async (args: {creator?: string}): Promise<CollectionType[] | null> => {
     const action = args.creator ? 'Get-Collections-By-User' : 'Get-Collections';
 

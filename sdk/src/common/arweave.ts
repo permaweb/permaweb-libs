@@ -21,7 +21,7 @@ export async function createTransaction(deps: DependencyType, args: {
 	catch (e: any) {
 		throw new Error(e);
 	}
-
+  
 	if (content && contentType) {
 		const contentSize: number = getByteSize(content);
 

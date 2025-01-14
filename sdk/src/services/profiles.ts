@@ -12,7 +12,7 @@ import { createZoneWith, updateZoneWith, getZoneWith } from './zones';
 export function createProfileWith(deps: DependencyType) {
   const createZone = createZoneWith(deps);
 
-  return async (args: ProfileArgsType, wallet: any, callback?: (status: any) => void): Promise<string | null> => {
+  return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
     let profileId: string | null = null;
   
     const tags: { name: string, value: string }[] = [
@@ -40,7 +40,7 @@ export function createProfileWith(deps: DependencyType) {
     await Promise.all([addImageTag('Thumbnail'), addImageTag('Banner')]);
   
     try {
-      profileId = await createZone({ tags: tags }, wallet, callback);
+      profileId = await createZone({ tags: tags }, callback);
   
       // if (profileId) {
       // 	globalLog(`Profile ID: ${profileId}`);
@@ -71,7 +71,7 @@ export function createProfileWith(deps: DependencyType) {
 export function updateProfileWith(deps: DependencyType) {
   const updateZone = updateZoneWith(deps);
 
-  return async (args: ProfileArgsType, profileId: string, wallet: any, callback?: (status: any) => void): Promise<string | null> => {
+  return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
     if (profileId) {
       let data: any = {
         Username: args.username,
@@ -96,7 +96,7 @@ export function updateProfileWith(deps: DependencyType) {
       }
   
       try {
-        return await updateZone(data, profileId, wallet);
+        return await updateZone(data, profileId);
       }
       catch (e: any) {
         throw new Error(e.message ?? 'Error creating profile');

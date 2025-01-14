@@ -4,7 +4,7 @@ import { AO, TAGS } from 'helpers/config';
 import { DependencyType, TagType } from 'helpers/types';
 
 export function createZoneWith(deps: DependencyType) {
-  return async (args: { tags?: TagType[] }, wallet: any, callback?: (status: any) => void): Promise<string | null> => {
+  return async (args: { tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
     try {
       const tags = [{ name: TAGS.keys.bootloaderInit, value: AO.src.zone }];
       if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
@@ -25,7 +25,7 @@ export function createZoneWith(deps: DependencyType) {
 }
 
 export function updateZoneWith(deps: DependencyType) {
-  return async (args: object, zoneId: string, wallet: any): Promise<string | null> => {
+  return async (args: object, zoneId: string): Promise<string | null> => {
     try {
       const mappedData = Object.entries(args).map(([key, value]) => ({ key, value }));
   
@@ -44,7 +44,7 @@ export function updateZoneWith(deps: DependencyType) {
 }
 
 export function addToZoneWith(deps: DependencyType) {
-  return async (args: { path: string, data: object }, zoneId: string, wallet: any): Promise<string | null> => {
+  return async (args: { path: string, data: object }, zoneId: string): Promise<string | null> => {
     try {
       const zoneUpdateId = await aoSend(deps, {
         processId: zoneId,

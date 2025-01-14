@@ -1,27 +1,43 @@
 import esbuild from 'esbuild';
+import dtsPlugin from 'esbuild-plugin-d.ts';
+import path from 'path';
 
 const sharedConfig = {
-  entryPoints: ['src/index.ts'],    // Entry file for the SDK
-  bundle: true,                     // Bundle all dependencies
-  sourcemap: true,                  // Generate source maps
-  minify: true,                     // Minify the output for production
+  entryPoints: ['src/index.ts'],
+  bundle: true,
+  sourcemap: true,
+  minify: true,
+  inject: [path.resolve('node_modules/process/browser.js')], // Explicitly inject the process polyfill
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  },
 };
 
 const buildConfigs = [
   // Node.js (CJS)
+	{
+		...sharedConfig,
+		outfile: 'dist/index.cjs',
+		platform: 'node',
+		format: 'cjs',
+		plugins: [dtsPlugin({ outDir: 'dist/types' })],
+	},
+  // Node.js (ESM)
   {
-    ...sharedConfig,
-    outfile: 'dist/index.cjs.js',
-    platform: 'node',              // Node.js environment
-    format: 'cjs',                 // CommonJS format
-  },
-  // Browser (ESM)
-  {
-    ...sharedConfig,
-    outfile: 'dist/index.esm.js',
-    platform: 'browser',           // Browser environment
-    format: 'esm',                 // ES Module format
-  },
+		...sharedConfig,
+		outfile: 'dist/index.js',
+		platform: 'node',
+		format: 'esm',
+		plugins: [dtsPlugin({ outDir: 'dist/types' })],
+	},
+	// Browser (ESM)
+	{
+		...sharedConfig,
+		outfile: 'dist/index.esm.js',
+		platform: 'browser',
+		format: 'esm',
+		plugins: [dtsPlugin({ outDir: 'dist/types' })],
+	},
 ];
 
 async function build() {

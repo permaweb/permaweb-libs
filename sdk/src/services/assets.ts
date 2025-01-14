@@ -12,7 +12,7 @@ export function createAtomicAssetWith(deps: DependencyType) {
   
     const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
   
-    const tags = [{ name: TAGS.keys.bootloaderInit, value: AO.src.asset }];	
+    const tags = [{ name: TAGS.keys.bootloaderInit, value: args.src ?? AO.src.asset }];	
     tags.push(...buildAssetTags(args));
   
     tags.push(getBootTag('Name', args.title));

@@ -2,7 +2,7 @@
 import { DependencyType, CommentCreateArgType, AssetCreateArgsType, CommentHeaderType, CommentDetailType, TagType, GQLNodeResponseType, TagFilterType, AssetDetailType, AssetHeaderType } from "helpers/types";
 import { buildAsset, createAtomicAssetWith, getAtomicAssetWith, getAtomicAssets } from "./assets";
 import { getGQLData } from "common/gql";
-import { GATEWAYS } from "helpers/config";
+import { AO, GATEWAYS } from "helpers/config";
 
 export function createCommentWith(deps: DependencyType) {
   const createAtomicAsset = createAtomicAssetWith(deps);
@@ -24,14 +24,15 @@ export function createCommentWith(deps: DependencyType) {
       data: args.data,
       creator: args.creator,
       collectionId: args.collectionId,
-      renderWith: args.renderWith,
-      thumbnail: args.thumbnail,
       supply: args.supply,
       denomination: args.denomination,
       transferable: args.transferable,
-      src: args.src,
+      src: args.src ?? AO.src.asset,
       tags
     };
+
+    if(args.renderWith) assetArgs.renderWith = args.renderWith;
+    if(args.thumbnail) assetArgs.thumbnail = args.thumbnail;
     
     return createAtomicAsset(assetArgs, callback);
   }
@@ -81,7 +82,7 @@ export function getCommentsWith(_deps: DependencyType) {
     })
 
     const gqlResponse = await getGQLData({
-      gateway: GATEWAYS.arweave,
+      gateway: GATEWAYS.goldsky,
       ids: null,
       tags,
       owners: null,

@@ -1,5 +1,8 @@
+import { Buffer } from 'buffer';
 import { DependencyType } from 'helpers/types';
 import * as Services from './services';
+
+if (!globalThis.Buffer) globalThis.Buffer = Buffer;
 
 function init(deps: DependencyType) {
   return {
@@ -23,7 +26,7 @@ function init(deps: DependencyType) {
     getCollection: Services.getCollectionWith(deps),
     getCollections: Services.getCollectionsWith(deps),
 
-    createComment: Services.getCommentWith(deps),
+    createComment: Services.createCommentWith(deps),
     getComment: Services.getCommentWith(deps),
     getComments: Services.getCommentsWith(deps)
   }
@@ -33,4 +36,5 @@ export default {
   init
 };
 
+export * from './helpers/types';
 

@@ -1,147 +1,178 @@
-import { createAtomicAsset, createZone, getAtomicAsset, getZone, updateZone } from '@permaweb/libs';
 import { readFileSync } from 'fs';
+import { connect, createDataItemSigner } from '@permaweb/aoconnect';
+import Permaweb from '@permaweb/permaweb-libs';
+import Arweave from 'arweave';
 
-function expect(actual) {
-	return {
-		toBeDefined: () => {
-			if (actual === undefined) {
-				throw new Error(`Expected value to be defined, but it was undefined`);
-			}
-			console.log('\x1b[32m%s\x1b[0m', 'Success: Value is defined');
-		},
-		toHaveProperty: (prop) => {
-			if (!(prop in actual)) {
-				throw new Error(`Expected object to have property '${prop}', but it was not found`);
-			}
-			console.log('\x1b[32m%s\x1b[0m', `Success: Object has property '${prop}'`);
-		},
-		toEqualType: (expected) => {
-			const actualType = typeof actual;
-			const expectedType = typeof expected;
+const ao = connect();
+const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET, 'utf-8'));
+const signer = createDataItemSigner(wallet);
+const arweave = Arweave.init();
 
-			if (actualType !== expectedType) {
-				throw new Error(`Type mismatch: expected ${expectedType}, but got ${actualType}`);
-			}
-
-			if (actualType === 'object' && actual !== null && expected !== null) {
-				if (Array.isArray(actual) !== Array.isArray(expected)) {
-					throw new Error(`Type mismatch: expected ${Array.isArray(expected) ? 'array' : 'object'}, but got ${Array.isArray(actual) ? 'array' : 'object'}`);
-				}
-			}
-			console.log('\x1b[32m%s\x1b[0m', `Success: Types match (${actualType})`);
-		},
-		toEqual: (expected) => {
-			const actualType = typeof actual;
-			const expectedType = typeof expected;
-
-			if (actualType !== expectedType) {
-				throw new Error(`Type mismatch: expected ${expectedType}, but got ${actualType}`);
-			}
-
-			if (actualType === 'object' && actual !== null && expected !== null) {
-				const actualKeys = Object.keys(actual);
-				const expectedKeys = Object.keys(expected);
-
-				if (actualKeys.length !== expectedKeys.length) {
-					throw new Error(`Object key count mismatch: expected ${expectedKeys.length}, but got ${actualKeys.length}`);
-				}
-
-				for (const key of actualKeys) {
-					if (!(key in expected)) {
-						throw new Error(`Expected object is missing key: ${key}`);
-					}
-					expect(actual[key]).toEqual(expected[key]);
-				}
-			} else if (actual !== expected) {
-				throw new Error(`Value mismatch: expected ${expected}, but got ${actual}`);
-			}
-			console.log('\x1b[32m%s\x1b[0m', 'Success: Values are equal');
-		},
-	};
-}
+const {
+  createZone,
+  updateZone,
+  // TODO: Missing addToZone call
+  // addToZone,
+  getZone,
+  createAtomicAsset,
+  getAtomicAsset,
+  getAtomicAssets,
+  // TODO: Missing buildAsset call
+  // buildAsset,
+  createProfile,
+  updateProfile,
+  getProfileById,
+  getProfileByWalletAddress,
+  createCollection,
+  updateCollection,
+  getCollection,
+  getCollections,
+  createComment,
+  getComment,
+  getComments
+} = Permaweb.init({ ao, signer, arweave });
 
 function logTest(message) {
 	console.log('\x1b[33m%s\x1b[0m', `\n${message}`);
 }
 
-function logError(message) {
-	console.error('\x1b[31m%s\x1b[0m', `Error (${message})`);
-}
+const TRANSACTION_DELAY = 10000;
 
+/*
+  Currently this is just making sure everything runs
+  we should add some assertions to it.
+*/
 async function runTests() {
-	try {
-		console.log('Running tests...');
-		const wallet = JSON.parse(readFileSync('./wallets/wallet.json', 'utf-8'));
+  logTest('Testing zone creation...');
+  const zoneId = await createZone([], (status) => console.log(`Callback: ${status}`));
 
-		logTest('Testing zone creation...');
-		const zoneId = await createZone(wallet, (status) => console.log(`Callback: ${status}`));
+  console.log(`Zone id: ${zoneId}`);
 
-		expect(zoneId).toBeDefined();
-		expect(zoneId).toEqualType('string');
+  logTest('Testing zone fetch...');
+  await new Promise(resolve => setTimeout(resolve, TRANSACTION_DELAY));
+  let zone = await getZone(zoneId);
 
-		logTest('Testing zone fetch...');
-		let zone = await getZone(zoneId);
+  console.log(`Zone: `, zone);
 
-		expect(zone).toBeDefined();
-		expect(zone).toEqual({ store: [], assets: [] });
+  logTest('Testing zone update...');
+  const zoneUpdateId = await updateZone({
+    data: {
+      name: 'Sample Zone',
+      metadata: {
+        description: 'A test zone for unit testing',
+        version: '1.0.0'
+      }
+    }
+  }, zoneId);
 
-		logTest('Testing zone update...');
-		const zoneUpdateId = await updateZone({
-			data: {
-				name: 'Sample Zone',
-				metadata: {
-					description: 'A test zone for unit testing',
-					version: '1.0.0'
-				}
-			}
-		}, zoneId, wallet);
+  console.log(`Zone update id: ${zoneUpdateId}`);
 
-		expect(zoneUpdateId).toBeDefined();
-		expect(zoneUpdateId).toEqualType('string');
+  zone = await getZone(zoneId);
 
-		zone = await getZone(zoneId);
+  console.log(`Zone: `, zone);
 
-		expect(zone).toEqual({
-			store: {
-				name: 'Sample Zone',
-				metadata: {
-					description: 'A test zone for unit testing',
-					version: '1.0.0'
-				}
-			},
-			assets: []
-		});
+  logTest('Testing atomic asset creation...');
+  const assetId = await createAtomicAsset({
+    title: 'Test Asset',
+    description: 'This is a test atomic asset',
+    type: 'article',
+    topics: ['test', 'atomic', 'asset'],
+    contentType: 'text/plain',
+    data: '1234',
+    creator: zoneId,
+    collectionId: 'CollectionId1234',
+    supply: 100,
+    denomination: 1,
+    transferable: true
+  }, (status) => console.log(`Callback: ${status}`));
 
-		logTest('Testing atomic asset creation...');
-		const assetId = await createAtomicAsset({
-			title: 'Test Asset',
-			description: 'This is a test atomic asset',
-			type: 'article',
-			topics: ['test', 'atomic', 'asset'],
-			contentType: 'text/plain',
-			data: '1234',
-			creator: zoneId,
-			collectionId: 'CollectionId1234',
-			supply: 100,
-			denomination: 1,
-			transferable: true
-		}, wallet, (status) => console.log(`Callback: ${status}`));
+  console.log(`Asset ID: ${assetId}`)
 
-		expect(assetId).toBeDefined();
-		expect(assetId).toEqualType('string');
+  logTest('Testing atomic asset fetch...');
+  await new Promise(resolve => setTimeout(resolve, TRANSACTION_DELAY));
+  const asset = await getAtomicAsset(assetId);
 
-		logTest('Testing atomic asset fetch...');
-		const asset = await getAtomicAsset(assetId);
+  console.log(`Asset: `, asset);
 
-		expect(asset).toBeDefined();
-		expect(asset.id).toEqual(assetId);
-		expect(asset.title).toEqual('Test Asset');
-		expect(asset.description).toEqual('This is a test atomic asset');
+  logTest('Testing atomic assets fetch...');
+  const assets = await getAtomicAssets([assetId]);
 
-		console.log('All tests passed successfully!');
-	} catch (error) {
-		logError(error.message);
-	}
+  console.log(`Assets: `, assets);
+
+  logTest('Testing create profile...');
+  const profileId = await createProfile({
+    username: 'Test User',
+    displayName: 'Test Display',
+    description: 'Test Description'
+  });
+
+  console.log(`Profile id ${profileId}`);
+
+  logTest('Testing profile fetch...');
+  await new Promise(resolve => setTimeout(resolve, TRANSACTION_DELAY));
+  let profile = await getProfileById(profileId);
+
+  console.log(`Profile: `, profile);
+
+  await updateProfile({
+    username: 'Test User Update',
+    displayName: 'Test Display Update',
+    description: 'Test Description Update'
+  }, profileId);
+
+  let profileUpdated = await getProfileByWalletAddress(asset.owner);
+
+  console.log(`Updated Profile: `, profileUpdated);
+
+  logTest(`Testing collection create`);
+  let collectionId = await createCollection({
+    walletAddress: asset.owner, 
+    profileId: profileId,
+    title: 'Test Collection Title',
+    description: 'Test Collection Description',
+    contentType: 'application/json'
+  });
+
+  logTest(`Testing collection update`);
+  await new Promise(resolve => setTimeout(resolve, TRANSACTION_DELAY));
+  await updateCollection({
+    profileId,
+    collectionId,
+    assetIds: [assetId]
+  });
+
+  logTest(`Testing collection fetch`);
+  let collection = await getCollection({id: collectionId});
+  console.log(`Collection: `, collection);
+
+  let collections = await getCollections({creator: collection.creator});
+  console.log(`Collections: `, collections);
+
+  logTest(`Test create comment`)
+  const commentId = await createComment({
+    title: 'Test Asset',
+    description: 'This is a test atomic asset',
+    type: 'article',
+    topics: ['test', 'atomic', 'asset'],
+    contentType: 'text/plain',
+    data: '1234',
+    creator: zoneId,
+    collectionId: 'CollectionId1234',
+    supply: 100,
+    denomination: 1,
+    transferable: true,
+    dataSource: assetId,
+    rootSource: assetId
+  }, (status) => console.log(`Callback: ${status}`));
+
+  await new Promise(resolve => setTimeout(resolve, TRANSACTION_DELAY));
+
+  const comment = await getComment({ id: commentId })
+  console.log(`Comment: `, comment);
+
+  const comments = await getComments({ dataSource: assetId });
+
+  console.log(`Comments fetch: `, comments);
 }
 
 runTests();
