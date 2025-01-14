@@ -1,7 +1,7 @@
 export type DependencyType = {
-  ao: any,
-  signer?: any,
-  arweave?: any
+	ao: any;
+	signer?: any;
+	arweave?: any;
 };
 
 export type ProcessSpawnType = {
@@ -43,9 +43,9 @@ export type MessageDryRunType = {
 	data?: string | object;
 };
 
-export type ZoneType = { store: any, assets: ZoneAssetType[] };
+export type ZoneType = { store: any; assets: ZoneAssetType[] };
 
-export type ZoneAssetType = { id: string, balance: string, dateCreated: number, lastUpdate: number }
+export type ZoneAssetType = { id: string; balance: string; dateCreated: number; lastUpdate: number };
 
 export type ProfileArgsType = {
 	username: string;
@@ -63,7 +63,7 @@ export type ProfileType = {
 	description: string;
 	thumbnail?: any;
 	banner?: any;
-	assets: { id: string, quantity: string }[];
+	assets: { id: string; quantity: string }[];
 } & any;
 
 export type AssetCreateArgsType = {
@@ -108,7 +108,7 @@ export type AssetStateType = {
 	denomination: string | null;
 	balances: { [key: string]: string } | null;
 	transferable: boolean | null;
-}
+};
 
 export type AoAssetType = {
 	ticker: string;
@@ -125,6 +125,14 @@ export type AoAssetType = {
 };
 
 export type AssetDetailType = AssetHeaderType & AssetStateType;
+
+export type CommentHeaderType = AssetHeaderType & { dataSource: string; rootSource: string };
+
+export type CommentStateType = AssetStateType;
+
+export type CommentDetailType = CommentHeaderType & CommentStateType;
+
+export type CommentCreateArgType = { creator: string; content: string; parentId: string; rootId?: string, tags?: TagType[] };
 
 export type CollectionManifestType = {
 	type: string;
@@ -143,16 +151,7 @@ export type CollectionType = {
 
 export type CollectionDetailType = CollectionType & {
 	assetIds: string[];
-	creatorProfile: ProfileType;
 };
-
-export type CommentHeaderType = AssetHeaderType & { dataSource: string, rootSource: string };
-
-export type CommentStateType = AssetStateType;
-
-export type CommentDetailType = CommentHeaderType & CommentStateType;
-
-export type CommentCreateArgType = AssetCreateArgsType & { dataSource: string, rootSource: string };
 
 export type UDLicenseType = {
 	access: UDLicenseValueType | null;

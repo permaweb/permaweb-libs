@@ -2,12 +2,47 @@
 
 This SDK provides a set of libraries designed as foundational building blocks for developers to create and interact with applications on Arweave's permaweb. These libraries aim to contribute building on the composable web, promoting interoperability and reusability across decentralized applications. With libraries for managing profiles, atomic assets, collections, and more, this SDK simplifies the development of decentralized, permanent applications.
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Initialization](#initialization)
+- [Usage](#usage)
+  - [Zones](#zones)
+    - [createZone](#createzone)
+    - [updateZone](#updatezone)
+    - [getZone](#getzone)
+  - [Profiles](#profiles)
+    - [createProfile](#createprofile)
+    - [updateProfile](#updateprofile)
+    - [getProfileById](#getprofilebyid)
+    - [getProfileByWalletAddress](#getprofilebywalletaddress)
+  - [Atomic Assets](#atomic-assets)
+    - [createAtomicAsset](#createatomicasset)
+    - [getAtomicAsset](#getatomicasset)
+    - [getAtomicAssets](#getatomicassets)
+  - [Comments](#comments)
+    - [createComment](#createcomment)
+    - [getComment](#getcomment)
+    - [getComments](#getcomments)
+  - [Collections](#collections)
+    - [createCollection](#createcollection)
+    - [updateCollectionAssets](#updatecollectionassets)
+    - [getCollection](#getcollection)
+    - [getCollections](#getcollections)
+- [Examples](#examples)
+- [Resources](#resources)
+
 ## Prerequisites
 
 - `node >= v18.0`
 - `npm` or `yarn`
+- `arweave`
+- `@permaweb/aoconnect`
 
 ## Installation
+
+If `arweave` or `@permaweb/aoconnect` is not already installed, add them to the installation command below as additional packages
 
 ```bash
 npm install @permaweb/libs
@@ -19,24 +54,42 @@ or
 yarn add @permaweb/libs
 ```
 
-## Zones
+## Initialization
+
+```typescript
+import Arweave from "arweave";
+import { connect, createDataItemSigner } from "@permaweb/aoconnect";
+import Permaweb from "@permaweb/libs";
+
+// Browser Usage
+const wallet = window.arweaveWallet;
+
+// NodeJS Usage
+const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET, "utf-8"));
+
+const permaweb = Permaweb.init({
+  ao: connect(),
+  arweave: Arweave.init(),
+  signer: createDataItemSigner(wallet),
+});
+```
+
+## Usage
+
+### Zones
 
 Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity's behalf. A profile is an instance of a zone with specific metadata ([Read the spec](./specs/spec-zones.md)).
 
 #### `createZone`
 
-Creates a zone, setting up a key-value store and asset manager to track tokens created or transferred.
-
 ```typescript
-import { createZone } from "@permaweb/libs";
-
-const zoneId = await createZone(wallet);
+const zoneId = await permaweb.createZone();
 ```
 
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `wallet`: Wallet object
+- `tags (optional)`: Additional tags
 
 </details>
 
@@ -51,21 +104,16 @@ ZoneProcessId;
 
 #### `updateZone`
 
-Updates a zone's key-value store with specified data.
-
 ```typescript
-import { updateZone } from "@permaweb/libs";
-
-const zoneUpdateId = await updateZone(
+const zoneUpdateId = await permaweb.updateZone(
   {
     name: "Sample Zone",
     metadata: {
-      description: "A test zone for unit testing",
+      description: "A sample zone for testing",
       version: "1.0.0",
     },
   },
-  zoneId,
-  wallet
+  zoneId
 );
 ```
 
@@ -74,7 +122,6 @@ const zoneUpdateId = await updateZone(
 
 - `args`: Zone data to update, specified in an object
 - `zoneId`: The ID of the zone to update
-- `wallet`: Wallet object
 
 </details>
 
@@ -89,12 +136,8 @@ ZoneUpdateId;
 
 #### `getZone`
 
-Fetches a zone based on its ID, including store data and any associated assets.
-
 ```typescript
-import { getZone } from "@permaweb/libs";
-
-const zone = await getZone(zoneId);
+const zone = await permaweb.getZone(zoneId);
 ```
 
 <details>
@@ -113,34 +156,26 @@ const zone = await getZone(zoneId);
 
 </details>
 
-## Profiles
+### Profiles
 
 Profiles are a digital representation of entities, such as users, organizations, or channels. They instantiate zones with specific metadata that describes the entity and can be associated with various digital assets and collections. Profiles are created, updated, and fetched using the following functions.
 
 #### `createProfile`
 
-Creates a profile, initializing a zone with specific profile relevant metadata.
-
 ```typescript
-import { createProfile } from "@permaweb/libs";
-
-const profileId = await createProfile(
-  {
-    username: "Sample Zone",
-    displayName: "Sample Zone",
-    description: "Sample description",
-    thumbnail: "Thumbnail image data",
-    banner: "Banner image data",
-  },
-  wallet
-);
+const profileId = await permaweb.createProfile({
+  username: "Sample Zone",
+  displayName: "Sample Zone",
+  description: "Sample description",
+  thumbnail: "Thumbnail image data",
+  banner: "Banner image data",
+});
 ```
 
 <details>
   <summary><strong>Parameters</strong></summary>
 
 - `args`: Object containing profile details, including `username`, `displayName`, `description`, `thumbnail`, and `banner`
-- `wallet`: Wallet object
 - `callback (optional)`: Callback function for client use
 
 </details>
@@ -149,19 +184,15 @@ const profileId = await createProfile(
   <summary><strong>Response</strong></summary>
 
 ```typescript
-string | null; // Profile ID or null if creation fails
+ProfileProcessId;
 ```
 
 </details>
 
 #### `updateProfile`
 
-Updates a profile by modifying its metadata, such as `username`, `displayName`, `description`, and optional image fields like `thumbnail` and `banner`.
-
 ```typescript
-import { updateProfile } from "@permaweb/libs";
-
-const profileId = await updateProfile(
+const profileId = await permaweb.updateProfile(
   {
     username: "Sample Zone",
     displayName: "Sample Zone",
@@ -169,8 +200,7 @@ const profileId = await updateProfile(
     thumbnail: "Thumbnail image data",
     banner: "Banner image data",
   },
-  profileId,
-  wallet
+  profileId
 );
 ```
 
@@ -179,7 +209,6 @@ const profileId = await updateProfile(
 
 - `args`: Profile details to update, structured similarly to `createProfile`
 - `profileId`: The ID of the profile to update
-- `wallet`: Wallet object
 - `callback (optional)`: Callback function for client use
 
 </details>
@@ -188,19 +217,15 @@ const profileId = await updateProfile(
   <summary><strong>Response</strong></summary>
 
 ```typescript
-string | null; // Profile update ID or null if update fails
+ProfileProcessUpdateId;
 ```
 
 </details>
 
 #### `getProfileById`
 
-Fetches a profile based on its ID. Returns a structured profile object containing the profile’s metadata, assets, and other properties associated with the profile.
-
 ```typescript
-import { getProfileById } from "@permaweb/libs";
-
-const profile = await getProfileById(profileId);
+const profile = await permaweb.getProfileById(profileId);
 ```
 
 <details>
@@ -234,12 +259,8 @@ const profile = await getProfileById(profileId);
 
 #### `getProfileByWalletAddress`
 
-Fetches a profile using the wallet address associated with it. This function is useful for retrieving a profile when only the wallet address is known.
-
 ```typescript
-import { getProfileByWalletAddress } from "@permaweb/libs";
-
-const profile = await getProfileByWalletAddress(walletAddress);
+const profile = await permaweb.getProfileByWalletAddress(walletAddress);
 ```
 
 <details>
@@ -271,32 +292,27 @@ const profile = await getProfileByWalletAddress(walletAddress);
 
 </details>
 
-## Atomic Assets
+### Atomic Assets
 
 Atomic assets are unique digital item consisting of an AO process and its associated data which are stored together in a single transaction on Arweave ([Read the spec](./specs/spec-atomic-assets.md)).
 
 #### `createAtomicAsset`
 
-Creates an atomic asset.
-
 ```typescript
-import { createAtomicAsset } from '@permaweb/libs';
-
-const assetId = await createAtomicAsset({
+const assetId = await permaweb.createAtomicAsset({
     title: 'Example Title',
     description, 'Example Description',
     type: 'Example Atomic Asset Type',
     topics: ['Topic 1', 'Topic 2', 'Topic 3'],
     contentType: 'text/html',
     data: '1234'
-}, wallet);
+});
 ```
 
 <details>
   <summary><strong>Parameters</strong></summary>
 
 - `args`: Object containing profile details, including `title`, `description`, `type`, `topics`, `contentType`, and `data`
-- `wallet`: Wallet object
 - `callback (optional)`: Callback function for client use
 
 </details>
@@ -314,12 +330,8 @@ AssetProcessId;
 
 #### `getAtomicAsset`
 
-Performs a lookup of an atomic asset by ID. This function also performs a dryrun on the asset process to receive the balances and other associated metadata of the atomic asset that is inside the AO process itself.
-
 ```typescript
-import { getAtomicAsset } from "@permaweb/libs";
-
-const asset = await getAtomicAsset(assetId);
+const asset = await permaweb.getAtomicAsset(assetId);
 ```
 
 <details>
@@ -374,12 +386,8 @@ const asset = await getAtomicAsset(assetId);
 
 #### `getAtomicAssets`
 
-Queries multiple atomic assets from the gateway.
-
 ```typescript
-import { getAtomicAssets } from "@permaweb/libs";
-
-const assets = await getAtomicAssets(assetIds);
+const assets = await permaweb.getAtomicAssets(assetIds);
 ```
 
 <details>
@@ -452,3 +460,331 @@ const assets = await getAtomicAssets(assetIds);
 ```
 
 </details>
+
+### Comments
+
+Comments are an instantiation of atomic assets created with additional tags to link them with other comments / atomic assets with specific data or root contexts.
+
+#### `createComment`
+
+```typescript
+const commentId = await permaweb.createComment({
+  content: "Sample comment on an atomic asset",
+  creator: profileId,
+  parentId: atomicAssetId,
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `content`, `creator`, `parentId`, and `rootId (optional)`
+- `callback (optional)`: Callback function for status updates.
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CommentProcessId;
+```
+
+</details>
+
+#### `getComment`
+
+```typescript
+const comment = await permaweb.getComment(commentId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `commentId`: The ID of the comment to fetch.
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+{
+  id: 'CommentProcessId',
+  title: 'Comment Title',
+  description: 'Comment Description',
+  dataSource: 'Data Source Identifier',
+  rootSource: 'Root Source Identifier',
+  contentType: 'text/plain',
+  data: 'Comment data',
+  creator: 'Creator Identifier',
+  collectionId: 'Collection Identifier',
+  transferable: true,
+  tags: [
+    { name: 'Data-Source', value: 'Data Source Identifier' },
+    { name: 'Root-Source', value: 'Root Source Identifier' }
+  ]
+}
+```
+
+</details>
+
+#### `getComments`
+
+```typescript
+const comments = await permaweb.getComments({
+  parentId: atomicAssetId,
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `parentId` or `rootId`
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+[
+  {
+    id: "CommentProcessId1",
+    title: "Comment Title 1",
+    description: "Comment Description 1",
+    dataSource: "Data Source Identifier",
+    rootSource: "Root Source Identifier",
+    contentType: "text/plain",
+    data: "Comment data 1",
+    creator: "Creator Identifier",
+    collectionId: "Collection Identifier",
+    transferable: true,
+    tags: [
+      { name: "Data-Source", value: "Data Source Identifier" },
+      { name: "Root-Source", value: "Root Source Identifier" },
+    ],
+  },
+  {
+    id: "CommentProcessId2",
+    title: "Comment Title 2",
+    description: "Comment Description 2",
+    dataSource: "Data Source Identifier",
+    rootSource: "Root Source Identifier",
+    contentType: "text/plain",
+    data: "Comment data 2",
+    creator: "Creator Identifier",
+    collectionId: "Collection Identifier",
+    transferable: true,
+    tags: [
+      { name: "Data-Source", value: "Data Source Identifier" },
+      { name: "Root-Source", value: "Root Source Identifier" },
+    ],
+  },
+];
+```
+
+</details>
+
+### Collections
+
+Collections are structured groups of atomic assets, allowing for cohesive representation, management, and categorization of digital items. Collections extend the concept of atomic assets by introducing an organized layer to group and manage related assets. ([Read the spec](./specs/spec-collections.md)).
+
+#### `createCollection`
+
+```typescript
+const commentId = await permaweb.createCollection({
+  title: "Sample collection title",
+  description: "Sample collection description",
+  creator: profileId,
+  thumbnail: "Thumbnail image data",
+  banner: "Banner image data",
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `title`, `description`, `creator`, `thumbnail (optional)`, and `banner (optional)`
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CollectionProcessId;
+```
+
+</details>
+
+#### `updateCollectionAssets`
+
+```typescript
+const commentId = await permaweb.updateCollectionAssets({
+  collectionId: collectionId,
+  assetIds: ["AssetId1", "AssetId2", "AssetId3"],
+  profileId: profileId,
+  updateType: "Add",
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `collectionId`, `assetIds`, `profileId`, and `updateType ('Add' | 'Remove')`
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CollectionProcessUpdateId;
+```
+
+</details>
+
+#### `getCollection`
+
+```typescript
+const collection = await permaweb.getCollection(collectionId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `collectionId`: The ID of the collection to fetch
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+{
+  id: 'Id',
+  title: 'Title',
+  description: 'Description',
+  creator: 'Creator',
+  dateCreated: 'DateCreated',
+  thumbnail: 'ThumbnailTx',
+  banner: 'BannerTx',
+  assets: ['AssetId1', 'AssetId2', 'AssetId3']
+}
+```
+
+</details>
+
+#### `getCollections`
+
+```typescript
+const collections = await permaweb.getCollections(collectionId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `creator (optional)`
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+[
+  {
+    id: "Id",
+    title: "Title",
+    description: "Description",
+    creator: "Creator",
+    dateCreated: "DateCreated",
+    thumbnail: "ThumbnailTx",
+    banner: "BannerTx",
+    assets: ["AssetId1", "AssetId2", "AssetId3"],
+  },
+  {
+    id: "Id",
+    title: "Title",
+    description: "Description",
+    creator: "Creator",
+    dateCreated: "DateCreated",
+    thumbnail: "ThumbnailTx",
+    banner: "BannerTx",
+    assets: ["AssetId1", "AssetId2", "AssetId3"],
+  },
+];
+```
+
+</details>
+
+## Examples
+
+To avoid the need for creating many instances in your frontend application, this react provider can be used as a reference.
+
+#### Provider
+
+```typescript
+import Arweave from "arweave";
+import { connect, createDataItemSigner } from "@permaweb/aoconnect";
+import Permaweb from "@permaweb/libs";
+
+const PermawebContext = React.createContext<PermawebContextState>({
+  libs: null,
+});
+
+export function usePermawebProvider(): PermawebContextState {
+  return React.useContext(PermawebContext);
+}
+
+export function PermawebProvider(props: { children }) {
+  const [libs, setLibs] = React.useState(null);
+
+  React.useEffect(() => {
+    let dependencies = { ao: connect(), arweave: Arweave.init() };
+    if (wallet) dependencies.signer = createDataItemSigner(wallet);
+
+    setLibs(Permaweb.init(deps));
+  }, [wallet]);
+}
+
+return (
+  <PermawebContext.Provider value={{ libs: libs }}>
+    {props.children}
+  </PermawebContext.Provider>
+);
+```
+
+#### Usage in a component
+
+```typescript
+import { usePermawebProvider } from "providers/PermawebProvider";
+
+export default function MyComponent() {
+  const permawebProvider = usePermawebProvider();
+
+  React.useEffect(() => {
+    (async function () {
+      const asset = await permawebProvider.libs.getAtomicAsset(id);
+    })();
+  }, [permawebProvider.libs]);
+
+  return <h1>Permaweb Libs Component</h1>;
+}
+```
+
+## Resources
+
+- [AO Connect](https://github.com/permaweb/ao)
+- [ArweaveJS](https://github.com/ArweaveTeam/arweave-js)

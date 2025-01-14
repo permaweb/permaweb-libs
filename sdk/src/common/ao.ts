@@ -1,7 +1,7 @@
 import { AO, GATEWAYS } from 'helpers/config';
 import { getTxEndpoint } from 'helpers/endpoints';
 import {
-  DependencyType,
+	DependencyType,
 	MessageDryRunType,
 	MessageResultType,
 	MessageSendType,
@@ -18,7 +18,6 @@ const GATEWAY = GATEWAYS.goldsky;
 const GATEWAY_RETRY_COUNT = 1000;
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
-
 	const tags = [{ name: 'Authority', value: AO.mu }];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
@@ -32,8 +31,7 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 		});
 
 		return processId;
-	}
-	catch (e: any) {
+	} catch (e: any) {
 		throw new Error(e.message ?? 'Error spawning process');
 	}
 }
@@ -94,7 +92,7 @@ export async function aoDryRun(deps: DependencyType, args: MessageDryRunType): P
 			}
 		}
 	} catch (e: any) {
-		throw new Error(e.message ?? 'Error dryrunning process')
+		throw new Error(e.message ?? 'Error dryrunning process');
 	}
 }
 
@@ -138,15 +136,15 @@ export async function aoMessageResult(deps: DependencyType, args: MessageResultT
 }
 
 export async function aoMessageResults(
-  deps: DependencyType, 
-  args: {
-    processId: string;
-    action: string;
-    tags: TagType[] | null;
-    data: any;
-    responses?: string[];
-    handler?: string;
-  }
+	deps: DependencyType,
+	args: {
+		processId: string;
+		action: string;
+		tags: TagType[] | null;
+		data: any;
+		responses?: string[];
+		handler?: string;
+	},
 ): Promise<any> {
 	try {
 		const tags = [{ name: 'Action', value: args.action }];
@@ -227,47 +225,14 @@ export async function aoMessageResults(
 	}
 }
 
-export async function waitForProcess(processId: string, _setStatus?: (status: any) => void) {
-	let retries = 0;
-
-	while (retries < GATEWAY_RETRY_COUNT) {
-		await new Promise((r) => setTimeout(r, 2000));
-
-		const gqlResponse = await getGQLData({
-			gateway: GATEWAY,
-			ids: [processId],
-		});
-
-		if (gqlResponse?.data?.length) {
-			const foundProcess = gqlResponse.data[0].node.id;
-			globalLog(`Fetched transaction: ${foundProcess} (Try ${retries + 1})`);
-			return foundProcess;
-		} else {
-			globalLog(`Transaction not found: ${processId} (Try ${retries + 1})`);
-			retries++;
-		}
-	}
-
-	throw new Error(`Process not found, please try again`);
-}
-
-export async function fetchProcessSrc(txId: string): Promise<string> {
-	try {
-		const srcFetch = await fetch(getTxEndpoint(txId));
-		return await srcFetch.text();
-	} catch (e: any) {
-		throw new Error(e);
-	}
-}
-
 export async function handleProcessEval(
-  deps: DependencyType, 
-  args: {
-    processId: string;
-    evalTxId: string | null;
-    evalSrc: string | null;
-    evalTags?: TagType[];
-  }
+	deps: DependencyType,
+	args: {
+		processId: string;
+		evalTxId: string | null;
+		evalSrc: string | null;
+		evalTags?: TagType[];
+	},
 ): Promise<string | null> {
 	let src: string | null = null;
 
@@ -301,7 +266,53 @@ export async function handleProcessEval(
 	return null;
 }
 
-export async function aoCreateProcess(deps: DependencyType, args: ProcessCreateType, statusCB?: (status: any) => void): Promise<string> {
+export function aoCreateProcessWith(deps: DependencyType) {
+	return async (args: ProcessCreateType, statusCB?: (status: any) => void) => {
+		try {
+			const spawnArgs: any = {
+				module: args.module || AO.module,
+				scheduler: args.scheduler || AO.scheduler,
+			};
+
+			if (args.spawnData) spawnArgs.data = args.spawnData;
+			if (args.spawnTags) spawnArgs.tags = args.spawnTags;
+
+			statusCB && statusCB(`Spawning process...`);
+			const processId = await aoSpawn(deps, spawnArgs);
+
+			if (args.evalTxId || args.evalSrc) {
+				statusCB && statusCB(`Retrieving process...`);
+				await waitForProcess(processId, statusCB);
+
+				statusCB && statusCB(`Process retrieved!`);
+				statusCB && statusCB('Sending eval...');
+
+				try {
+					const evalResult = await handleProcessEval(deps, {
+						processId: processId,
+						evalTxId: args.evalTxId || null,
+						evalSrc: args.evalSrc || null,
+						evalTags: args.evalTags,
+					});
+
+					if (evalResult && statusCB) statusCB('Eval complete');
+				} catch (e: any) {
+					throw new Error(e.message ?? 'Error creating process');
+				}
+			}
+
+			return processId;
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error creating process');
+		}
+	};
+}
+
+export async function aoCreateProcess(
+	deps: DependencyType,
+	args: ProcessCreateType,
+	statusCB?: (status: any) => void,
+): Promise<string> {
 	try {
 		const spawnArgs: any = {
 			module: args.module || AO.module,
@@ -314,13 +325,13 @@ export async function aoCreateProcess(deps: DependencyType, args: ProcessCreateT
 		statusCB && statusCB(`Spawning process...`);
 		const processId = await aoSpawn(deps, spawnArgs);
 
-		if (args.evalTxId || args.evalSrc) {
-			statusCB && statusCB(`Retrieving process...`);
-			await waitForProcess(processId, statusCB);
+		statusCB && statusCB(`Retrieving process...`);
+		await waitForProcess(processId, statusCB);
 
+		if (args.evalTxId || args.evalSrc) {
 			statusCB && statusCB(`Process retrieved!`);
 			statusCB && statusCB('Sending eval...');
-			
+
 			try {
 				const evalResult = await handleProcessEval(deps, {
 					processId: processId,
@@ -338,5 +349,38 @@ export async function aoCreateProcess(deps: DependencyType, args: ProcessCreateT
 		return processId;
 	} catch (e: any) {
 		throw new Error(e.message ?? 'Error creating process');
+	}
+}
+
+export async function waitForProcess(processId: string, _setStatus?: (status: any) => void) {
+	let retries = 0;
+
+	while (retries < GATEWAY_RETRY_COUNT) {
+		await new Promise((r) => setTimeout(r, 2000));
+
+		const gqlResponse = await getGQLData({
+			gateway: GATEWAY,
+			ids: [processId],
+		});
+
+		if (gqlResponse?.data?.length) {
+			const foundProcess = gqlResponse.data[0].node.id;
+			globalLog(`Fetched transaction: ${foundProcess} (Try ${retries + 1})`);
+			return foundProcess;
+		} else {
+			globalLog(`Transaction not found: ${processId} (Try ${retries + 1})`);
+			retries++;
+		}
+	}
+
+	throw new Error(`Process not found, please try again`);
+}
+
+export async function fetchProcessSrc(txId: string): Promise<string> {
+	try {
+		const srcFetch = await fetch(getTxEndpoint(txId));
+		return await srcFetch.text();
+	} catch (e: any) {
+		throw new Error(e);
 	}
 }

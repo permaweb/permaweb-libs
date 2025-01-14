@@ -106,9 +106,7 @@ export function formatDate(dateArg: string | number | null, dateType: 'iso' | 'e
 	return fullTime
 		? `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()} at ${
 				date.getHours() % 12 || 12
-			}:${date.getMinutes().toString().padStart(2, '0')} ${
-				date.getHours() >= 12 ? 'PM' : 'AM'
-			}`
+			}:${date.getMinutes().toString().padStart(2, '0')} ${date.getHours() >= 12 ? 'PM' : 'AM'}`
 		: `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()}`;
 }
 
@@ -225,12 +223,12 @@ export function cleanTagValue(value: string) {
  * @returns Array of values whose keys match the prefix
  */
 export function getStoreNamespace<T = any>(prefix: string, store: Record<string, T>): T[] {
-    if (!store) return [];
-    
-    const searchPrefix = `${prefix}:`;
-    return Object.keys(store)
-        .filter(key => key.startsWith(searchPrefix))
-        .map(key => store[key]) as any;
+	if (!store) return [];
+
+	const searchPrefix = `${prefix}:`;
+	return Object.keys(store)
+		.filter((key) => key.startsWith(searchPrefix))
+		.map((key) => store[key]) as any;
 }
 
 export function buildStoreNamespace(prefix: string, value: string) {
@@ -238,43 +236,43 @@ export function buildStoreNamespace(prefix: string, value: string) {
 }
 
 export const globalLog = (...args: any[]) => {
-    console.log('[@permaweb/libs]', ...args);
+	console.log('[@permaweb/libs]', ...args);
 };
 
 function toProcessCase(str: string): string {
-    return str.replace(/^[a-z]/, (match) => match.toUpperCase());
+	return str.replace(/^[a-z]/, (match) => match.toUpperCase());
 }
 
 /* Maps an object from camel case to pascal case */
 export function mapToProcessCase(obj: any): any {
-    if (Array.isArray(obj)) {
-        return obj.map(mapToProcessCase);
-    } else if (obj && typeof obj === 'object') {
-        return Object.entries(obj).reduce((acc: any, [key, value]) => {
-            const toKey = toProcessCase(key);
-            acc[toKey] = mapToProcessCase(value);
-            return acc;
-        }, {});
-    }
-    return obj;
+	if (Array.isArray(obj)) {
+		return obj.map(mapToProcessCase);
+	} else if (obj && typeof obj === 'object') {
+		return Object.entries(obj).reduce((acc: any, [key, value]) => {
+			const toKey = toProcessCase(key);
+			acc[toKey] = mapToProcessCase(value);
+			return acc;
+		}, {});
+	}
+	return obj;
 }
 
 function fromProcessCase(str: string) {
-    return str.charAt(0).toLowerCase() + str.slice(1);
+	return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
 /* Maps an object from pascal case to camel case */
 export function mapFromProcessCase(obj: any): any {
-    if (Array.isArray(obj)) {
-        return obj.map(mapFromProcessCase);
-    } else if (obj && typeof obj === 'object') {
-        return Object.entries(obj).reduce((acc: any, [key, value]) => {
-            const fromKey = fromProcessCase(key);
-            acc[fromKey] = mapFromProcessCase(value);
-            return acc;
-        }, {});
-    }
-    return obj;
+	if (Array.isArray(obj)) {
+		return obj.map(mapFromProcessCase);
+	} else if (obj && typeof obj === 'object') {
+		return Object.entries(obj).reduce((acc: any, [key, value]) => {
+			const fromKey = fromProcessCase(key);
+			acc[fromKey] = mapFromProcessCase(value);
+			return acc;
+		}, {});
+	}
+	return obj;
 }
 
 export function getBootTag(key: string, value: string) {

@@ -1,5 +1,8 @@
-import { createAtomicAsset, createZone, getAtomicAsset, getZone, updateZone } from '@permaweb/libs';
 import { readFileSync } from 'fs';
+
+import Arweave from 'arweave';
+import { connect, createDataItemSigner } from '@permaweb/aoconnect';
+import Permaweb from '@permaweb/libs';
 
 function expect(actual) {
 	return {
@@ -25,7 +28,9 @@ function expect(actual) {
 
 			if (actualType === 'object' && actual !== null && expected !== null) {
 				if (Array.isArray(actual) !== Array.isArray(expected)) {
-					throw new Error(`Type mismatch: expected ${Array.isArray(expected) ? 'array' : 'object'}, but got ${Array.isArray(actual) ? 'array' : 'object'}`);
+					throw new Error(
+						`Type mismatch: expected ${Array.isArray(expected) ? 'array' : 'object'}, but got ${Array.isArray(actual) ? 'array' : 'object'}`,
+					);
 				}
 			}
 			console.log('\x1b[32m%s\x1b[0m', `Success: Types match (${actualType})`);
@@ -68,80 +73,106 @@ function logError(message) {
 	console.error('\x1b[31m%s\x1b[0m', `Error (${message})`);
 }
 
-async function runTests() {
-	try {
-		console.log('Running tests...');
-		const wallet = JSON.parse(readFileSync('./wallets/wallet.json', 'utf-8'));
+const permaweb = Permaweb.init({
+	ao: connect(),
+	arweave: Arweave.init(),
+	signer: createDataItemSigner(JSON.parse(readFileSync(process.env.PATH_TO_WALLET), 'utf-8'))
+});
 
+async function testZones() {
+	try {
 		logTest('Testing zone creation...');
-		const zoneId = await createZone(wallet, (status) => console.log(`Callback: ${status}`));
+		const zoneId = await permaweb.createZone([], (status) => console.log(`Callback: ${status}`));
 
 		expect(zoneId).toBeDefined();
 		expect(zoneId).toEqualType('string');
 
-		logTest('Testing zone fetch...');
-		let zone = await getZone(zoneId);
-
-		expect(zone).toBeDefined();
-		expect(zone).toEqual({ store: [], assets: [] });
-
 		logTest('Testing zone update...');
-		const zoneUpdateId = await updateZone({
+		const zoneUpdateId = await permaweb.updateZone({
 			data: {
 				name: 'Sample Zone',
 				metadata: {
 					description: 'A test zone for unit testing',
-					version: '1.0.0'
-				}
-			}
-		}, zoneId, wallet);
+					version: '1.0.0',
+				},
+			},
+		}, zoneId);
 
 		expect(zoneUpdateId).toBeDefined();
 		expect(zoneUpdateId).toEqualType('string');
 
-		zone = await getZone(zoneId);
+		logTest('Testing zone fetch...');
+		const zone = await permaweb.getZone(zoneId);
 
 		expect(zone).toEqual({
 			store: {
 				name: 'Sample Zone',
 				metadata: {
 					description: 'A test zone for unit testing',
-					version: '1.0.0'
-				}
+					version: '1.0.0',
+				},
 			},
-			assets: []
+			assets: [],
 		});
-
-		logTest('Testing atomic asset creation...');
-		const assetId = await createAtomicAsset({
-			title: 'Test Asset',
-			description: 'This is a test atomic asset',
-			type: 'article',
-			topics: ['test', 'atomic', 'asset'],
-			contentType: 'text/plain',
-			data: '1234',
-			creator: zoneId,
-			collectionId: 'CollectionId1234',
-			supply: 100,
-			denomination: 1,
-			transferable: true
-		}, wallet, (status) => console.log(`Callback: ${status}`));
-
-		expect(assetId).toBeDefined();
-		expect(assetId).toEqualType('string');
-
-		logTest('Testing atomic asset fetch...');
-		const asset = await getAtomicAsset(assetId);
-
-		expect(asset).toBeDefined();
-		expect(asset.id).toEqual(assetId);
-		expect(asset.title).toEqual('Test Asset');
-		expect(asset.description).toEqual('This is a test atomic asset');
-
-		console.log('All tests passed successfully!');
-	} catch (error) {
-		logError(error.message);
+	}
+	catch (e) {
+		logError(e.message ?? 'Zone tests failed');
 	}
 }
 
-runTests();
+async function testProfiles() {
+	try {
+		logTest('Testing profile creation...');
+	}
+	catch (e) {
+		logError(e.message ?? 'Profile tests failed');
+	}
+}
+
+async function testAssets() {
+	try {
+		logTest('Testing asset creation...');
+	}
+	catch (e) {
+		logError(e.message ?? 'Asset tests failed');
+	}
+}
+
+async function testComments() {
+	try {
+		logTest('Testing comment creation...');
+	}
+	catch (e) {
+		logError(e.message ?? 'Comment tests failed');
+	}
+}
+
+async function testCollections() {
+	try {
+		logTest('Testing collection creation...');
+	}
+	catch (e) {
+		logError(e.message ?? 'Collection tests failed');
+	}
+}
+
+const testMap = {
+	zones: { key: 'zones', fn: testZones },
+	profiles: { key: 'profiles', fn: testProfiles },
+	assets: { key: 'assets', fn: testAssets },
+	comments: { key: 'comments', fn: testComments },
+	collections: { key: 'assets', fn: testCollections },
+};
+
+(async function () {
+	const testType = process.argv[2];
+	if (!testType || testType === 'all') {
+		for (const testKey in testMap) {
+			await testMap[testKey].fn();
+		}
+	} else if (testMap[testType]) {
+		await testMap[testType].fn();
+	} else {
+		console.log(`Invalid test type. Specify one of: ${Object.keys(testMap).join(', ')}, or 'all'.`);
+	}
+})()

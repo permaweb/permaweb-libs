@@ -3,18 +3,18 @@ import dtsPlugin from 'esbuild-plugin-d.ts';
 import path from 'path';
 
 const sharedConfig = {
-  entryPoints: ['src/index.ts'],
-  bundle: true,
-  sourcemap: true,
-  minify: true,
-  inject: [path.resolve('node_modules/process/browser.js')], // Explicitly inject the process polyfill
-  define: {
-    'process.env.NODE_ENV': JSON.stringify('production'),
-  },
+	entryPoints: ['src/index.ts'],
+	bundle: true,
+	sourcemap: true,
+	minify: true,
+	inject: [path.resolve('node_modules/process/browser.js')], // Explicitly inject the process polyfill
+	define: {
+		'process.env.NODE_ENV': JSON.stringify('production'),
+	},
 };
 
 const buildConfigs = [
-  // Node.js (CJS)
+	// Node.js (CJS)
 	{
 		...sharedConfig,
 		outfile: 'dist/index.cjs',
@@ -22,8 +22,8 @@ const buildConfigs = [
 		format: 'cjs',
 		plugins: [dtsPlugin({ outDir: 'dist/types' })],
 	},
-  // Node.js (ESM)
-  {
+	// Node.js (ESM)
+	{
 		...sharedConfig,
 		outfile: 'dist/index.js',
 		platform: 'node',
@@ -41,13 +41,13 @@ const buildConfigs = [
 ];
 
 async function build() {
-  try {
-    await Promise.all(buildConfigs.map(config => esbuild.build(config)));
-    console.log('Build complete!');
-  } catch (error) {
-    console.error('Build failed:', error);
-    process.exit(1);
-  }
+	try {
+		await Promise.all(buildConfigs.map((config) => esbuild.build(config)));
+		console.log('Build complete!');
+	} catch (error) {
+		console.error('Build failed:', error);
+		process.exit(1);
+	}
 }
 
 build();

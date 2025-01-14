@@ -5,9 +5,9 @@ export const AO = {
 	src: {
 		asset: 'gyvfBebLlNJw0_bdq6NLL_BK_dqpgj9nRTYebyoOmKI',
 		zone: 'UmDqxL8ufIj2Zj9eKDQfDj_hyJ8rWZn7VaTgpyeRT94',
-    collection: '2ZDuM2VUCN8WHoAKOOjiH4_7Apq0ZHKnTWdLppxCdGY'
+		collection: '2ZDuM2VUCN8WHoAKOOjiH4_7Apq0ZHKnTWdLppxCdGY',
 	},
-  collectionsRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg'
+	collectionsRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg',
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {
@@ -17,9 +17,6 @@ export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: a
 	},
 };
 
-export const DEFAULT_UCM_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
-export const DEFAULT_UCM_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';
-
 export const GATEWAYS = {
 	arweave: 'arweave.net',
 	goldsky: 'arweave-search.goldsky.com',
@@ -28,14 +25,14 @@ export const GATEWAYS = {
 export const LICENSES = {
 	udl: {
 		label: 'Universal Data License',
-		address: 'dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw'
+		address: 'dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw',
 	},
 };
 
 export const TAGS = {
 	keys: {
 		access: 'Access-Fee',
-    ans110: {
+		ans110: {
 			title: 'Title',
 			description: 'Description',
 			topic: 'Topic:*',
@@ -65,7 +62,7 @@ export const TAGS = {
 		name: 'Name',
 		paymentAddress: 'Payment-Address',
 		paymentMode: 'Payment-Mode',
-    profileCreator: 'Profile-Creator',
+		profileCreator: 'Profile-Creator',
 		profileIndex: 'Profile-Index',
 		protocolName: 'Protocol-Name',
 		renderWith: 'Render-With',
@@ -73,11 +70,11 @@ export const TAGS = {
 		title: 'Title',
 		topic: 'Topic',
 		type: 'Type',
-		zoneType: 'Zone-Type'
+		zoneType: 'Zone-Type',
 	},
-  values: {
-    document: 'Document',
-  }
+	values: {
+		document: 'Document',
+	},
 };
 
 export const UPLOAD = {
