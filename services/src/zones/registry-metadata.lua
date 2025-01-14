@@ -1,3 +1,4 @@
+
 local json = require('json')
 local sqlite3 = require('lsqlite3')
 
@@ -270,7 +271,6 @@ local function handle_boot_zone(msg)
         },
         Data = json.encode(metadataValues)
     })
-
 end
 
 local function handle_prepare_db(msg)
@@ -712,7 +712,7 @@ end
 Handlers.add(H_PREPARE_DB, Handlers.utils.hasMatchingTag('Action', H_PREPARE_DB),
         handle_prepare_db)
 
--- Data - { [Address: {} | Addresses: {} ] }
+-- Data - { Addresses }
 Handlers.add(H_GET_ZONES_USERS, Handlers.utils.hasMatchingTag('Action', H_GET_ZONES_USERS),
         function(msg)
             local decode_check, data = decode_message_data(msg.Data)
@@ -893,9 +893,9 @@ Handlers.add(H_INFO, Handlers.utils.hasMatchingTag('Action', H_INFO),
         end)
 
 Handlers.add(H_SUB_REG_CONFIRM, Handlers.utils.hasMatchingTag('Action', H_SUB_REG_CONFIRM),
-        function(msg)
-            print("Whitelist-Confirmation")
-        end
+    function(msg)
+        print("Whitelist-Confirmation")
+    end
 )
 
 Handlers.add(H_SUB_TOP_CONFIRM, Handlers.utils.hasMatchingTag('Response-For', "Subscribe-To-Topics"),
