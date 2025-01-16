@@ -329,7 +329,6 @@ function Zone.Functions.addUpload(msg)
         Timestamp = msg.Timestamp,
         AssetType = msg.AssetType,
         ContentType = msg.ContentType,
-
     })
 end
 
