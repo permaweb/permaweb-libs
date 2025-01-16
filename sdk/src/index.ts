@@ -10,35 +10,35 @@ if (!globalThis.Buffer) globalThis.Buffer = Buffer;
 
 function init(deps: Helpers.DependencyType) {
 	return {
-		/* Services */
+		/* Zones */
 		createZone: Services.createZoneWith(deps),
 		updateZone: Services.updateZoneWith(deps),
 		addToZone: Services.addToZoneWith(deps),
 		getZone: Services.getZoneWith(deps),
-
+		/* Assets */
 		createAtomicAsset: Services.createAtomicAssetWith(deps),
 		getAtomicAsset: Services.getAtomicAssetWith(deps),
 		getAtomicAssets: Services.getAtomicAssets,
-
+		/* Profiles */
 		createProfile: Services.createProfileWith(deps),
 		updateProfile: Services.updateProfileWith(deps),
 		getProfileById: Services.getProfileByIdWith(deps),
 		getProfileByWalletAddress: Services.getProfileByWalletAddressWith(deps),
-
+		/* Comments */
 		createComment: Services.createCommentWith(deps),
 		getComment: Services.getCommentWith(deps),
 		getComments: Services.getCommentsWith(deps),
-
+		/* Collections */
 		createCollection: Services.createCollectionWith(deps),
 		updateCollectionAssets: Services.updateCollectionAssetsWith(deps),
 		getCollection: Services.getCollectionWith(deps),
 		getCollections: Services.getCollectionsWith(deps),
-
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),
 		getGQLData: Common.getGQLData,
 		createProcess: Common.aoCreateProcessWith(deps),
-
+		readProcess: Common.aoDryRunWith(deps),
+		sendMessage: Common.aoSendWith(deps),
 		/* Utils */
 		mapFromProcessCase: Helpers.mapFromProcessCase,
 		mapToProcessCase: Helpers.mapToProcessCase,

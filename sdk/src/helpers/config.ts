@@ -40,6 +40,7 @@ export const TAGS = {
 			implements: 'Implements',
 			license: 'License',
 		},
+		assetType: 'Asset-Type',
 		banner: 'Banner',
 		bootloader: 'Bootloader',
 		bootloaderInit: 'On-Boot',

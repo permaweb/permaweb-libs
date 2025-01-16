@@ -1,6 +1,7 @@
 import { getGQLData } from 'common/gql';
 
 import { AO, GATEWAYS } from 'helpers/config';
+import { getTxEndpoint } from 'helpers/endpoints';
 import {
 	AssetCreateArgsType,
 	AssetHeaderType,
@@ -13,7 +14,7 @@ import {
 	TagType,
 } from 'helpers/types';
 
-import { buildAsset, createAtomicAssetWith, getAtomicAssetWith } from './assets';
+import { buildAsset, createAtomicAssetWith, getAtomicAsset } from './assets';
 
 export function createCommentWith(deps: DependencyType) {
 	const createAtomicAsset = createAtomicAssetWith(deps);
@@ -27,7 +28,7 @@ export function createCommentWith(deps: DependencyType) {
 			title: `Comment on ${args.parentId}`,
 			description: `Comment on ${args.parentId}`,
 			type: 'comment',
-			topics: [],
+			topics: ['comment'],
 			contentType: 'text/plain',
 			data: args.content,
 			creator: args.creator,
@@ -40,27 +41,30 @@ export function createCommentWith(deps: DependencyType) {
 }
 
 export function getCommentWith(deps: DependencyType) {
-	const getAtomicAsset = getAtomicAssetWith(deps);
-	return async (args: { parentId: string }) => {
-		const asset = await getAtomicAsset(args.parentId);
+	return async (id: string): Promise<CommentDetailType | null> => {
+		try {
+			const asset = await getAtomicAsset(deps, id);
 
-		const dataSource = asset?.tags?.find((t: TagType) => {
-			return t.name === 'Data-Source';
-		})?.value;
+			const dataSource = asset?.tags?.find((t: TagType) => {
+				return t.name === 'Data-Source';
+			})?.value;
 
-		const rootSource = asset?.tags?.find((t: TagType) => {
-			return t.name === 'Root-Source';
-		})?.value;
+			const rootSource = asset?.tags?.find((t: TagType) => {
+				return t.name === 'Root-Source';
+			})?.value;
 
-		if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
+			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
 
-		const comment: CommentDetailType = {
-			...asset,
-			dataSource,
-			rootSource,
-		};
-
-		return comment;
+			return {
+				...asset,
+				content: await getCommentData(id),
+				dataSource,
+				rootSource,
+			};
+		}
+		catch (e: any) {
+			throw new Error(e.message ?? 'Error getting comment');
+		}
 	};
 }
 
@@ -98,7 +102,8 @@ export function getCommentsWith(_deps: DependencyType) {
 			assets = gqlResponse.data.map((element: GQLNodeResponseType) => buildAsset(element));
 		}
 
-		return assets.map((asset: AssetHeaderType) => {
+		const comments = [];
+		for (const asset of assets) {
 			const dataSource = asset?.tags?.find((t: TagType) => {
 				return t.name === 'Data-Source';
 			})?.value;
@@ -109,13 +114,23 @@ export function getCommentsWith(_deps: DependencyType) {
 
 			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
 
-			const comment: CommentHeaderType = {
+			comments.push({
 				...asset,
+				content: await getCommentData(asset.id),
 				dataSource,
 				rootSource,
-			};
+			})
+		}
 
-			return comment;
-		});
+		return comments;
 	};
+}
+
+async function getCommentData(id: string) {
+	try {
+		return await (await fetch(getTxEndpoint(id))).text();
+	}
+	catch (e: any) {
+		throw new Error(e.message ?? 'Error getting comment data')
+	}
 }

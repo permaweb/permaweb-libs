@@ -37,10 +37,7 @@ export function createAtomicAssetWith(deps: DependencyType) {
 		try {
 			const assetId = await aoCreateProcess(
 				deps,
-				{
-					spawnTags: tags,
-					spawnData: data,
-				},
+				{ spawnTags: tags, spawnData: data },
 				callback ? (status) => callback(status) : undefined,
 			);
 
@@ -51,84 +48,88 @@ export function createAtomicAssetWith(deps: DependencyType) {
 	};
 }
 
-export function getAtomicAssetWith(deps: DependencyType) {
-	return async (id: string): Promise<AssetDetailType | null> => {
-		try {
-			const gqlResponse = await getGQLData({
-				gateway: GATEWAYS.goldsky,
-				ids: [id],
-				tags: null,
-				owners: null,
-				cursor: null,
+export async function getAtomicAsset(deps: DependencyType, id: string): Promise<AssetDetailType | null> {
+	try {
+		const gqlResponse = await getGQLData({
+			gateway: GATEWAYS.goldsky,
+			ids: [id],
+			tags: null,
+			owners: null,
+			cursor: null,
+		});
+
+		if (gqlResponse && gqlResponse.data.length) {
+			const asset: AssetHeaderType = buildAsset(gqlResponse.data[0]);
+
+			let state: AssetStateType & any = {
+				ticker: null,
+				denomination: null,
+				balances: null,
+				transferable: null,
+				creator: null,
+				metadata: {},
+			};
+
+			const processState = await aoDryRun(deps, {
+				processId: asset.id,
+				action: 'Info',
 			});
 
-			if (gqlResponse && gqlResponse.data.length) {
-				const asset: AssetHeaderType = buildAsset(gqlResponse.data[0]);
-
-				let state: AssetStateType & any = {
-					ticker: null,
-					denomination: null,
-					balances: null,
-					transferable: null,
-					creator: null,
-					metadata: {},
-				};
-
-				const processState = await aoDryRun(deps, {
-					processId: asset.id,
-					action: 'Info',
-				});
-
-				if (processState) {
-					if (processState.Name || processState.name) {
-						asset.title = processState.Name || processState.name;
-					}
-					if (processState.Ticker || processState.ticker) state.ticker = processState.Ticker || processState.ticker;
-					if (processState.Denomination || processState.denomination)
-						state.denomination = processState.Denomination || processState.denomination;
-					if (processState.Logo || processState.logo) asset.thumbnail = processState.Logo || processState.logo;
-					if (processState.Balances) {
-						state.balances = Object.fromEntries(
-							Object.entries(processState.Balances).filter(([_, value]) => Number(value) !== 0),
-						) as any;
-					}
-					if (processState.Transferable !== undefined) {
-						state.transferable = processState.Transferable;
-					} else {
-						state.transferable = true;
-					}
-					if (processState.Creator || processState.creator) {
-						state.creator = processState.Creator || processState.creator;
-					}
-					if (processState.AssetMetadata) {
-						for (const [key, value] of Object.entries(processState.AssetMetadata)) {
-							if (!(key in state)) {
-								state.metadata[key] = value;
-							}
+			if (processState) {
+				if (processState.Name || processState.name) {
+					asset.title = processState.Name || processState.name;
+				}
+				if (processState.Ticker || processState.ticker) state.ticker = processState.Ticker || processState.ticker;
+				if (processState.Denomination || processState.denomination)
+					state.denomination = processState.Denomination || processState.denomination;
+				if (processState.Logo || processState.logo) asset.thumbnail = processState.Logo || processState.logo;
+				if (processState.Balances) {
+					state.balances = Object.fromEntries(
+						Object.entries(processState.Balances).filter(([_, value]) => Number(value) !== 0),
+					) as any;
+				}
+				if (processState.Transferable !== undefined) {
+					state.transferable = processState.Transferable;
+				} else {
+					state.transferable = true;
+				}
+				if (processState.Creator || processState.creator) {
+					state.creator = processState.Creator || processState.creator;
+				}
+				if (processState.AssetMetadata) {
+					for (const [key, value] of Object.entries(processState.AssetMetadata)) {
+						if (!(key in state)) {
+							state.metadata[key] = value;
 						}
 					}
 				}
-
-				if (!state.balances) {
-					try {
-						const processBalances = await aoDryRun(deps, {
-							processId: asset.id,
-							action: 'Balances',
-						});
-
-						if (processBalances) state.balances = processBalances;
-					} catch (e: any) {
-						console.error(e);
-					}
-				}
-
-				return { ...asset, ...mapFromProcessCase(state) };
 			}
 
-			return null;
-		} catch (e: any) {
-			throw new Error(e.message || 'Error fetching atomic asset');
+			if (!state.balances) {
+				try {
+					const processBalances = await aoDryRun(deps, {
+						processId: asset.id,
+						action: 'Balances',
+					});
+
+					if (processBalances) state.balances = processBalances;
+				} catch (e: any) {
+					console.error(e);
+				}
+			}
+
+			return { ...asset, ...mapFromProcessCase(state) };
 		}
+
+		return null;
+	} catch (e: any) {
+		throw new Error(e.message || 'Error fetching atomic asset');
+	}
+}
+
+export function getAtomicAssetWith(deps: DependencyType) {
+	return async (id: string): Promise<AssetDetailType | null> => {
+		return await getAtomicAsset(deps, id);
 	};
 }
 
@@ -200,7 +201,7 @@ export function buildAsset(element: GQLNodeResponseType): AssetHeaderType {
 		TAGS.keys.collectionId,
 		TAGS.keys.dateCreated,
 	]);
-
+	
 	const asset = {
 		id: element.node.id,
 		owner: element.node.owner.address,
@@ -269,7 +270,7 @@ function buildAssetTags(args: AssetCreateArgsType): { name: string; value: strin
 	const tags = [
 		{ name: TAGS.keys.title, value: args.title },
 		{ name: TAGS.keys.description, value: args.description },
-		{ name: TAGS.keys.type, value: args.type },
+		{ name: TAGS.keys.assetType, value: args.type },
 		{ name: TAGS.keys.contentType, value: args.contentType },
 		{ name: TAGS.keys.implements, value: 'ANS-110' },
 		{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },

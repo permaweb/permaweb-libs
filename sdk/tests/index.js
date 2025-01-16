@@ -139,8 +139,40 @@ async function testAssets() {
 }
 
 async function testComments() {
+	const PARENT_ID = 'fRWwQajlhuaY4l4HthYgY6EjI-XUmN_3AFBTWVYkPbY';
+	const CREATOR = 'FyulcTQDKqMQMB92N2X01pHZxk0wh_ljywsGZuXOI-s';
+
 	try {
 		logTest('Testing comment creation...');
+		const commentId1 = await permaweb.createComment({
+			creator: CREATOR,
+			content: 'My first comment',
+			parentId: PARENT_ID
+		}, (status) => console.log(`Callback: ${status}`));
+
+		expect(commentId1).toBeDefined();
+		expect(commentId1).toEqualType('string');
+
+		logTest('Testing comment fetch...');
+		const comment = await permaweb.getComment(commentId1);
+
+		expect(comment).toBeDefined();
+		expect(comment.id).toEqual(commentId1);
+
+		logTest('Creating second comment for batch query...');
+		const commentId2 = await permaweb.createComment({
+			creator: CREATOR,
+			content: 'My second comment',
+			parentId: PARENT_ID
+		}, (status) => console.log(`Callback: ${status}`));
+
+		expect(commentId2).toBeDefined();
+		expect(commentId2).toEqualType('string');
+
+		logTest('Testing comments fetch...');
+		const comments = await permaweb.getComments({ parentId: PARENT_ID });
+
+		expect(comments).toBeDefined();
 	}
 	catch (e) {
 		logError(e.message ?? 'Comment tests failed');

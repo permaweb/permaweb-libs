@@ -36,6 +36,12 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 	}
 }
 
+export function aoSendWith(deps: DependencyType) {
+	return async (args: MessageSendType) => {
+		return await aoSend(deps, args);
+	}
+}
+
 export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
 	try {
 		const tags: TagType[] = [{ name: 'Action', value: args.action }];
@@ -53,6 +59,12 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 		return txId;
 	} catch (e: any) {
 		throw new Error(e);
+	}
+}
+
+export function aoDryRunWith(deps: DependencyType) {
+	return async (args: MessageSendType) => {
+		return await aoDryRun(deps, args);
 	}
 }
 

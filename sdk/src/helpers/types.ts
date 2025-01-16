@@ -126,13 +126,13 @@ export type AoAssetType = {
 
 export type AssetDetailType = AssetHeaderType & AssetStateType;
 
-export type CommentHeaderType = AssetHeaderType & { dataSource: string; rootSource: string };
+export type CommentHeaderType = AssetHeaderType & { content: string, dataSource: string; rootSource: string };
 
 export type CommentStateType = AssetStateType;
 
 export type CommentDetailType = CommentHeaderType & CommentStateType;
 
-export type CommentCreateArgType = { creator: string; content: string; parentId: string; rootId?: string, tags?: TagType[] };
+export type CommentCreateArgType = { content: string; creator: string;  parentId: string; rootId?: string, tags?: TagType[] };
 
 export type CollectionManifestType = {
 	type: string;
