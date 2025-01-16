@@ -32,6 +32,7 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_RUN_ACTION = 'Run-Action',
     H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
     H_ZONE_INDEX_NOTICE = 'Index-Notice',
+    -- mutations
     H_ZONE_UPDATE = 'Zone-Update',
     H_ZONE_ROLE_SET = 'Role-Set',
     H_ZONE_SET = 'Zone-Set',
@@ -312,6 +313,7 @@ function Zone.Functions.zoneRoleSet(msg)
                 Message = 'Role updated'
             }
         })
+        Subscribable.notifySubscribers(Zone.Constants.H_ZONE_ROLE_SET, { UpdateTx = msg.Id })
     else
         print('Decode Error')
         Zone.Functions.sendError(msg.From, string.format(
@@ -327,18 +329,6 @@ function Zone.Functions.addUpload(msg)
         Timestamp = msg.Timestamp,
         AssetType = msg.AssetType,
         ContentType = msg.ContentType,
-
-    })
-end
-
-function Zone.Functions.addUpload(msg)
-    Zone.Data.AssetManager:update({
-        Type = 'Add',
-        AssetId = msg.AssetId,
-        Timestamp = msg.Timestamp,
-        AssetType = msg.AssetType,
-        ContentType = msg.ContentType,
-
     })
 end
 
@@ -565,6 +555,11 @@ Subscribable.configTopicsAndChecks({
         returns = '{ "UpdateTx" : string }',
         subscriptionBasis = 'Whitelisting'
     },
+    [Zone.Constants.H_ZONE_ROLE_SET] = {
+        description = 'Zone role set',
+        returns = '{ "UpdateTx" : string }',
+        subscriptionBasis = 'Whitelisting'
+    },
 })
 
 --------------------------------------------------------------------------------
@@ -673,6 +668,8 @@ end
 
 -- Boot Initialization
 if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
+    --TODO add registries at boot
+    --local registry_ids = {}
     for _, tag in ipairs(Inbox[1].TagArray) do
         local prefix = "Bootloader-"
         -- Check if this Tag is for the Bootloader
@@ -681,6 +678,10 @@ if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
             setStoreValue(keyWithoutPrefix, tag.value)
         end
+        -- TODO add registries at boot
+        --if tag.name == 'Registry-Id' then
+        --    table.insert(registry_ids, tag.value)
+        --end
     end
 
     ao.send({
