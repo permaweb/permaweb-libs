@@ -39,10 +39,13 @@ const buildConfigs = [
 		plugins: [dtsPlugin({ outDir: 'dist/types' })],
 	},
 ];
-
 async function build() {
 	try {
-		await Promise.all(buildConfigs.map((config) => esbuild.build(config)));
+		await Promise.all(buildConfigs.map(async (config, index) => {
+			console.log(`Building configuration ${index + 1}:`, config.outfile);
+			await esbuild.build(config);
+			console.log(`Finished building configuration ${index + 1}:`, config.outfile);
+		}));
 		console.log('Build complete!');
 	} catch (error) {
 		console.error('Build failed:', error);

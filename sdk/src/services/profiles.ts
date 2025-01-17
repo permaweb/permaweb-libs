@@ -124,7 +124,7 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
 		try {
 			const gqlResponse = await getGQLData({
-				gateway: GATEWAYS.arweave,
+				gateway: GATEWAYS.goldsky,
 				tags: [
 					{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
 					{ name: TAGS.keys.zoneType, values: ['User'] },

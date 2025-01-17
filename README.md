@@ -1,6 +1,6 @@
 # @permaweb/libs
 
-This SDK provides a set of libraries designed as foundational building blocks for developers to create and interact with applications on Arweave's permaweb. These libraries aim to contribute building on the composable web, promoting interoperability and reusability across decentralized applications. With libraries for managing profiles, atomic assets, collections, and more, this SDK simplifies the development of decentralized, permanent applications.
+This SDK provides a set of libraries designed as foundational building blocks for developers to create and interact with applications on Arweave"s permaweb. These libraries aim to contribute building on the composable web, promoting interoperability and reusability across decentralized applications. With libraries for managing profiles, atomic assets, collections, and more, this SDK simplifies the development of decentralized, permanent applications.
 
 ## Table of Contents
 
@@ -78,7 +78,7 @@ const permaweb = Permaweb.init({
 
 ### Zones
 
-Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity's behalf. A profile is an instance of a zone with specific metadata ([Read the spec](./specs/spec-zones.md)).
+Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity"s behalf. A profile is an instance of a zone with specific metadata ([Read the spec](./specs/spec-zones.md)).
 
 #### `createZone`
 
@@ -162,9 +162,9 @@ Profiles are a digital representation of entities, such as users, organizations,
 
 ```typescript
 const profileId = await permaweb.createProfile({
-  username: "Sample Zone",
-  displayName: "Sample Zone",
-  description: "Sample description",
+  username: "My username",
+  displayName: "My display name",
+  description: "My description",
   thumbnail: "Thumbnail image data",
   banner: "Banner image data",
 });
@@ -173,7 +173,7 @@ const profileId = await permaweb.createProfile({
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing profile details, including `username`, `displayName`, `description`, `thumbnail`, and `banner`
+- `args`: Object containing profile details, including `username`, `displayName`, `description`, `thumbnail (optional)`, and `banner (optional)`
 - `callback (optional)`: Callback function for client use
 
 </details>
@@ -191,9 +191,9 @@ ProfileProcessId;
 
 ```typescript
 const profileId = await permaweb.updateProfile({
-    username: "Sample Zone",
-    displayName: "Sample Zone",
-    description: "Sample description",
+    username: "My usename",
+    displayName: "My display name",
+    description: "My description",
     thumbnail: "Thumbnail image data",
     banner: "Banner image data",
   }, profileId
@@ -296,12 +296,12 @@ Atomic assets are unique digital item consisting of an AO process and its associ
 
 ```typescript
 const assetId = await permaweb.createAtomicAsset({
-    title: 'Example Title',
-    description, 'Example Description',
-    type: 'Example Atomic Asset Type',
-    topics: ['Topic 1', 'Topic 2', 'Topic 3'],
-    contentType: 'text/html',
-    data: '1234'
+    title: "Example Title",
+    description: "Example Description",
+    type: "Example Atomic Asset Type",
+    topics: ["Topic 1", "Topic 2", "Topic 3"],
+    contentType: "text/plain",
+    data: "1234"
 });
 ```
 
@@ -344,37 +344,37 @@ const asset = await permaweb.getAtomicAsset(assetId);
 
 ```typescript
  {
-  id: 'z0f2O9Fs3yb_EMXtPPwKeb2O0WueIG5r7JLs5UxsA4I',
-  title: 'City',
-  description: 'A collection of AI generated images of different settings and areas',
+  id: "z0f2O9Fs3yb_EMXtPPwKeb2O0WueIG5r7JLs5UxsA4I",
+  title: "City",
+  description: "A collection of AI generated images of different settings and areas",
   type: null,
   topics: null,
-  contentType: 'image/png',
+  contentType: "image/png",
   renderWith: null,
   thumbnail: null,
   udl: {
-    access: { value: 'One-Time-0.1' },
-    derivations: { value: 'Allowed-With-One-Time-Fee-0.1' },
-    commercialUse: { value: 'Allowed-With-One-Time-Fee-0.1' },
-    dataModelTraining: { value: 'Disallowed' },
-    paymentMode: 'Single',
-    paymentAddress: 'uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk',
-    currency: 'xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10'
+    access: { value: "One-Time-0.1" },
+    derivations: { value: "Allowed-With-One-Time-Fee-0.1" },
+    commercialUse: { value: "Allowed-With-One-Time-Fee-0.1" },
+    dataModelTraining: { value: "Disallowed" },
+    paymentMode: "Single",
+    paymentAddress: "uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk",
+    currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10"
   },
-  creator: 'SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M',
-  collectionId: 'XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc',
-  implementation: 'ANS-110',
+  creator: "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M",
+  collectionId: "XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc",
+  implementation: "ANS-110",
   dateCreated: 1717663091000,
   blockHeight: 1439467,
-  ticker: 'ATOMIC',
-  denomination: '1',
+  ticker: "ATOMIC",
+  denomination: "1",
   balances: {
-    'SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M': '1',
-    cfQOZc7saMMizHtBKkBoF_QuH5ri0Bmb5KSf_kxQsZE: '1',
-    U3TjJAZWJjlWBB4KAXSHKzuky81jtyh0zqH8rUL4Wd0: '98'
+    "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M": "1",
+    cfQOZc7saMMizHtBKkBoF_QuH5ri0Bmb5KSf_kxQsZE: "1",
+    U3TjJAZWJjlWBB4KAXSHKzuky81jtyh0zqH8rUL4Wd0: "98"
   },
   transferable: true,
-  tags: [{ name: 'Remaining', value: 'Tag' }]
+  tags: [{ name: "Remaining", value: "Tag" }]
 }
 ```
 
@@ -510,20 +510,19 @@ const comment = await permaweb.getComment(commentId);
 
 ```typescript
 {
-  id: 'CommentProcessId',
-  title: 'Comment Title',
-  description: 'Comment Description',
-  parentId: 'ParentProcessId',
-  rootId: 'RootProcessId',
-  content: 'My Comment',
-  contentType: 'text/plain',
-  data: 'Comment data',
-  creator: 'Creator Identifier',
-  collectionId: 'Collection Identifier',
+  id: "CommentProcessId",
+  title: "Comment Title",
+  description: "Comment Description",
+  parentId: "ParentProcessId",
+  rootId: "RootProcessId",
+  content: "My Comment",
+  contentType: "text/plain",
+  creator: "Creator Identifier",
+  collectionId: "Collection Identifier",
   transferable: true,
   tags: [
-    { name: 'Data-Source', value: 'Data Source Identifier' },
-    { name: 'Root-Source', value: 'Root Source Identifier' }
+    { name: "Data-Source", value: "Data Source Identifier" },
+    { name: "Root-Source", value: "Root Source Identifier" }
   ]
 }
 ```
@@ -556,11 +555,10 @@ const comments = await permaweb.getComments({
     id: "CommentProcessId1",
     title: "Comment Title 1",
     description: "Comment Description 1",
-    parentId: 'ParentProcessId',
-    rootId: 'RootProcessId',
-    content: 'My Comment',
+    parentId: "ParentProcessId",
+    rootId: "RootProcessId",
+    content: "My Comment",
     contentType: "text/plain",
-    data: "Comment data 1",
     creator: "Creator Identifier",
     collectionId: "Collection Identifier",
     transferable: true,
@@ -573,9 +571,9 @@ const comments = await permaweb.getComments({
     id: "CommentProcessId2",
     title: "Comment Title 2",
     description: "Comment Description 2",
-    parentId: 'ParentProcessId',
-    rootId: 'RootProcessId',
-    content: 'My Comment',
+    parentId: "ParentProcessId",
+    rootId: "RootProcessId",
+    content: "My Comment",
     contentType: "text/plain",
     data: "Comment data 2",
     creator: "Creator Identifier",
@@ -598,12 +596,10 @@ Collections are structured groups of atomic assets, allowing for cohesive repres
 #### `createCollection`
 
 ```typescript
-const commentId = await permaweb.createCollection({
-  title: "Sample collection title",
-  description: "Sample collection description",
-  creator: profileId,
-  thumbnail: "Thumbnail image data",
-  banner: "Banner image data",
+const collectionId = await permaweb.createCollection({
+  title: "Example Title",
+  description: "Example Description",
+  creator: profileId
 });
 ```
 
@@ -628,10 +624,10 @@ CollectionProcessId;
 #### `updateCollectionAssets`
 
 ```typescript
-const commentId = await permaweb.updateCollectionAssets({
+const collectionUpdateId = await permaweb.updateCollectionAssets({
   collectionId: collectionId,
   assetIds: ["AssetId1", "AssetId2", "AssetId3"],
-  profileId: profileId,
+  creator: creator,
   updateType: "Add",
 });
 ```
@@ -639,7 +635,7 @@ const commentId = await permaweb.updateCollectionAssets({
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing `collectionId`, `assetIds`, `profileId`, and `updateType ('Add' | 'Remove')`
+- `args`: Object containing `collectionId`, `assetIds`, `profileId`, and `updateType ("Add" | "Remove")`
 
 </details>
 
@@ -672,14 +668,14 @@ const collection = await permaweb.getCollection(collectionId);
 
 ```typescript
 {
-  id: 'Id',
-  title: 'Title',
-  description: 'Description',
-  creator: 'Creator',
-  dateCreated: 'DateCreated',
-  thumbnail: 'ThumbnailTx',
-  banner: 'BannerTx',
-  assets: ['AssetId1', 'AssetId2', 'AssetId3']
+  id: "Id",
+  title: "Title",
+  description: "Description",
+  creator: "Creator",
+  dateCreated: "DateCreated",
+  thumbnail: "ThumbnailTx",
+  banner: "BannerTx",
+  assets: ["AssetId1", "AssetId2", "AssetId3"]
 }
 ```
 
@@ -730,52 +726,92 @@ const collections = await permaweb.getCollections();
 
 ## Examples
 
-To avoid the need for creating many instances in your frontend application, this react provider can be used as a reference.
+To streamline the integration of `@permaweb/libs` into your React applications, you can use the following `PermawebProvider`. This provider simplifies dependency management and avoids the need to create multiple SDK instances across different components in your frontend application. By leveraging React Context, the provider ensures the Permaweb SDK is initialized once and is accessible throughout your component tree.
 
-#### Provider
+### Key Features of This Example:
+- **Global Initialization**: The `PermawebProvider` initializes the necessary dependencies (e.g., Arweave, AO Connect, and optional wallet signing).
+- **React Context Integration**: It makes the initialized `libs` instance globally available to all child components without requiring prop drilling.
+- **Reusable Hook**: The `usePermawebProvider` hook offers a convenient way to access the SDK in any component.
+
+---
+
+### Provider Setup
+
+The following example demonstrates how to create a React Context and Provider for `@permaweb/libs`.
 
 ```typescript
+import React from "react";
 import Arweave from "arweave";
 import { connect, createDataItemSigner } from "@permaweb/aoconnect";
 import Permaweb from "@permaweb/libs";
 
+// Define the context shape
+interface PermawebContextState {
+  libs: Permaweb | null;
+}
+
+// Create a React context for Permaweb
 const PermawebContext = React.createContext<PermawebContextState>({ libs: null });
 
+// Hook to access the Permaweb context
 export function usePermawebProvider(): PermawebContextState {
   return React.useContext(PermawebContext);
 }
 
-export function PermawebProvider(props: { children }) {
-  const [libs, setLibs] = React.useState(null);
+// Provider component for initializing and sharing the Permaweb instance
+export function PermawebProvider(props: { children: React.ReactNode }) {
+  const [libs, setLibs] = React.useState<Permaweb | null>(null);
 
   React.useEffect(() => {
-    let dependencies = { ao: connect(), arweave: Arweave.init() };
-    if (wallet) dependencies.signer = createDataItemSigner(wallet);
+    // Initialize dependencies
+    const dependencies: any = { ao: connect(), arweave: Arweave.init() };
+    if (wallet) {
+      dependencies.signer = createDataItemSigner(wallet);
+    }
 
-    setLibs(Permaweb.init(deps));
-  }, [wallet]);
+    // Initialize Permaweb SDK and set it in the state
+    const permawebInstance = Permaweb.init(dependencies);
+    setLibs(permawebInstance);
+  }, []);
+
+  return (
+    <PermawebContext.Provider value={{ libs }}>
+      {props.children}
+    </PermawebContext.Provider>
+  );
 }
-
-return (
-  <PermawebContext.Provider value={{ libs: libs }}>
-    {props.children}
-  </PermawebContext.Provider>
-);
 ```
 
-#### Usage in a component
+### Explanation:
+1. **React Context**: The `PermawebContext` is used to store the initialized `libs` object, making it accessible across your application.
+2. **Dynamic Initialization**: In the `useEffect` hook, the dependencies are initialized once when the provider mounts, including optional wallet signing logic.
+3. **Encapsulation**: The `PermawebProvider` ensures the SDK logic is abstracted, keeping the rest of your app clean and focused.
+
+---
+
+### Usage in a Component
+
+Here's how you can use the `usePermawebProvider` hook to access the `libs` instance in a React component:
 
 ```typescript
+import React from "react";
 import { usePermawebProvider } from "providers/PermawebProvider";
 
 export default function MyComponent() {
-  const permawebProvider = usePermawebProvider();
+  const { libs } = usePermawebProvider();
 
   React.useEffect(() => {
-    (async function () {
-      const asset = await permawebProvider.libs.getAtomicAsset(id);
+    (async function fetchAsset() {
+      if (libs) {
+        try {
+          const asset = await libs.getAtomicAsset(id);
+          console.log("Fetched Asset:", asset);
+        } catch (error) {
+          console.error("Error fetching asset:", error);
+        }
+      }
     })();
-  }, [permawebProvider.libs]);
+  }, [libs]);
 
   return <h1>Permaweb Libs Component</h1>;
 }

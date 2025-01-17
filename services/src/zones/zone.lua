@@ -139,7 +139,8 @@ function Zone.Functions.isAuthorized(msg)
 
     local rolesForHandler = HandlerRoles[msg.Action]
     if not rolesForHandler then
-        return msg.From == Owner or false, "AuthRoles: Sender " .. msg.From .. " not Authorized. Only Owner can access the handler " .. msg.Action
+        return msg.From == Owner or false,
+            "AuthRoles: Sender " .. msg.From .. " not Authorized. Only Owner can access the handler " .. msg.Action
     end
 
     local actorRoles = Zone.Functions.getActorRoles(msg.From)
@@ -317,8 +318,8 @@ function Zone.Functions.zoneRoleSet(msg)
     else
         print('Decode Error')
         Zone.Functions.sendError(msg.From, string.format(
-                'Failed to parse role update data, received: %s. %s.', msg.Data,
-                'Data must be an object - { Id, Op, Role }'))
+            'Failed to parse role update data, received: %s. %s.', msg.Data,
+            'Data must be an object - { Id, Op, Role }'))
     end
 end
 
@@ -366,12 +367,16 @@ function Zone.Functions.runAction(msg)
         return
     end
 
-    ao.send({
-        Target = msg.ForwardTo,
-        Action = msg.ForwardAction,
-        Data = msg.Data,
-        Tags = msg.Tags
-    })
+    local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
+
+    if decodeResult.success and decodeResult.data then
+        ao.send({
+            Target = msg.ForwardTo,
+            Action = msg.ForwardAction,
+            Data = decodeResult.data.Input,
+            Tags = msg.Tags
+        })
+    end
 end
 
 function Zone.Functions.addIndexId(msg)
@@ -504,7 +509,6 @@ function Zone.Functions.keysHandler(msg)
 end
 
 function Zone.Functions.getRoles(msg)
-
     local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
 
     if decodeResult.success and decodeResult.data and decodeResult.data.Actors then
@@ -547,7 +551,7 @@ Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zon
 -- Register-Whitelisted-Subscriber -- owner only
 -- Looks for Tag: Subscriber-Process-Id = <registry_id>
 Handlers.add('Register-Whitelisted-Subscriber', 'Register-Whitelisted-Subscriber',
-        Subscribable.handleRegisterWhitelistedSubscriber)
+    Subscribable.handleRegisterWhitelistedSubscriber)
 
 Subscribable.configTopicsAndChecks({
     [Zone.Constants.H_ZONE_UPDATE] = {
@@ -587,18 +591,18 @@ local function setStoreValue(keyString, value)
     local isStringAppend = false
     if string.sub(lastPart, -3) == "+++" then
         isStringAppend = true
-        lastPart = string.sub(lastPart, 1, -4)  -- remove '+++'
+        lastPart = string.sub(lastPart, 1, -4) -- remove '+++'
     end
 
     -- Check if we are dealing with an array
     local isArray = false
     if string.sub(lastPart, -2) == "[]" then
         isArray = true
-        lastPart = string.sub(lastPart, 1, -3)  -- remove '[]'
+        lastPart = string.sub(lastPart, 1, -3) -- remove '[]'
     end
 
     -- Update the last segment in our parts table
-    parts[#parts] = lastPart
+    parts[#parts]      = lastPart
 
     -- 3) Build a dot-notated key up to (but not including) the last part
     --    We'll use this later to navigate or set in the KV store.
@@ -638,7 +642,6 @@ local function setStoreValue(keyString, value)
                 currentValue[lastIndex] = currentValue[lastIndex] .. value
             end
             Zone.Data.KV:set(fullKey, currentValue)
-
         else
             -- Not an array, just a single field
             if currentValue == nil then

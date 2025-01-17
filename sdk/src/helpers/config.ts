@@ -4,7 +4,7 @@ export const AO = {
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
 		asset: 'gyvfBebLlNJw0_bdq6NLL_BK_dqpgj9nRTYebyoOmKI',
-		zone: 'UmDqxL8ufIj2Zj9eKDQfDj_hyJ8rWZn7VaTgpyeRT94',
+		zone: 'Dw8yZwAc8Sg1lo2juHJc79RANWS7AOxe1DJDGScqmIo',
 		collection: '2ZDuM2VUCN8WHoAKOOjiH4_7Apq0ZHKnTWdLppxCdGY',
 	},
 	collectionsRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg',

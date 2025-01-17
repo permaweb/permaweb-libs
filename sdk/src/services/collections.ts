@@ -1,8 +1,7 @@
-import { aoDryRun, aoSend } from 'common/ao';
+import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
 import { resolveTransaction } from 'common/arweave';
-import { getGQLData } from 'common/gql';
 
-import { AO, GATEWAYS, TAGS } from 'helpers/config';
+import { AO, TAGS } from 'helpers/config';
 import { getTxEndpoint } from 'helpers/endpoints';
 import { CollectionDetailType, CollectionType, DependencyType, TagType } from 'helpers/types';
 import { cleanProcessField, cleanTagValue } from 'helpers/utils';
@@ -17,12 +16,12 @@ export function createCollectionWith(deps: DependencyType) {
 		creator: string;
 		banner: any;
 		thumbnail: any;
-	}) => {
+	}, callback?: (status: any) => void) => {
 		if (!deps.signer) throw new Error(`Must provide a signer when initializing to create collections`);
 
 		const dateTime = new Date().getTime().toString();
 
-		const collectionTags: TagType[] = [
+		const tags: TagType[] = [
 			{ name: TAGS.keys.contentType, value: 'application/json' },
 			{ name: TAGS.keys.creator, value: args.creator },
 			{
@@ -42,20 +41,28 @@ export function createCollectionWith(deps: DependencyType) {
 			{ name: 'Action', value: 'Add-Collection' },
 		];
 
-		const thumbnailTx = args.banner ? await resolveTransaction(deps, args.thumbnail) : DEFAULT_COLLECTION_THUMBNAIL;
-		const bannerTx = args.banner ? await resolveTransaction(deps, args.banner) : DEFAULT_COLLECTION_BANNER;
+		let thumbnailTx = null;
+		let bannerTx = null;
 
-		if (args.thumbnail)
-			collectionTags.push({
-				name: TAGS.keys.thumbnail,
-				value: thumbnailTx,
-			});
+		try {
+			thumbnailTx = args.banner ? await resolveTransaction(deps, args.thumbnail) : DEFAULT_COLLECTION_THUMBNAIL;
+			bannerTx = args.banner ? await resolveTransaction(deps, args.banner) : DEFAULT_COLLECTION_BANNER;
 
-		if (args.banner)
-			collectionTags.push({
-				name: TAGS.keys.banner,
-				value: bannerTx,
-			});
+			if (args.thumbnail)
+				tags.push({
+					name: TAGS.keys.thumbnail,
+					value: thumbnailTx,
+				});
+
+			if (args.banner)
+				tags.push({
+					name: TAGS.keys.banner,
+					value: bannerTx,
+				});
+		}
+		catch (e: any) {
+			console.error(e);
+		}
 
 		const processSrcFetch = await fetch(getTxEndpoint(AO.src.collection));
 		if (!processSrcFetch.ok) throw new Error(`Unable to fetch process src`);
@@ -65,108 +72,75 @@ export function createCollectionWith(deps: DependencyType) {
 		processSrc = processSrc.replace(/'<NAME>'/g, cleanProcessField(args.title));
 		processSrc = processSrc.replace(/'<DESCRIPTION>'/g, cleanProcessField(args.description));
 		processSrc = processSrc.replace(/<CREATOR>/g, args.creator);
-		processSrc = processSrc.replace(/<BANNER>/g, bannerTx ? bannerTx : DEFAULT_COLLECTION_THUMBNAIL);
 		processSrc = processSrc.replace(/<THUMBNAIL>/g, thumbnailTx ? thumbnailTx : DEFAULT_COLLECTION_THUMBNAIL);
+		processSrc = processSrc.replace(/<BANNER>/g, bannerTx ? bannerTx : DEFAULT_COLLECTION_THUMBNAIL);
 		processSrc = processSrc.replace(/<DATECREATED>/g, dateTime);
 		processSrc = processSrc.replace(/<LASTUPDATE>/g, dateTime);
 
-		let processId: string | undefined = undefined;
-		let retryCount = 0;
-		const maxRetries = 25;
+		try {
+			const collectionId = await aoCreateProcess(
+				deps,
+				{ spawnTags: tags },
+				callback ? (status) => callback(status) : undefined,
+			);
 
-		while (!processId && retryCount < maxRetries) {
-			try {
-				processId = await deps.ao.spawn({
-					module: AO.module,
-					scheduler: AO.scheduler,
-					signer: deps.signer,
-					tags: collectionTags,
-				});
-				console.log(`Collection process: ${processId}`);
-			} catch (e: any) {
-				console.error(`Spawn attempt ${retryCount + 1} failed:`, e);
-				retryCount++;
-				if (retryCount < maxRetries) {
-					await new Promise((r) => setTimeout(r, 1000));
-				} else {
-					throw new Error(`Failed to spawn process after ${maxRetries} attempts`);
-				}
-			}
-		}
-
-		let fetchedCollectionId: string | undefined = undefined;
-		retryCount = 0;
-
-		while (!fetchedCollectionId) {
-			await new Promise((r) => setTimeout(r, 2000));
-			const gqlResponse = await getGQLData({
-				gateway: GATEWAYS.goldsky,
-				ids: [processId ? processId : ''],
-				owners: null,
-				cursor: null,
+			await deps.ao.message({
+				process: collectionId,
+				signer: deps.signer,
+				tags: [{ name: 'Action', value: 'Eval' }],
+				data: processSrc,
 			});
 
-			if (gqlResponse && gqlResponse.data.length) {
-				console.log(`Fetched transaction`, gqlResponse.data[0].node.id, 0);
-				fetchedCollectionId = gqlResponse.data[0].node.id;
-			} else {
-				console.log(`Transaction not found`, processId, 0);
-				retryCount++;
-				if (retryCount >= 10) {
-					throw new Error(`Transaction not found after 10 attempts, process deployment retries failed`);
-				}
-			}
+			const registryTags = [
+				{ name: 'Action', value: 'Add-Collection' },
+				{ name: 'CollectionId', value: collectionId },
+				{ name: 'Name', value: cleanTagValue(args.title) },
+				{ name: 'Creator', value: args.creator },
+				{ name: 'DateCreated', value: dateTime },
+			];
+
+			if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
+			if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
+
+			// TODO
+			// await deps.ao.message({
+			// 	process: AO.collectionsRegistry,
+			// 	signer: deps.signer,
+			// 	tags: registryTags,
+			// });
+
+			await deps.ao.message({
+				process: collectionId,
+				signer: deps.signer,
+				tags: [
+					{ name: 'Action', value: 'Add-Collection-To-Profile' },
+					{ name: 'ProfileProcess', value: args.creator },
+				],
+			});
+
+			return collectionId;
 		}
-
-		await deps.ao.message({
-			process: processId,
-			signer: deps.signer,
-			tags: [{ name: 'Action', value: 'Eval' }],
-			data: processSrc,
-		});
-
-		const registryTags = [
-			{ name: 'Action', value: 'Add-Collection' },
-			{ name: 'CollectionId', value: processId },
-			{ name: 'Name', value: cleanTagValue(args.title) },
-			{ name: 'Creator', value: args.creator },
-			{ name: 'DateCreated', value: dateTime },
-		];
-
-		if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
-		if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
-
-		await deps.ao.message({
-			process: AO.collectionsRegistry,
-			signer: deps.signer,
-			tags: registryTags,
-		});
-
-		await deps.ao.message({
-			process: processId,
-			signer: deps.signer,
-			tags: [
-				{ name: 'Action', value: 'Add-Collection-To-Profile' },
-				{ name: 'ProfileProcess', value: args.creator },
-			],
-		});
-
-		return processId;
+		catch (e: any) {
+			throw new Error(e.message ?? 'Error creating collection')
+		}
 	};
 }
 
 export function updateCollectionAssetsWith(deps: DependencyType) {
-	return async (args: { collectionId: string; assetIds: string[]; profileId: string; updateType: 'Add' | 'Remove' }): Promise<string> => {
+	return async (args: { collectionId: string; assetIds: string[]; creator: string; updateType: 'Add' | 'Remove' }): Promise<string> => {
 		return await aoSend(deps, {
-			processId: args.profileId,
+			processId: args.creator,
 			action: 'Run-Action',
-			tags: null,
+			tags: [
+				{ name: 'ForwardTo', value: args.collectionId },
+				{ name: 'ForwardAction', value: 'Update-Assets' }
+			],
 			data: {
 				Target: args.collectionId,
 				Action: 'Update-Assets',
 				Input: JSON.stringify({
 					AssetIds: args.assetIds,
-					UpdateType: 'Add',
+					UpdateType: args.updateType,
 				}),
 			},
 		});

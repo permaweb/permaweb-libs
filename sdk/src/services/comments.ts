@@ -7,7 +7,6 @@ import {
 	AssetHeaderType,
 	CommentCreateArgType,
 	CommentDetailType,
-	CommentHeaderType,
 	DependencyType,
 	GQLNodeResponseType,
 	TagFilterType,

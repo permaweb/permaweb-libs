@@ -30,6 +30,8 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 			data: args.data,
 		});
 
+		globalLog(`Process ID: ${processId}`);
+
 		return processId;
 	} catch (e: any) {
 		throw new Error(e.message ?? 'Error spawning process');
@@ -377,10 +379,10 @@ export async function waitForProcess(processId: string, _setStatus?: (status: an
 
 		if (gqlResponse?.data?.length) {
 			const foundProcess = gqlResponse.data[0].node.id;
-			globalLog(`Fetched transaction: ${foundProcess} (Try ${retries + 1})`);
+			globalLog(`Process found: ${foundProcess} (Try ${retries + 1})`);
 			return foundProcess;
 		} else {
-			globalLog(`Transaction not found: ${processId} (Try ${retries + 1})`);
+			globalLog(`Process not found: ${processId} (Try ${retries + 1})`);
 			retries++;
 		}
 	}

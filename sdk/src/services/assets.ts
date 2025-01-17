@@ -15,6 +15,10 @@ import {
 } from 'helpers/types';
 import { checkValidAddress, formatAddress, getBootTag, getTagValue, mapFromProcessCase } from 'helpers/utils';
 
+// TODO
+// PublishedDate / ReleasedDate
+// DateUpdated
+// Thumbnail
 export function createAtomicAssetWith(deps: DependencyType) {
 	return async (args: AssetCreateArgsType, callback?: (status: any) => void) => {
 		const validationError = getValidationErrorMessage(args);
