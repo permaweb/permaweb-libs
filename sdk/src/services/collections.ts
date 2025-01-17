@@ -101,13 +101,12 @@ export function createCollectionWith(deps: DependencyType) {
 
 			if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
 			if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
-
-			// TODO
-			// await deps.ao.message({
-			// 	process: AO.collectionsRegistry,
-			// 	signer: deps.signer,
-			// 	tags: registryTags,
-			// });
+			
+			await deps.ao.message({
+				process: AO.collectionsRegistry,
+				signer: deps.signer,
+				tags: registryTags,
+			});
 
 			await deps.ao.message({
 				process: collectionId,
