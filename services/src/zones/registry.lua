@@ -49,7 +49,12 @@ local function isInArray(table, value)
 end
 
 local function decode_message_data(data)
+    --print("encoded data decoded: " .. type(json.decode(json.encode(data))))
+    if type(data) == 'table' then
+        return true, data
+    end
     local status, decoded_data = pcall(json.decode, data)
+    print("decode: " .. type(decoded_data) .. " " .. tostring(status))
     if not status or type(decoded_data) ~= 'table' then
         return false, nil
     end
@@ -61,7 +66,7 @@ local function cleanPending()
     local now = os.time()
     for _, pending in ipairs(NotifiedPending) do
         -- pending: { UpdateTx = "abc", Timestamp = os.time() }
-        if now - pending.Timestamp < 300000 then
+        if now - pending.Timestamp < 300 then
             table.insert(newPending, pending)
         end
     end
@@ -375,7 +380,7 @@ local function handle_meta_get(msg)
                                              Banner = row.banner,
                                              Description = row.description,
                                              DisplayName = row.display_name,
-                                             Tags = row.tags and json.decode(row.tags) or nil,
+                                             --Tags = row.tags and json.decode(row.tags) or nil,
                                              DateUpdated = row.date_updated,
                     })
                 end
@@ -407,7 +412,6 @@ local function handle_meta_get(msg)
             })
             print('No ZoneIds provided or the list is empty.')
             return
-
         end
     else
         ao.send({
@@ -558,6 +562,7 @@ local function handle_meta_set(msg)
             Data = { Status = 'DECODE_FAILED',
                      Message = "Failed to decode data", Code = "DECODE_FAILED" }
         })
+        print(msg.Data)
         return
     end
     if not data.entries or #data.entries < 1 then
@@ -570,20 +575,29 @@ local function handle_meta_set(msg)
         return
     end
 
-    local entries = data.entries
+    local entries = data.entries -- { { key: 'UserName', value: 'Steve' },... }
 
+    -- handle either assigned update or update sent by zone itself
+    local ZoneId = msg.Target
+    local UserId = msg.From -- (assigned) -- AuthorizedAddress
+    local isAssigned = true;
+
+    -- if provided zoneId and userid, then make sure it's from zoneId, else use msg.From
+    -- then we can skip checking for the NotifiedPending
+    if data.ZoneId and data.UserId and data.ZoneId == msg.From then -- zone can update itself
+        ZoneId = data.ZoneId
+        UserId = data.UserId
+        isAssigned = false;
+    end
     -- make sure msg.Id is in NotifiedPending from Zone
     -- if NotifiedPending has msg.Id then
     -- remove msg.Id from NotifiedPending and continue.
     -- removed =
-    if not removePendingId(msg.Id) then
+    if isAssigned and not removePendingId(msg.Id) then
         print("could not remove pending")
         -- did not find notification confirmation from zone for this update
         return
     end
-
-    local ZoneId = msg.Target -- Is this original target? confirm.
-    local UserId = msg.From -- (assigned) -- AuthorizedAddress
 
     local check = Db:prepare('SELECT 1 FROM zone_users WHERE user_id = ? AND zone_id = ? LIMIT 1')
     check:bind_values(UserId, ZoneId)
