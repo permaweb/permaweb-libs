@@ -4,8 +4,8 @@ import Arweave from 'arweave';
 import { connect, createDataItemSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 
-const PARENT_ASSET_ID = 'fRWwQajlhuaY4l4HthYgY6EjI-XUmN_3AFBTWVYkPbY';
-const CREATOR = 'SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M';
+const PARENT_ASSET_ID = 'PARENT_ASSET_ID';
+const CREATOR = 'CREATOR_ADDRESS';
 
 function expect(actual) {
 	return {
@@ -80,10 +80,8 @@ function logError(message) {
 	const ao = connect();
 	const arweave = Arweave.init();
 
-	// logTest('Generating wallet...');
-	// const wallet = await arweave.wallets.generate();
-	
-	const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET));
+	logTest('Generating wallet...');
+	const wallet = await arweave.wallets.generate();
 
 	console.log(`Wallet address: ${await arweave.wallets.jwkToAddress(wallet)}`);
 
