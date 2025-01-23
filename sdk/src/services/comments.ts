@@ -24,7 +24,7 @@ export function createCommentWith(deps: DependencyType) {
 		tags.push({ name: 'Root-Source', value: args.rootId ?? args.parentId });
 
 		const assetArgs: AssetCreateArgsType = {
-			title: `Comment on ${args.parentId}`,
+			name: `Comment on ${args.parentId}`,
 			description: `Comment on ${args.parentId}`,
 			type: 'comment',
 			topics: ['comment'],

@@ -29,12 +29,12 @@ export function createAtomicAssetWith(deps: DependencyType) {
 		const tags = [{ name: TAGS.keys.bootloaderInit, value: args.src ?? AO.src.asset }];
 		tags.push(...buildAssetTags(args));
 
-		tags.push(getBootTag('Name', args.title));
+		tags.push(getBootTag('Name', args.name));
+		tags.push(getBootTag('Creator', args.creator));
 		tags.push(getBootTag('Ticker', 'ATOMIC'));
 		tags.push(getBootTag('Denomination', args.denomination ? args.denomination.toString() : '1'));
 		tags.push(getBootTag('TotalSupply', args.supply ? args.supply.toString() : '1'));
 
-		if (args.creator) tags.push(getBootTag('Creator', args.creator));
 		if (args.collectionId) tags.push(getBootTag('Collection', args.collectionId));
 		if (!args.transferable) tags.push(getBootTag('Transferable', 'false'));
 
@@ -74,34 +74,34 @@ export async function getAtomicAsset(deps: DependencyType, id: string): Promise<
 				metadata: {},
 			};
 
-			const processState = await aoDryRun(deps, {
+			let processState = await aoDryRun(deps, {
 				processId: asset.id,
 				action: 'Info',
 			});
 
+			processState = mapFromProcessCase(processState);
+
 			if (processState) {
-				if (processState.Name || processState.name) {
-					asset.title = processState.Name || processState.name;
-				}
-				if (processState.Ticker || processState.ticker) state.ticker = processState.Ticker || processState.ticker;
-				if (processState.Denomination || processState.denomination)
-					state.denomination = processState.Denomination || processState.denomination;
-				if (processState.Logo || processState.logo) asset.thumbnail = processState.Logo || processState.logo;
-				if (processState.Balances) {
+				if (processState.name) asset.name = processState.name
+				if (processState.ticker) state.ticker = processState.ticker;
+				if (processState.denomination) state.denomination = processState.denomination;
+				if (processState.logo) asset.thumbnail = processState.logo;
+				if (processState.creator) state.creator = processState.creator;
+
+				if (processState.balances) {
 					state.balances = Object.fromEntries(
-						Object.entries(processState.Balances).filter(([_, value]) => Number(value) !== 0),
+						Object.entries(processState.balances).filter(([_, value]) => Number(value) !== 0),
 					) as any;
 				}
-				if (processState.Transferable !== undefined) {
-					state.transferable = processState.Transferable;
+
+				if (processState.transferable !== undefined) {
+					state.transferable = processState.transferable;
 				} else {
 					state.transferable = true;
 				}
-				if (processState.Creator || processState.creator) {
-					state.creator = processState.Creator || processState.creator;
-				}
-				if (processState.AssetMetadata) {
-					for (const [key, value] of Object.entries(processState.AssetMetadata)) {
+
+				if (processState.assetMetadata) {
+					for (const [key, value] of Object.entries(processState.assetMetadata)) {
 						if (!(key in state)) {
 							state.metadata[key] = value;
 						}
@@ -122,7 +122,7 @@ export async function getAtomicAsset(deps: DependencyType, id: string): Promise<
 				}
 			}
 
-			return { ...asset, ...mapFromProcessCase(state) };
+			return { ...asset, ...state };
 		}
 
 		return null;
@@ -210,7 +210,7 @@ export function buildAsset(element: GQLNodeResponseType): AssetHeaderType {
 		id: element.node.id,
 		owner: element.node.owner.address,
 		creator: getTagValue(element.node.tags, TAGS.keys.creator),
-		title: getTitle(element),
+		name: getName(element),
 		description: getTagValue(element.node.tags, TAGS.keys.description),
 		type: getTagValue(element.node.tags, TAGS.keys.type),
 		topics: getTopics(element),
@@ -228,10 +228,10 @@ export function buildAsset(element: GQLNodeResponseType): AssetHeaderType {
 	return asset;
 }
 
-function getTitle(element: GQLNodeResponseType): string {
+function getName(element: GQLNodeResponseType): string {
 	return (
-		getTagValue(element.node.tags, TAGS.keys.title) ||
 		getTagValue(element.node.tags, TAGS.keys.name) ||
+		getTagValue(element.node.tags, TAGS.keys.title) ||
 		formatAddress(element.node.id, false)
 	);
 }
@@ -272,7 +272,7 @@ function getLicense(element: GQLNodeResponseType): UDLicenseType | null {
 
 function buildAssetTags(args: AssetCreateArgsType): { name: string; value: string }[] {
 	const tags = [
-		{ name: TAGS.keys.title, value: args.title },
+		{ name: TAGS.keys.title, value: args.name },
 		{ name: TAGS.keys.description, value: args.description },
 		{ name: TAGS.keys.assetType, value: args.type },
 		{ name: TAGS.keys.contentType, value: args.contentType },
@@ -306,20 +306,20 @@ function buildAssetTags(args: AssetCreateArgsType): { name: string; value: strin
 function getValidationErrorMessage(args: AssetCreateArgsType): string | null {
 	if (typeof args !== 'object' || args === null) return 'The provided arguments are invalid or empty.';
 
-	const requiredFields = ['title', 'description', 'type', 'topics', 'contentType', 'data'];
+	const requiredFields = ['name', 'description', 'type', 'topics', 'contentType', 'data'];
 	for (const field of requiredFields) {
-		if (!(field in args)) return `Missing field '${field}'.`;
+		if (!(field in args)) return `Missing field '${field}'`;
 	}
 
-	if (typeof args.title !== 'string' || args.title.trim() === '') return 'Title is required';
+	if (typeof args.name !== 'string' || args.name.trim() === '') return 'Name is required';
 	if (typeof args.description !== 'string') return 'The description must be a valid string';
 	if (typeof args.type !== 'string' || args.type.trim() === '') return 'Type must be a non-empty string';
 	if (!Array.isArray(args.topics) || args.topics.length === 0) return 'Topics are required';
 	if (typeof args.contentType !== 'string' || args.contentType.trim() === '')
 		return 'Content type must be a non-empty string';
-	if (args.data === undefined || args.data === null) return 'The data field is required';
+	if (args.data === undefined || args.data === null) return 'Data field is required';
+	if (typeof args.creator !== 'string' || args.creator.trim() === '') return 'Creator is required';
 
-	if ('creator' in args && typeof args.creator !== 'string') return 'Creator must be a valid string';
 	if ('collectionId' in args && typeof args.collectionId !== 'string') return 'Collection ID must be a valid string';
 	if ('renderWith' in args && typeof args.renderWith !== 'string') return 'Render with value must be a valid string';
 	if ('thumbnail' in args && typeof args.thumbnail !== 'string') return 'Thumbnail must be a valid string';

@@ -3,8 +3,8 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'gyvfBebLlNJw0_bdq6NLL_BK_dqpgj9nRTYebyoOmKI',
-		zone: 'Dw8yZwAc8Sg1lo2juHJc79RANWS7AOxe1DJDGScqmIo',
+		asset: 'Xr4vjtRZLlW-8pv7jZC_89xXXfjQ_VgjdRbt8fN47mg',
+		zone: 'M9G2B9Uvk8VK1pxloESeT4XScguRKSzLyd4as1HFOJ8',
 		collection: '2ZDuM2VUCN8WHoAKOOjiH4_7Apq0ZHKnTWdLppxCdGY',
 	},
 	collectionsRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg',

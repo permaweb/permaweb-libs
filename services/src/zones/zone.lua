@@ -38,7 +38,7 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_SET = 'Zone-Set',
     H_ZONE_APPEND = 'Zone-Append',
     H_ZONE_REMOVE = 'Zone-Remove',
-    H_ZONE_ADD_UPLOAD = 'Add-Upload',
+    H_ZONE_ADD_UPLOAD = 'Add-Uploaded-Asset',
 }
 
 Zone.ROLE_NAMES = Zone.ROLE_NAMES or {
@@ -86,7 +86,7 @@ end
 
 function Zone.Functions.actorHasRole(actor, role)
     local actorRoles = Zone.Functions.getActorRoles(actor)
-    if rolesHasValue(actorRoles, role) then
+    if Zone.Functions.rolesHasValue(actorRoles, role) then
         return true
     end
     return false

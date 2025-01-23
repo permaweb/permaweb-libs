@@ -67,13 +67,13 @@ export type ProfileType = {
 } & any;
 
 export type AssetCreateArgsType = {
-	title: string;
+	name: string;
 	description: string;
 	type: string;
 	topics: string[];
 	contentType: string;
 	data: any;
-	creator?: string;
+	creator: string;
 	collectionId?: string;
 	renderWith?: string;
 	thumbnail?: string;
@@ -88,7 +88,7 @@ export type AssetHeaderType = {
 	id: string;
 	owner: string | null;
 	creator: string | null;
-	title: string | null;
+	name: string | null;
 	description: string | null;
 	type: string | null;
 	topics: string[] | null;

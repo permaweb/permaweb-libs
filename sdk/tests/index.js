@@ -1,9 +1,11 @@
+import { readFileSync } from 'fs';
+
 import Arweave from 'arweave';
 import { connect, createDataItemSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 
 const PARENT_ASSET_ID = 'fRWwQajlhuaY4l4HthYgY6EjI-XUmN_3AFBTWVYkPbY';
-const CREATOR = 'FyulcTQDKqMQMB92N2X01pHZxk0wh_ljywsGZuXOI-s';
+const CREATOR = 'SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M';
 
 function expect(actual) {
 	return {
@@ -75,11 +77,13 @@ function logError(message) {
 }
 
 (async function () {
-	logTest('Generating wallet...');
-
 	const ao = connect();
 	const arweave = Arweave.init();
-	const wallet = await arweave.wallets.generate();
+
+	// logTest('Generating wallet...');
+	// const wallet = await arweave.wallets.generate();
+	
+	const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET));
 
 	console.log(`Wallet address: ${await arweave.wallets.jwkToAddress(wallet)}`);
 
@@ -163,8 +167,9 @@ function logError(message) {
 		try {
 			logTest('Testing asset creation...');
 			const assetId = await permaweb.createAtomicAsset({
-				title: 'Example Title',
+				name: 'Example Name',
 				description: 'Example Description',
+				creator: CREATOR,
 				type: 'Example Atomic Asset Type',
 				topics: ['Topic 1', 'Topic 2', 'Topic 3'],
 				contentType: 'text/plain',
@@ -177,8 +182,32 @@ function logError(message) {
 			logTest('Testing asset fetch...')
 			const asset = await permaweb.getAtomicAsset(assetId);
 
+			console.log(asset)
+
 			expect(asset).toBeDefined();
-			expect(asset.title).toEqual('Example Title');
+			expect(asset.name).toEqual('Example Name');
+
+			logTest('Testing asset update...');
+			const data = permaweb.mapToProcessCase({
+				name: 'Updated Name',
+				description: 'Updated Description',
+				status: 'Updated Status',
+				content: 'My Post Content',
+				topics: ['Topic 1'],
+				categories: ['Category 1'],
+			});
+
+			await permaweb.sendMessage({
+				processId: assetId,
+				wallet: wallet,
+				action: 'Update-Asset',
+				data: data,
+			});
+
+			logTest('Testing updated asset fetch...');
+			const updatedAsset = await permaweb.getAtomicAsset(assetId);
+
+			console.log(updatedAsset);
 
 		}
 		catch (e) {
@@ -263,7 +292,7 @@ function logError(message) {
 			expect(collectionUpdateId).toBeDefined();
 			expect(collectionUpdateId).toEqualType("string");
 
-			logTest('Sleeping for collection update...')
+			logTest('Sleeping for collection update...');
 			await new Promise((r) => setTimeout(r, 5000));
 
 			logTest('Testing updated collection fetch...');
