@@ -75,7 +75,7 @@ Atomic assets are unique digital item consisting of an AO process and its associ
 
 ```typescript
 const assetId = await permaweb.createAtomicAsset({
-    title: "Example Title",
+    name: "Example Title",
     description: "Example Description",
     type: "Example Atomic Asset Type",
     topics: ["Topic 1", "Topic 2", "Topic 3"],
@@ -87,7 +87,7 @@ const assetId = await permaweb.createAtomicAsset({
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing profile details, including `title`, `description`, `type`, `topics`, `contentType`, and `data`
+- `args`: Object containing profile details, including `name`, `description`, `type`, `topics`, `contentType`, and `data`
 - `callback (optional)`: Callback function for client use
 
 </details>
@@ -124,7 +124,7 @@ const asset = await permaweb.getAtomicAsset(assetId);
 ```typescript
  {
   id: "z0f2O9Fs3yb_EMXtPPwKeb2O0WueIG5r7JLs5UxsA4I",
-  title: "City",
+  name: "City",
   description: "A collection of AI generated images of different settings and areas",
   type: null,
   topics: null,
@@ -181,7 +181,7 @@ const assets = await permaweb.getAtomicAssets(assetIds);
 [
   {
     id: "AssetProcessId1",
-    title: "City",
+    name: "City",
     description:
       "A collection of AI generated images of different settings and areas",
     type: null,
@@ -207,7 +207,7 @@ const assets = await permaweb.getAtomicAssets(assetIds);
   },
   {
     id: "AssetProcessId2",
-    title: "City",
+    name: "City",
     description:
       "A collection of AI generated images of different settings and areas",
     type: null,
@@ -290,7 +290,7 @@ const comment = await permaweb.getComment(commentId);
 ```typescript
 {
   id: "CommentProcessId",
-  title: "Comment Title",
+  name: "Comment Title",
   description: "Comment Description",
   parentId: "ParentProcessId",
   rootId: "RootProcessId",
@@ -332,7 +332,7 @@ const comments = await permaweb.getComments({
 [
   {
     id: "CommentProcessId1",
-    title: "Comment Title 1",
+    name: "Comment Title 1",
     description: "Comment Description 1",
     parentId: "ParentProcessId",
     rootId: "RootProcessId",
@@ -348,7 +348,7 @@ const comments = await permaweb.getComments({
   },
   {
     id: "CommentProcessId2",
-    title: "Comment Title 2",
+    name: "Comment Title 2",
     description: "Comment Description 2",
     parentId: "ParentProcessId",
     rootId: "RootProcessId",
