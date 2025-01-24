@@ -97,7 +97,7 @@ function logError(message) {
 	async function testZones() {
 		try {
 			logTest('Testing zone creation...');
-			const zoneId = await permaweb.createZone([], (status) => console.log(`Callback: ${status}`));
+			const zoneId = await permaweb.createZone({}, (status) => console.log(`Callback: ${status}`));
 
 			expect(zoneId).toBeDefined();
 			expect(zoneId).toEqualType('string');
@@ -116,8 +116,6 @@ function logError(message) {
 
 			logTest('Testing zone fetch...');
 			const zone = await permaweb.getZone(zoneId);
-
-			console.log(zone)
 
 			expect(zone).toEqual({
 				store: {
