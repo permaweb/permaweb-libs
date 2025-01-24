@@ -5,17 +5,19 @@ local unsetPlaceholder = '!UNSET!'
 
 Token = Token or {
     Name = Name or unsetPlaceholder,
-    Creator = Creator or unsetPlaceholder,
     Ticker = Ticker or unsetPlaceholder,
     Denomination = Denomination or unsetPlaceholder,
     TotalSupply = TotalSupply or unsetPlaceholder,
-    Balances = Balances or {},
     Transferable = true,
+    Creator = Creator or unsetPlaceholder,
+    Balances = Balances or {},
 }
 
-AssetMetadata = AssetMetadata or {}
-
+Metadata = Metadata or {}
 IndexRecipients = IndexRecipients or {}
+
+DateCreated = DateCreated or nil
+LastUpdate = LastUpdate or nil
 
 local function checkValidAddress(address)
     if not address or type(address) ~= 'string' then
@@ -53,16 +55,10 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
             Balances = Token.Balances,
             Transferable = Token.Transferable,
             Creator = Token.Creator,
-            AssetMetadata = AssetMetadata
+            Metadata = Metadata,
+            DateCreated = tostring(DateCreated),
+            LastUpdate = tostring(LastUpdate)
         }
-    })
-end)
-
--- Get asset metadata
-Handlers.add('Get-Asset-Metadata', 'Get-Asset-Metadata', function(msg)
-    msg.reply({
-        Action = 'Asset-Metadata-Notice',
-        Data = json.encode(AssetMetadata)
     })
 end)
 
@@ -251,6 +247,29 @@ Handlers.add('Total-Supply', Handlers.utils.hasMatchingTag('Action', 'Total-Supp
     })
 end)
 
+local function getIndexData(args) -- AssetType, ContentType
+    local indexData = {
+        Name = Token.Name,
+        Ticker = Token.Ticker,
+        Denomination = tostring(Token.Denomination),
+        TotalSupply = Token.TotalSupply,
+        Balances = Token.Balances,
+        Transferable = Token.Transferable,
+        Creator = Token.Creator,
+        Metadata = Metadata,
+        ProcessType = 'atomic-asset',
+        DateCreated = DateCreated,
+        LastUpdate = LastUpdate,
+    }
+
+    if args then
+        if args.AssetType then indexData.AssetType = args.AssetType end;
+        if args.ContentType then indexData.ContentType = args.ContentType end; 
+    end
+
+    return json.encode(indexData)
+end
+
 -- Update asset token / metadata
 Handlers.add('Update-Asset', 'Update-Asset', function(msg)
     if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
@@ -258,15 +277,13 @@ Handlers.add('Update-Asset', 'Update-Asset', function(msg)
     local decodeCheck, data = decodeMessageData(msg.Data)
 
     if decodeCheck and data then
-        local indexData = {}
+        LastUpdate = tostring(msg.Timestamp)
 
         for key, value in pairs(data) do
             if Token[key] ~= nil then
                 Token[key] = value
-                indexData[key] = value
-            elseif AssetMetadata[key] ~= nil or type(value) == 'string' or type(value) == 'table' then
-                AssetMetadata[key] = value
-                indexData[key] = value
+            elseif Metadata[key] ~= nil or type(value) == 'string' or type(value) == 'table' then
+                Metadata[key] = value
             end
         end
 
@@ -275,7 +292,7 @@ Handlers.add('Update-Asset', 'Update-Asset', function(msg)
                 Target = recipient,
                 Action = 'Index-Notice',
                 Recipient = recipient,
-                Data = json.encode(indexData)
+                Data = getIndexData()
             })
         end
 
@@ -310,33 +327,15 @@ Handlers.add('Send-Index', 'Send-Index', function(msg)
                     Target = recipient,
                     Action = 'Index-Notice',
                     Recipient = recipient,
-                    Data = json.encode({
-                        Token = Token,
-                        AssetMetadata = AssetMetadata,
-                        ProcessType = 'atomic-asset',
-                        AssetType = msg.AssetType or 'None',
-                        ContentType = msg.ContentType or 'None',
-                        DateUpdated = msg.Timestamp
-                    })
+                    Data = getIndexData({
+                        AssetType = msg.AssetType,
+                        ContentType = msg.ContentType
+                    }),
                 })
             end
         end
     end
 end)
-
--- -- Initialize a request to add to creator zone
--- Handlers.once('Add-Upload-To-Zone', 'Add-Upload-To-Zone', function(msg)
---     if msg.From ~= Token.Creator and msg.From ~= Owner and msg.From ~= ao.id then
---         return
---     end
---     ao.send({
---         Target = Token.Creator,
---         Action = 'Add-Upload',
---         AssetId = ao.id,
---         AssetType = msg.AssetType,
---         ContentType = msg.ContentType
---     })
--- end)
 
 -- Parse the key string to determine the nested structure:
 -- Split the key by . to get each 'level'.
@@ -375,8 +374,8 @@ local function setStoreValue(key, value)
 
     parts[#parts] = lastPart
 
-    -- Traverse the structure in AssetMetadata
-    local current = AssetMetadata
+    -- Traverse the structure in Metadata
+    local current = Metadata
     for i = 1, #parts - 1 do
         local segment = parts[i]
         if current[segment] == nil then
@@ -444,6 +443,10 @@ end
 if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
     local collectedValues = {}
     for _, tag in ipairs(Inbox[1].TagArray) do
+        if tag.name == 'Date-Created' then
+            DateCreated = tostring(tag.value)
+        end
+
         local prefix = 'Bootloader-'
         if string.sub(tag.name, 1, string.len(prefix)) == prefix then
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)

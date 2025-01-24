@@ -250,7 +250,7 @@ export function mapToProcessCase(obj: any): any {
 	} else if (obj && typeof obj === 'object') {
 		return Object.entries(obj).reduce((acc: any, [key, value]) => {
 			const toKey = toProcessCase(key);
-			acc[toKey] = mapToProcessCase(value);
+			acc[toKey] = checkValidAddress(value as any) ? value : mapToProcessCase(value);
 			return acc;
 		}, {});
 	}
@@ -268,7 +268,7 @@ export function mapFromProcessCase(obj: any): any {
 	} else if (obj && typeof obj === 'object') {
 		return Object.entries(obj).reduce((acc: any, [key, value]) => {
 			const fromKey = fromProcessCase(key);
-			acc[fromKey] = mapFromProcessCase(value);
+			acc[fromKey] = checkValidAddress(value as any) ? value : mapFromProcessCase(value);
 			return acc;
 		}, {});
 	}
@@ -276,5 +276,6 @@ export function mapFromProcessCase(obj: any): any {
 }
 
 export function getBootTag(key: string, value: string) {
-	return { name: `${TAGS.keys.bootloader}-${key}`, value };
+	const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+	return { name: `${TAGS.keys.bootloader}-${capitalizedKey}`, value };
 }
