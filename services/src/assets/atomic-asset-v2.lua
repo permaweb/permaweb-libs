@@ -13,7 +13,7 @@ Token = Token or {
     Transferable = true,
 }
 
-AssetMetadata = AssetMetadata or {}
+Metadata = Metadata or {}
 
 IndexRecipients = IndexRecipients or {}
 
@@ -53,16 +53,8 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
             Balances = Token.Balances,
             Transferable = Token.Transferable,
             Creator = Token.Creator,
-            AssetMetadata = AssetMetadata
+            Metadata = Metadata
         }
-    })
-end)
-
--- Get asset metadata
-Handlers.add('Get-Asset-Metadata', 'Get-Asset-Metadata', function(msg)
-    msg.reply({
-        Action = 'Asset-Metadata-Notice',
-        Data = json.encode(AssetMetadata)
     })
 end)
 
@@ -264,8 +256,8 @@ Handlers.add('Update-Asset', 'Update-Asset', function(msg)
             if Token[key] ~= nil then
                 Token[key] = value
                 indexData[key] = value
-            elseif AssetMetadata[key] ~= nil or type(value) == 'string' or type(value) == 'table' then
-                AssetMetadata[key] = value
+            elseif Metadata[key] ~= nil or type(value) == 'string' or type(value) == 'table' then
+                Metadata[key] = value
                 indexData[key] = value
             end
         end
@@ -311,32 +303,24 @@ Handlers.add('Send-Index', 'Send-Index', function(msg)
                     Action = 'Index-Notice',
                     Recipient = recipient,
                     Data = json.encode({
-                        Token = Token,
-                        AssetMetadata = AssetMetadata,
+                        Name = Token.Name,
+                        Ticker = Token.Ticker,
+                        Denomination = tostring(Token.Denomination),
+                        TotalSupply = Token.TotalSupply,
+                        Balances = Token.Balances,
+                        Transferable = Token.Transferable,
+                        Creator = Token.Creator,
+                        Metadata = Metadata,
                         ProcessType = 'atomic-asset',
                         AssetType = msg.AssetType or 'None',
                         ContentType = msg.ContentType or 'None',
-                        DateUpdated = msg.Timestamp
+                        DateUpdated = msg.Timestamp,
                     })
                 })
             end
         end
     end
 end)
-
--- -- Initialize a request to add to creator zone
--- Handlers.once('Add-Upload-To-Zone', 'Add-Upload-To-Zone', function(msg)
---     if msg.From ~= Token.Creator and msg.From ~= Owner and msg.From ~= ao.id then
---         return
---     end
---     ao.send({
---         Target = Token.Creator,
---         Action = 'Add-Upload',
---         AssetId = ao.id,
---         AssetType = msg.AssetType,
---         ContentType = msg.ContentType
---     })
--- end)
 
 -- Parse the key string to determine the nested structure:
 -- Split the key by . to get each 'level'.
@@ -375,8 +359,8 @@ local function setStoreValue(key, value)
 
     parts[#parts] = lastPart
 
-    -- Traverse the structure in AssetMetadata
-    local current = AssetMetadata
+    -- Traverse the structure in Metadata
+    local current = Metadata
     for i = 1, #parts - 1 do
         local segment = parts[i]
         if current[segment] == nil then
