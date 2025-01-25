@@ -105,13 +105,15 @@ ZoneProcessId;
 #### `updateZone`
 
 ```typescript
-const zoneUpdateId = await permaweb.updateZone({
+const zoneUpdateId = await permaweb.updateZone(
+  {
     name: "Sample Zone",
     metadata: {
       description: "A sample zone for testing",
       version: "1.0.0",
     },
-  }, zoneId
+  },
+  zoneId
 );
 ```
 
@@ -190,13 +192,15 @@ ProfileProcessId;
 #### `updateProfile`
 
 ```typescript
-const profileId = await permaweb.updateProfile({
+const profileId = await permaweb.updateProfile(
+  {
     username: "My usename",
     displayName: "My display name",
     description: "My description",
     thumbnail: "Thumbnail image data",
     banner: "Banner image data",
-  }, profileId
+  },
+  profileId
 );
 ```
 
@@ -296,19 +300,23 @@ Atomic assets are unique digital item consisting of an AO process and its associ
 
 ```typescript
 const assetId = await permaweb.createAtomicAsset({
-    title: "Example Title",
-    description: "Example Description",
-    type: "Example Atomic Asset Type",
-    topics: ["Topic 1", "Topic 2", "Topic 3"],
-    contentType: "text/plain",
-    data: "1234"
+  name: "Example Name",
+  description: "Example Description",
+  topics: ["Topic 1", "Topic 2", "Topic 3"],
+  creator: CREATOR_ADDRESS,
+  data: "1234",
+  contentType: "text/plain",
+  assetType: "Example Atomic Asset Type",
+  metadata: {
+    status: "Initial Status",
+  },
 });
 ```
 
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing profile details, including `title`, `description`, `type`, `topics`, `contentType`, and `data`
+- `args`: Object containing asset details, including `name`, `description`, ` topics`, `creator (wallet or profile address)`, `data`, `contentType`, `assetType`, `metadata (optional)`, and `tags (optional)`
 - `callback (optional)`: Callback function for client use
 
 </details>
@@ -343,38 +351,16 @@ const asset = await permaweb.getAtomicAsset(assetId);
   </summary>
 
 ```typescript
- {
-  id: "z0f2O9Fs3yb_EMXtPPwKeb2O0WueIG5r7JLs5UxsA4I",
-  title: "City",
-  description: "A collection of AI generated images of different settings and areas",
-  type: null,
-  topics: null,
-  contentType: "image/png",
-  renderWith: null,
-  thumbnail: null,
-  udl: {
-    access: { value: "One-Time-0.1" },
-    derivations: { value: "Allowed-With-One-Time-Fee-0.1" },
-    commercialUse: { value: "Allowed-With-One-Time-Fee-0.1" },
-    dataModelTraining: { value: "Disallowed" },
-    paymentMode: "Single",
-    paymentAddress: "uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk",
-    currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10"
-  },
-  creator: "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M",
-  collectionId: "XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc",
-  implementation: "ANS-110",
-  dateCreated: 1717663091000,
-  blockHeight: 1439467,
+{
   ticker: "ATOMIC",
+  metadata: { status: "Initial Status" },
+  creator: "CREATOR_ADDRESS",
   denomination: "1",
-  balances: {
-    "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M": "1",
-    cfQOZc7saMMizHtBKkBoF_QuH5ri0Bmb5KSf_kxQsZE: "1",
-    U3TjJAZWJjlWBB4KAXSHKzuky81jtyh0zqH8rUL4Wd0: "98"
-  },
-  transferable: true,
-  tags: [{ name: "Remaining", value: "Tag" }]
+  name: "Example Name",
+  lastUpdate: "nil",
+  transferable: "true",
+  dateCreated: "1737827430138",
+  balances: { CREATOR_ADDRESS: "1" }
 }
 ```
 
@@ -599,7 +585,7 @@ Collections are structured groups of atomic assets, allowing for cohesive repres
 const collectionId = await permaweb.createCollection({
   title: "Example Title",
   description: "Example Description",
-  creator: profileId
+  creator: profileId,
 });
 ```
 
@@ -729,6 +715,7 @@ const collections = await permaweb.getCollections();
 To streamline the integration of `@permaweb/libs` into your React applications, you can use the following `PermawebProvider`. This provider simplifies dependency management and avoids the need to create multiple SDK instances across different components in your frontend application. By leveraging React Context, the provider ensures the Permaweb SDK is initialized once and is accessible throughout your component tree.
 
 ### Key Features of This Example:
+
 - **Global Initialization**: The `PermawebProvider` initializes the necessary dependencies (e.g., Arweave, AO Connect, and optional wallet signing).
 - **React Context Integration**: It makes the initialized `libs` instance globally available to all child components without requiring prop drilling.
 - **Reusable Hook**: The `usePermawebProvider` hook offers a convenient way to access the SDK in any component.
@@ -751,7 +738,9 @@ interface PermawebContextState {
 }
 
 // Create a React context for Permaweb
-const PermawebContext = React.createContext<PermawebContextState>({ libs: null });
+const PermawebContext = React.createContext<PermawebContextState>({
+  libs: null,
+});
 
 // Hook to access the Permaweb context
 export function usePermawebProvider(): PermawebContextState {
@@ -783,6 +772,7 @@ export function PermawebProvider(props: { children: React.ReactNode }) {
 ```
 
 ### Explanation:
+
 1. **React Context**: The `PermawebContext` is used to store the initialized `libs` object, making it accessible across your application.
 2. **Dynamic Initialization**: In the `useEffect` hook, the dependencies are initialized once when the provider mounts, including optional wallet signing logic.
 3. **Encapsulation**: The `PermawebProvider` ensures the SDK logic is abstracted, keeping the rest of your app clean and focused.

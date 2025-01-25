@@ -15,15 +15,15 @@ function init(deps: Helpers.DependencyType) {
 		updateZone: Services.updateZoneWith(deps),
 		addToZone: Services.addToZoneWith(deps),
 		getZone: Services.getZoneWith(deps),
-		/* Assets */
-		createAtomicAsset: Services.createAtomicAssetWith(deps),
-		getAtomicAsset: Services.getAtomicAssetWith(deps),
-		getAtomicAssets: Services.getAtomicAssets,
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),
 		updateProfile: Services.updateProfileWith(deps),
 		getProfileById: Services.getProfileByIdWith(deps),
 		getProfileByWalletAddress: Services.getProfileByWalletAddressWith(deps),
+		/* Assets */
+		createAtomicAsset: Services.createAtomicAssetWith(deps),
+		getAtomicAsset: Services.getAtomicAssetWith(deps),
+		getAtomicAssets: Services.getAtomicAssets,
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
 		getComment: Services.getCommentWith(deps),

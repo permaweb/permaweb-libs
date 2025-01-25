@@ -184,6 +184,8 @@ function logError(message) {
 			logTest('Testing asset fetch...')
 			const asset = await permaweb.getAtomicAsset(assetId);
 
+			console.log(asset)
+
 			expect(asset).toBeDefined();
 			expect(asset.name).toEqual('Example Name');
 
