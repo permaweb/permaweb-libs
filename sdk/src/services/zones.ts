@@ -2,6 +2,7 @@ import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
 
 import { AO, TAGS } from 'helpers/config';
 import { DependencyType, TagType } from 'helpers/types';
+import { mapFromProcessCase } from 'helpers/utils';
 
 export function createZoneWith(deps: DependencyType) {
 	return async (args: { tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
@@ -60,12 +61,12 @@ export function addToZoneWith(deps: DependencyType) {
 export function getZoneWith(deps: DependencyType) {
 	return async (zoneId: string): Promise<any | null> => {
 		try {
-			const processState = await aoDryRun(deps, {
+			const processInfo = await aoDryRun(deps, {
 				processId: zoneId,
 				action: 'Info',
 			});
 
-			return processState;
+			return mapFromProcessCase(processInfo);
 		} catch (e: any) {
 			throw new Error(e);
 		}

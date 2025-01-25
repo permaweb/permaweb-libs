@@ -69,17 +69,15 @@ export type ProfileType = {
 export type AssetCreateArgsType = {
 	name: string;
 	description: string;
-	type: string;
 	topics: string[];
-	contentType: string;
-	data: any;
 	creator: string;
-	collectionId?: string;
-	renderWith?: string;
-	thumbnail?: string;
+	data: any;
+	contentType: string;
+	assetType: string;
 	supply?: number;
 	denomination?: number;
 	transferable?: boolean;
+	metadata?: object;	
 	tags?: TagType[];
 	src?: string;
 };
@@ -103,34 +101,32 @@ export type AssetHeaderType = {
 	tags?: TagType[];
 };
 
-export type AssetStateType = {
-	ticker: string | null;
-	denomination: string | null;
-	balances: { [key: string]: string } | null;
-	transferable: boolean | null;
-};
-
-export type AoAssetType = {
+export type AssetDetailType = {
+	name: string;
 	ticker: string;
 	denomination: string;
-	balances: {
-		[key: string]: string;
-	};
-	transferable: boolean;
-	name: string;
+	totalSupply: string;
+	transferable: string;
 	creator: string;
-	assetMetadata: {
-		[key: string]: any;
-	};
+	balances: object;
+	metadata: object;
+	dateCreated: string;
+	lastUpdate: string;
+	tags?: TagType[]
+}
+
+export type CommentHeaderType = {
+	id: string; 
+	content: string;
+	parentId: string; 
+	rootId: string
 };
 
-export type AssetDetailType = AssetHeaderType & AssetStateType;
-
-export type CommentHeaderType = AssetHeaderType & { content: string, dataSource: string; rootSource: string };
-
-export type CommentStateType = AssetStateType;
-
-export type CommentDetailType = CommentHeaderType & CommentStateType;
+export type CommentDetailType = {
+	content: string;
+	parentId: string;
+	rootId: string;
+}
 
 export type CommentCreateArgType = { content: string; creator: string;  parentId: string; rootId?: string, tags?: TagType[] };
 

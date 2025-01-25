@@ -3,40 +3,23 @@ import { getGQLData } from 'common/gql';
 
 import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
 import {
-	AoAssetType,
 	AssetCreateArgsType,
 	AssetDetailType,
 	AssetHeaderType,
-	AssetStateType,
 	DependencyType,
 	GQLNodeResponseType,
 	TagType,
 	UDLicenseType,
 } from 'helpers/types';
-import { checkValidAddress, formatAddress, getBootTag, getTagValue, mapFromProcessCase } from 'helpers/utils';
+import { formatAddress, getBootTag, getTagValue, mapFromProcessCase, mapToProcessCase } from 'helpers/utils';
 
-// TODO
-// PublishedDate / ReleasedDate
-// DateUpdated
-// Thumbnail
 export function createAtomicAssetWith(deps: DependencyType) {
 	return async (args: AssetCreateArgsType, callback?: (status: any) => void) => {
 		const validationError = getValidationErrorMessage(args);
 		if (validationError) throw new Error(validationError);
 
 		const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
-
-		const tags = [{ name: TAGS.keys.bootloaderInit, value: args.src ?? AO.src.asset }];
-		tags.push(...buildAssetTags(args));
-
-		tags.push(getBootTag('Name', args.name));
-		tags.push(getBootTag('Creator', args.creator));
-		tags.push(getBootTag('Ticker', 'ATOMIC'));
-		tags.push(getBootTag('Denomination', args.denomination ? args.denomination.toString() : '1'));
-		tags.push(getBootTag('TotalSupply', args.supply ? args.supply.toString() : '1'));
-
-		if (args.collectionId) tags.push(getBootTag('Collection', args.collectionId));
-		if (!args.transferable) tags.push(getBootTag('Transferable', 'false'));
+		const tags = buildAssetCreateTags(args);
 
 		try {
 			const assetId = await aoCreateProcess(
@@ -52,80 +35,30 @@ export function createAtomicAssetWith(deps: DependencyType) {
 	};
 }
 
-export async function getAtomicAsset(deps: DependencyType, id: string): Promise<AssetDetailType | null> {
+export async function getAtomicAsset(deps: DependencyType, id: string, args?: { useGateway?: boolean }): Promise<AssetDetailType | null> {
 	try {
-		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.goldsky,
-			ids: [id],
-			tags: null,
-			owners: null,
-			cursor: null,
+		const processInfo = await aoDryRun(deps, {
+			processId: id,
+			action: 'Info',
 		});
 
-		if (gqlResponse && gqlResponse.data.length) {
-			const asset: AssetHeaderType = buildAsset(gqlResponse.data[0]);
-
-			let state: AssetStateType & any = {
-				ticker: null,
-				denomination: null,
-				balances: null,
-				transferable: null,
-				creator: null,
-				metadata: {},
-			};
-
-			let processState = await aoDryRun(deps, {
-				processId: asset.id,
-				action: 'Info',
+		if (args?.useGateway) {
+			const gqlResponse = await getGQLData({
+				gateway: GATEWAYS.goldsky,
+				ids: [id],
+				tags: null,
+				owners: null,
+				cursor: null,
 			});
 
-			processState = mapFromProcessCase(processState);
-
-			if (processState) {
-				if (processState.name) asset.name = processState.name
-				if (processState.ticker) state.ticker = processState.ticker;
-				if (processState.denomination) state.denomination = processState.denomination;
-				if (processState.logo) asset.thumbnail = processState.logo;
-				if (processState.creator) state.creator = processState.creator;
-
-				if (processState.balances) {
-					state.balances = Object.fromEntries(
-						Object.entries(processState.balances).filter(([_, value]) => Number(value) !== 0),
-					) as any;
-				}
-
-				if (processState.transferable !== undefined) {
-					state.transferable = processState.transferable;
-				} else {
-					state.transferable = true;
-				}
-
-				if (processState.assetMetadata) {
-					for (const [key, value] of Object.entries(processState.assetMetadata)) {
-						if (!(key in state)) {
-							state.metadata[key] = value;
-						}
-					}
-				}
+			return {
+				tags: gqlResponse?.data?.[0]?.node?.tags,
+				...mapFromProcessCase(processInfo)
 			}
-
-			if (!state.balances) {
-				try {
-					const processBalances = await aoDryRun(deps, {
-						processId: asset.id,
-						action: 'Balances',
-					});
-
-					if (processBalances) state.balances = processBalances;
-				} catch (e: any) {
-					console.error(e);
-				}
-			}
-
-			return { ...asset, ...state };
 		}
 
-		return null;
+		return mapFromProcessCase(processInfo);
+
 	} catch (e: any) {
 		throw new Error(e.message || 'Error fetching atomic asset');
 	}
@@ -134,31 +67,6 @@ export async function getAtomicAsset(deps: DependencyType, id: string): Promise<
 export function getAtomicAssetWith(deps: DependencyType) {
 	return async (id: string): Promise<AssetDetailType | null> => {
 		return await getAtomicAsset(deps, id);
-	};
-}
-
-export function getAoAtomicAssetWith(deps: DependencyType) {
-	return async (processId: string): Promise<AoAssetType> => {
-		try {
-			const processState = await aoDryRun(deps, {
-				processId: processId,
-				action: 'Info',
-			});
-			if (processState) {
-				return {
-					ticker: processState.Ticker,
-					denomination: processState.Denomination,
-					balances: processState.Balances,
-					transferable: processState.Transferable,
-					name: processState.Name,
-					creator: processState.Creator,
-					assetMetadata: mapFromProcessCase(processState.AssetMetadata),
-				};
-			}
-			return Promise.reject('Error fetching atomic asset');
-		} catch (e: any) {
-			throw new Error(e.message || 'Error fetching atomic asset');
-		}
 	};
 }
 
@@ -205,7 +113,7 @@ export function buildAsset(element: GQLNodeResponseType): AssetHeaderType {
 		TAGS.keys.collectionId,
 		TAGS.keys.dateCreated,
 	]);
-	
+
 	const asset = {
 		id: element.node.id,
 		owner: element.node.owner.address,
@@ -270,32 +178,26 @@ function getLicense(element: GQLNodeResponseType): UDLicenseType | null {
 	return null;
 }
 
-function buildAssetTags(args: AssetCreateArgsType): { name: string; value: string }[] {
+function buildAssetCreateTags(args: AssetCreateArgsType): { name: string; value: string }[] {
 	const tags = [
-		{ name: TAGS.keys.title, value: args.name },
-		{ name: TAGS.keys.description, value: args.description },
-		{ name: TAGS.keys.assetType, value: args.type },
+		{ name: TAGS.keys.bootloaderInit, value: args.src ?? AO.src.asset },
+		{ name: TAGS.keys.creator, value: args.creator },
+		{ name: TAGS.keys.assetType, value: args.assetType },
 		{ name: TAGS.keys.contentType, value: args.contentType },
 		{ name: TAGS.keys.implements, value: 'ANS-110' },
 		{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
+		getBootTag('Name', args.name),
+		getBootTag('Ticker', 'ATOMIC'),
+		getBootTag('Denomination', args.denomination?.toString() ?? '1'),
+		getBootTag('TotalSupply', args.supply?.toString() ?? '1'),
+		getBootTag('Transferable', args.transferable?.toString() ?? 'true'),
+		getBootTag('Creator', args.creator),
 	];
 
-	args.topics.forEach((topic: string) => tags.push({ name: TAGS.keys.topic, value: topic }));
-
-	if (args.creator) {
-		tags.push({ name: TAGS.keys.creator, value: args.creator });
-	}
-
-	if (args.collectionId) {
-		tags.push({ name: TAGS.keys.collectionId, value: args.collectionId });
-	}
-
-	if (args.renderWith) {
-		tags.push({ name: TAGS.keys.renderWith, value: args.renderWith });
-	}
-
-	if (args.thumbnail && checkValidAddress(args.thumbnail)) {
-		tags.push({ name: TAGS.keys.thumbnail, value: args.thumbnail });
+	if (args.metadata) {
+		for (const entry in args.metadata) {
+			tags.push(getBootTag(mapToProcessCase(entry), (args.metadata as any)[entry].toString()));
+		}
 	}
 
 	if (args.tags) args.tags.forEach((tag: TagType) => tags.push(tag));
@@ -306,29 +208,29 @@ function buildAssetTags(args: AssetCreateArgsType): { name: string; value: strin
 function getValidationErrorMessage(args: AssetCreateArgsType): string | null {
 	if (typeof args !== 'object' || args === null) return 'The provided arguments are invalid or empty.';
 
-	const requiredFields = ['name', 'description', 'type', 'topics', 'contentType', 'data'];
+	const requiredFields = ['name', 'description', 'topics', 'creator', 'data', 'contentType', 'assetType'];
 	for (const field of requiredFields) {
 		if (!(field in args)) return `Missing field '${field}'`;
 	}
 
 	if (typeof args.name !== 'string' || args.name.trim() === '') return 'Name is required';
 	if (typeof args.description !== 'string') return 'The description must be a valid string';
-	if (typeof args.type !== 'string' || args.type.trim() === '') return 'Type must be a non-empty string';
 	if (!Array.isArray(args.topics) || args.topics.length === 0) return 'Topics are required';
+	if (typeof args.creator !== 'string' || args.creator.trim() === '') return 'Creator is required';
+	if (args.data === undefined || args.data === null) return 'Data field is required';
 	if (typeof args.contentType !== 'string' || args.contentType.trim() === '')
 		return 'Content type must be a non-empty string';
-	if (args.data === undefined || args.data === null) return 'Data field is required';
-	if (typeof args.creator !== 'string' || args.creator.trim() === '') return 'Creator is required';
-
-	if ('collectionId' in args && typeof args.collectionId !== 'string') return 'Collection ID must be a valid string';
-	if ('renderWith' in args && typeof args.renderWith !== 'string') return 'Render with value must be a valid string';
-	if ('thumbnail' in args && typeof args.thumbnail !== 'string') return 'Thumbnail must be a valid string';
+	if (typeof args.assetType !== 'string' || args.assetType.trim() === '') return 'Type must be a non-empty string';
+	
 	if ('supply' in args && (typeof args.supply !== 'number' || args.supply <= 0))
 		return 'Supply must be a positive number';
+	if ('denomination' in args && (typeof args.denomination !== 'number' || args.denomination <= 0))
+		return 'Denomination must be a positive number';
 	if ('transferable' in args && typeof args.transferable !== 'boolean') return 'Transferable must be a boolean value';
+	if ('metadata' in args && typeof args.metadata !== 'object') return 'Metadata must be an object';
 	if ('tags' in args && (!Array.isArray(args.tags) || args.tags.some((tag) => typeof tag !== 'object')))
 		return 'Tags must be an array of objects';
 	if ('src' in args && typeof args.src !== 'string') return 'Source must be a valid string';
-
+	
 	return null;
 }

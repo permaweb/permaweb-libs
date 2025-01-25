@@ -8,7 +8,6 @@ import { getBootTag, mapFromProcessCase } from 'helpers/utils';
 import { createZoneWith, getZoneWith, updateZoneWith } from './zones';
 
 // TODO: Bootloader registry
-
 export function createProfileWith(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
 
@@ -111,7 +110,7 @@ export function getProfileByIdWith(deps: DependencyType) {
 	return async (profileId: string): Promise<ProfileType | null> => {
 		try {
 			const zone = await getZone(profileId);
-			return { id: profileId, ...mapFromProcessCase(zone.Store ?? {}), assets: mapFromProcessCase(zone.Assets ?? []) };
+			return { id: profileId, ...zone.store, assets: zone.assets };
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error fetching profile');
 		}

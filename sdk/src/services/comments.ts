@@ -1,6 +1,6 @@
 import { getGQLData } from 'common/gql';
 
-import { AO, GATEWAYS } from 'helpers/config';
+import { GATEWAYS } from 'helpers/config';
 import { getTxEndpoint } from 'helpers/endpoints';
 import {
 	AssetCreateArgsType,
@@ -26,12 +26,11 @@ export function createCommentWith(deps: DependencyType) {
 		const assetArgs: AssetCreateArgsType = {
 			name: `Comment on ${args.parentId}`,
 			description: `Comment on ${args.parentId}`,
-			type: 'comment',
 			topics: ['comment'],
-			contentType: 'text/plain',
-			data: args.content,
 			creator: args.creator,
-			src: AO.src.asset,
+			data: args.content,
+			contentType: 'text/plain',
+			assetType: 'comment',
 			tags,
 		};
 
@@ -42,7 +41,7 @@ export function createCommentWith(deps: DependencyType) {
 export function getCommentWith(deps: DependencyType) {
 	return async (id: string): Promise<CommentDetailType | null> => {
 		try {
-			const asset = await getAtomicAsset(deps, id);
+			const asset: any = await getAtomicAsset(deps, id, { useGateway: true });
 
 			const dataSource = asset?.tags?.find((t: TagType) => {
 				return t.name === 'Data-Source';
@@ -55,10 +54,9 @@ export function getCommentWith(deps: DependencyType) {
 			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
 
 			return {
-				...asset,
 				content: await getCommentData(id),
-				dataSource,
-				rootSource,
+				parentId: dataSource,
+				rootId: rootSource,
 			};
 		}
 		catch (e: any) {
@@ -114,10 +112,10 @@ export function getCommentsWith(_deps: DependencyType) {
 			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
 
 			comments.push({
-				...asset,
+				id: asset.id,
 				content: await getCommentData(asset.id),
-				dataSource,
-				rootSource,
+				parentId: dataSource,
+				rootId: rootSource,
 			})
 		}
 

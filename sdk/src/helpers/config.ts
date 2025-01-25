@@ -3,7 +3,7 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'Xr4vjtRZLlW-8pv7jZC_89xXXfjQ_VgjdRbt8fN47mg',
+		asset: 'yP9yYuq5dWNrXuTClg1rFTX70gpgMIgI-0MyxfN0w64',
 		zone: 'M9G2B9Uvk8VK1pxloESeT4XScguRKSzLyd4as1HFOJ8',
 		collection: '2ZDuM2VUCN8WHoAKOOjiH4_7Apq0ZHKnTWdLppxCdGY',
 	},

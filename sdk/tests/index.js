@@ -1,10 +1,7 @@
-import { readFileSync } from 'fs';
-
 import Arweave from 'arweave';
 import { connect, createDataItemSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 
-const PARENT_ASSET_ID = 'PARENT_ASSET_ID';
 const CREATOR = 'CREATOR_ADDRESS';
 
 function expect(actual) {
@@ -37,6 +34,12 @@ function expect(actual) {
 				}
 			}
 			console.log('\x1b[32m%s\x1b[0m', `Success: Types match (${actualType})`);
+		},
+		toEqualLength: (expected) => {
+			if (actual.length !== expected) {
+				throw new Error(`Array length mismatch: expected length ${expected}, but got ${actual.length}`);
+			}
+			console.log('\x1b[32m%s\x1b[0m', `Success: Array length is equal (${actual.length})`);
 		},
 		toEqual: (expected) => {
 			const actualType = typeof actual;
@@ -94,19 +97,17 @@ function logError(message) {
 	async function testZones() {
 		try {
 			logTest('Testing zone creation...');
-			const zoneId = await permaweb.createZone([], (status) => console.log(`Callback: ${status}`));
+			const zoneId = await permaweb.createZone({}, (status) => console.log(`Callback: ${status}`));
 
 			expect(zoneId).toBeDefined();
 			expect(zoneId).toEqualType('string');
 
 			logTest('Testing zone update...');
 			const zoneUpdateId = await permaweb.updateZone({
-				data: {
-					name: 'Sample Zone',
-					metadata: {
-						description: 'A test zone for unit testing',
-						version: '1.0.0',
-					},
+				name: 'Sample Zone',
+				metadata: {
+					description: 'A test zone for unit testing',
+					version: '1.0.0',
 				},
 			}, zoneId);
 
@@ -167,11 +168,14 @@ function logError(message) {
 			const assetId = await permaweb.createAtomicAsset({
 				name: 'Example Name',
 				description: 'Example Description',
-				creator: CREATOR,
-				type: 'Example Atomic Asset Type',
 				topics: ['Topic 1', 'Topic 2', 'Topic 3'],
+				creator: CREATOR,
+				data: '1234',
 				contentType: 'text/plain',
-				data: '1234'
+				assetType: 'Example Atomic Asset Type',
+				metadata: {
+					status: 'Initial Status'
+				}
 			});
 
 			expect(assetId).toBeDefined();
@@ -205,8 +209,8 @@ function logError(message) {
 			logTest('Testing updated asset fetch...');
 			const updatedAsset = await permaweb.getAtomicAsset(assetId);
 
-			console.log(updatedAsset);
-
+			expect(updatedAsset).toBeDefined();
+			expect(updatedAsset.metadata.status).toEqual('Updated Status');
 		}
 		catch (e) {
 			logError(e.message ?? 'Asset tests failed');
@@ -214,12 +218,14 @@ function logError(message) {
 	}
 
 	async function testComments() {
+		const PARENT_ID = new Date().getTime().toString();
+
 		try {
 			logTest('Testing comment creation...');
 			const commentId1 = await permaweb.createComment({
 				creator: CREATOR,
 				content: 'My first comment',
-				parentId: PARENT_ASSET_ID
+				parentId: PARENT_ID
 			}, (status) => console.log(`Callback: ${status}`));
 
 			expect(commentId1).toBeDefined();
@@ -229,22 +235,22 @@ function logError(message) {
 			const comment = await permaweb.getComment(commentId1);
 
 			expect(comment).toBeDefined();
-			expect(comment.id).toEqual(commentId1);
+			expect(comment.parentId).toEqual(PARENT_ID);
 
 			logTest('Creating comment for batch query...');
 			const commentId2 = await permaweb.createComment({
 				creator: CREATOR,
 				content: 'My second comment',
-				parentId: PARENT_ASSET_ID
+				parentId: PARENT_ID
 			}, (status) => console.log(`Callback: ${status}`));
 
 			expect(commentId2).toBeDefined();
 			expect(commentId2).toEqualType('string');
 
 			logTest('Testing comments fetch...');
-			const comments = await permaweb.getComments({ parentId: PARENT_ASSET_ID });
+			const comments = await permaweb.getComments({ parentId: PARENT_ID });
 
-			expect(comments).toBeDefined();
+			expect(comments).toEqualLength(2);
 		}
 		catch (e) {
 			logError(e.message ?? 'Comment tests failed');
@@ -296,10 +302,8 @@ function logError(message) {
 			logTest('Testing updated collection fetch...');
 			const updatedCollection = await permaweb.getCollection(collectionId);
 
-			console.log(updatedCollection);
-
 			expect(updatedCollection).toBeDefined();
-			
+
 			const expectedAssets = [
 				"BvKq3F8psspbAvIDBAlgiG3E_XwiszSfJIYSg3kl0BU",
 				"Loe-SwVioq8_xqbbzM-0TxMC4Lq8IobHNLyHQWgxaGk",
