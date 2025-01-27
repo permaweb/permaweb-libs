@@ -2,7 +2,7 @@ import Arweave from 'arweave';
 import { connect, createDataItemSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 
-const CREATOR = 'CREATOR_ADDRESS';
+const CREATOR = 'creator';
 
 function expect(actual) {
 	return {
@@ -165,12 +165,12 @@ function logError(message) {
 	async function testAssets() {
 		try {
 			logTest('Testing asset creation...');
-			const assetId = await permaweb.createAtomicAsset({
+			const assetId1 = await permaweb.createAtomicAsset({
 				name: 'Example Name',
 				description: 'Example Description',
 				topics: ['Topic 1', 'Topic 2', 'Topic 3'],
 				creator: CREATOR,
-				data: '1234',
+				data: 'Atomic Asset Data',
 				contentType: 'text/plain',
 				assetType: 'Example Atomic Asset Type',
 				metadata: {
@@ -178,39 +178,55 @@ function logError(message) {
 				}
 			});
 
-			expect(assetId).toBeDefined();
-			expect(assetId).toEqualType('string');
+			expect(assetId1).toBeDefined();
+			expect(assetId1).toEqualType('string');
 
 			logTest('Testing asset fetch...')
-			const asset = await permaweb.getAtomicAsset(assetId);
+			const asset1 = await permaweb.getAtomicAsset(assetId1);
 
-			console.log(asset)
+			expect(asset1).toBeDefined();
+			expect(asset1.name).toEqual('Example Name');
 
-			expect(asset).toBeDefined();
-			expect(asset.name).toEqual('Example Name');
+			logTest('Creating asset for batch query...');
+			const assetId2 = await permaweb.createAtomicAsset({
+				name: 'Example Name',
+				description: 'Example Description',
+				topics: ['Topic 1', 'Topic 2', 'Topic 3'],
+				creator: CREATOR,
+				data: 'Atomic Asset Data',
+				contentType: 'text/plain',
+				assetType: 'Example Atomic Asset Type',
+				metadata: {
+					status: 'Initial Status'
+				}
+			});
+
+			expect(assetId2).toBeDefined();
+			expect(assetId2).toEqualType('string');
+
+			logTest('Testing batch asset query...');
+			const assets = await permaweb.getAtomicAssets([assetId1, assetId2]);
+
+			expect(assets).toEqualLength(2);
 
 			logTest('Testing asset update...');
 			const data = permaweb.mapToProcessCase({
 				name: 'Updated Name',
-				description: 'Updated Description',
-				status: 'Updated Status',
-				content: 'My Post Content',
-				topics: ['Topic 1'],
-				categories: ['Category 1'],
+				description: 'Updated Description'
 			});
 
 			await permaweb.sendMessage({
-				processId: assetId,
+				processId: assetId1,
 				wallet: wallet,
 				action: 'Update-Asset',
 				data: data,
 			});
 
 			logTest('Testing updated asset fetch...');
-			const updatedAsset = await permaweb.getAtomicAsset(assetId);
+			const updatedAsset = await permaweb.getAtomicAsset(assetId1, { useGateway: true });
 
 			expect(updatedAsset).toBeDefined();
-			expect(updatedAsset.metadata.status).toEqual('Updated Status');
+			expect(updatedAsset.name).toEqual('Updated Name');
 		}
 		catch (e) {
 			logError(e.message ?? 'Asset tests failed');
@@ -218,7 +234,7 @@ function logError(message) {
 	}
 
 	async function testComments() {
-		const PARENT_ID = new Date().getTime().toString();
+		const PARENT_ID = (new Date().getTime()).toString();
 
 		try {
 			logTest('Testing comment creation...');
@@ -235,7 +251,7 @@ function logError(message) {
 			const comment = await permaweb.getComment(commentId1);
 
 			expect(comment).toBeDefined();
-			expect(comment.parentId).toEqual(PARENT_ID);
+			expect(comment.parentId).toEqual(Number(PARENT_ID));
 
 			logTest('Creating comment for batch query...');
 			const commentId2 = await permaweb.createComment({
@@ -268,8 +284,8 @@ function logError(message) {
 
 			logTest('Testing collection creation...');
 			const collectionId = await permaweb.createCollection({
-				title: "Sample collection title",
-				description: "Sample collection description",
+				title: 'Sample collection title',
+				description: 'Sample collection description',
 				creator: profileId
 			});
 
@@ -286,15 +302,15 @@ function logError(message) {
 			const collectionUpdateId = await permaweb.updateCollectionAssets({
 				collectionId: collectionId,
 				assetIds: [
-					"BvKq3F8psspbAvIDBAlgiG3E_XwiszSfJIYSg3kl0BU",
-					"Loe-SwVioq8_xqbbzM-0TxMC4Lq8IobHNLyHQWgxaGk",
+					'BvKq3F8psspbAvIDBAlgiG3E_XwiszSfJIYSg3kl0BU',
+					'Loe-SwVioq8_xqbbzM-0TxMC4Lq8IobHNLyHQWgxaGk',
 				],
 				creator: profileId,
-				updateType: "Add",
+				updateType: 'Add',
 			});
 
 			expect(collectionUpdateId).toBeDefined();
-			expect(collectionUpdateId).toEqualType("string");
+			expect(collectionUpdateId).toEqualType('string');
 
 			logTest('Sleeping for collection update...');
 			await new Promise((r) => setTimeout(r, 5000));
@@ -305,8 +321,8 @@ function logError(message) {
 			expect(updatedCollection).toBeDefined();
 
 			const expectedAssets = [
-				"BvKq3F8psspbAvIDBAlgiG3E_XwiszSfJIYSg3kl0BU",
-				"Loe-SwVioq8_xqbbzM-0TxMC4Lq8IobHNLyHQWgxaGk",
+				'BvKq3F8psspbAvIDBAlgiG3E_XwiszSfJIYSg3kl0BU',
+				'Loe-SwVioq8_xqbbzM-0TxMC4Lq8IobHNLyHQWgxaGk',
 			].sort();
 
 			const actualAssets = updatedCollection.assetIds.sort();

@@ -84,24 +84,11 @@ export type AssetCreateArgsType = {
 
 export type AssetHeaderType = {
 	id: string;
-	owner: string | null;
-	creator: string | null;
-	name: string | null;
-	description: string | null;
-	type: string | null;
-	topics: string[] | null;
-	implementation: string | null;
-	contentType: string | null;
-	renderWith: string | null;
-	thumbnail: string | null;
-	udl: UDLicenseType | null;
-	collectionId: string | null;
-	dateCreated: number | null;
-	blockHeight: number | null;
-	tags?: TagType[];
+	owner: string | null
 };
 
 export type AssetDetailType = {
+	id: string;
 	name: string;
 	ticker: string;
 	denomination: string;
@@ -112,7 +99,6 @@ export type AssetDetailType = {
 	metadata: object;
 	dateCreated: string;
 	lastUpdate: string;
-	tags?: TagType[]
 }
 
 export type CommentHeaderType = {
