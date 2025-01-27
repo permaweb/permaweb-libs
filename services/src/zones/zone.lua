@@ -39,6 +39,7 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_APPEND = 'Zone-Append',
     H_ZONE_REMOVE = 'Zone-Remove',
     H_ZONE_ADD_UPLOAD = 'Add-Uploaded-Asset',
+    H_ZONE_REGISTRY_INIT = 'Registry-Init',
 }
 
 Zone.ROLE_NAMES = Zone.ROLE_NAMES or {
@@ -177,6 +178,15 @@ function Zone.Functions.decodeMessageData(data)
     return { success = true, data = decodedData }
 end
 
+function Zone.Functions.getStoreEntriesForRegistry()
+    local entries = {}
+    local storeData = Zone.Data.KV:dump() -- { key = "val", key2 = "val" }
+    for key, value in pairs(storeData) do
+        entries[key] = value
+    end
+    return entries
+end
+
 function Zone.Functions.mergeTables(original, updates)
     for key, value in pairs(updates) do
         if type(value) == 'table' and type(original[key]) == 'table' then
@@ -208,6 +218,55 @@ function Zone.Functions.zoneGet(msg)
             Assets = Zone.Data.AssetManager.Assets
         }
     })
+end
+
+function Zone.Functions.registryUpdateFromStore(msg) --data { Registries, StoreKeys }
+    -- sends a message like zoneUpdate directly to registries
+    authorized, message = Zone.Functions.isAuthorized(msg)
+    if not authorized then
+        Zone.Functions.sendError(msg.From, 'Not Authorized' .. " " .. message)
+        return
+    end
+
+    local decodedData = Zone.Functions.decodeMessageData(msg.Data)
+
+    if not decodedData.success then
+        Zone.Functions.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    local storeDict = Zone.Functions.getStoreEntriesForRegistry()
+    local entries = {{ key = "DateUpdated", value = tostring(os.time()) }}
+
+    if decodedData.data.StoreKeys then
+        -- filter entries for only those in StoreKeys
+        for _, currentKey in ipairs(decodedData.data.StoreKeys) do
+            print(currentKey)
+            if storeDict[currentKey] then
+                table.insert(entries, { key = currentKey, value = storeDict[currentKey] })
+            end
+        end
+    else
+        for key, value in pairs(storeDict) do
+            if type(value) ~= 'table' then
+                table.insert(entries, { key = key, value = value })
+            end
+        end
+    end
+
+    local data = {
+        entries = entries,
+        ZoneId = ao.id,
+        UserId = Owner
+    }
+
+    for _, registry in ipairs(decodedData.data.Registries) do
+        ao.send({
+            Target = registry,
+            Action = Zone.Constants.H_ZONE_UPDATE,
+            Data = data
+        })
+    end
 end
 
 function Zone.Functions.zoneUpdate(msg)
@@ -546,6 +605,7 @@ Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Function
 Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
 Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
 Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zone.Functions.zoneRoleSet)
+Handlers.add(Zone.Constants.H_ZONE_REGISTRY_INIT, Zone.Constants.H_ZONE_REGISTRY_INIT, Zone.Functions.registryUpdateFromStore)
 
 
 -- Register-Whitelisted-Subscriber -- owner only
@@ -673,6 +733,7 @@ end
 if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
     --TODO add registries at boot
     --local registry_ids = {}
+
     for _, tag in ipairs(Inbox[1].TagArray) do
         local prefix = "Bootloader-"
         -- Check if this Tag is for the Bootloader
@@ -680,6 +741,7 @@ if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
             -- keyWithoutPrefix is everything after "Bootloader-"
             local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
             setStoreValue(keyWithoutPrefix, tag.value)
+             -- entries[keyWithoutPrefix] = tag.value
         end
         -- TODO add registries at boot
         --if tag.name == 'Registry-Id' then
@@ -687,12 +749,20 @@ if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
         --end
     end
 
+    --local entries = getStoreEntriesForRegistry()
+    --ao.send({
+    --    Target = REGISTRY,
+    --    Action = "Update-Zone",
+    --    Data = { entries = entries, ZoneId = ao.id, UserId = Owner}
+    --})
+
     ao.send({
         Target = ao.id,
         Action = 'Register-Whitelisted-Subscriber',
         Topics = '["Zone-Update"]',
         ['Subscriber-Process-Id'] = REGISTRY
     })
+
 end
 
 if not ZoneInitCompleted then

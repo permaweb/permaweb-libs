@@ -21,7 +21,8 @@ local H_ZONE_BOOT = "Create-Zone"
 local ASSIGNABLES = {
     H_ZONE_UPDATE, H_ROLE_SET, H_ZONE_BOOT }
 
-local RELEVANT_METADATA = { "UserName", "DisplayName", "Description", "Banner", "Thumbnail", "Tags", "DateUpdated" }
+local RELEVANT_METADATA = { "UserName", "DisplayName", "Description", "Banner", "Thumbnail", "DateUpdated" }
+-- removed Tags from relevant metadata for now. Decide how to handle Arrays types in DB and return values later.
 
 if not NotifiedPending then
     NotifiedPending = {}
@@ -49,7 +50,11 @@ local function isInArray(table, value)
 end
 
 local function decode_message_data(data)
+    if type(data) == 'table' then
+        return true, data
+    end
     local status, decoded_data = pcall(json.decode, data)
+    print("decode: " .. type(decoded_data) .. " " .. tostring(status))
     if not status or type(decoded_data) ~= 'table' then
         return false, nil
     end
@@ -125,6 +130,7 @@ local function handle_notified(msg)
 end
 
 -- init a zone from spawn msg using tags
+-- TODO implement this when assignments with On-Boot no longer Halts the process.
 --local function handle_boot_zone(msg)
 --
 --    local ZoneId = msg.Id -- create = msg.Id spawn
@@ -319,7 +325,6 @@ end
 local function handle_meta_get(msg)
     local decode_check, data = decode_message_data(msg.Data)
     local reply_to = msg.From
-    print("after decode")
     if decode_check and data then
         if not data.ZoneIds then
             ao.send({
@@ -359,11 +364,9 @@ local function handle_meta_get(msg)
                         },
                         Data = { Code = "Failed to prepare query statement" }
                     })
-                    print("Failed to prepare query statement")
                     return json.encode({ Code = 'DB_PREPARE_FAILED' })
                 end
 
-                print(data.ZoneIds[1])
                 stmt:bind_values(table.unpack(data.ZoneIds))
 
                 local foundRows = false
@@ -375,7 +378,7 @@ local function handle_meta_get(msg)
                                              Banner = row.banner,
                                              Description = row.description,
                                              DisplayName = row.display_name,
-                                             Tags = row.tags and json.decode(row.tags) or nil,
+                                             --Tags = row.tags and json.decode(row.tags) or nil,
                                              DateUpdated = row.date_updated,
                     })
                 end
@@ -407,7 +410,6 @@ local function handle_meta_get(msg)
             })
             print('No ZoneIds provided or the list is empty.')
             return
-
         end
     else
         ao.send({
@@ -492,7 +494,6 @@ local function handle_role_set(msg)
     -- remove msg.Id from NotifiedPending and continue.
     -- removed =
     if not removePendingId(msg.Id) then
-        print("could not remove pending")
         -- did not find notification confirmation from zone for this update
         return
     end
@@ -517,7 +518,6 @@ local function handle_role_set(msg)
     -- delete user/role
     if not data.roles then
         if hasEntry then
-            print("has entry")
             local delete_auth = Db:prepare(
                     'DELETE FROM zone_users WHERE zone_id = ? AND user_id = ?')
             delete_auth:bind_values(ZoneId, UserId)
@@ -539,7 +539,6 @@ local function handle_role_set(msg)
                              Message = insertErr }
                 })
             end
-            print(tostring(insertStepped))
             insert_auth:finalize()
         end
         return
@@ -570,25 +569,32 @@ local function handle_meta_set(msg)
         return
     end
 
-    local entries = data.entries
+    local entries = data.entries -- { { key: 'UserName', value: 'Steve' },... }
 
+    -- handle either assigned update or update sent by zone itself
+    local ZoneId = msg.Target
+    local UserId = msg.From -- (assigned) -- AuthorizedAddress
+    local isAssigned = true;
+
+    -- if provided zoneId and userid, then make sure it's from zoneId, else use msg.From
+    -- then we can skip checking for the NotifiedPending
+    if data.ZoneId and data.UserId and data.ZoneId == msg.From then -- zone can update itself
+        ZoneId = data.ZoneId
+        UserId = data.UserId
+        isAssigned = false;
+    end
     -- make sure msg.Id is in NotifiedPending from Zone
     -- if NotifiedPending has msg.Id then
     -- remove msg.Id from NotifiedPending and continue.
     -- removed =
-    if not removePendingId(msg.Id) then
-        print("could not remove pending")
+    if isAssigned and not removePendingId(msg.Id) then
         -- did not find notification confirmation from zone for this update
         return
     end
 
-    local ZoneId = msg.Target -- Is this original target? confirm.
-    local UserId = msg.From -- (assigned) -- AuthorizedAddress
-
     local check = Db:prepare('SELECT 1 FROM zone_users WHERE user_id = ? AND zone_id = ? LIMIT 1')
     check:bind_values(UserId, ZoneId)
     if check:step() ~= sqlite3.ROW then
-        print("inserting users")
         local insert_auth = Db:prepare(
                 'INSERT INTO zone_users (zone_id, user_id) VALUES (?, ?)')
         insert_auth:bind_values(ZoneId, UserId)
@@ -647,11 +653,8 @@ local function handle_meta_set(msg)
                 end
             end
         end
-
-        print("updating meta " .. table.concat(columns, ', ') .. table.concat(placeholders, ", "))
         local sql = "INSERT OR REPLACE INTO ao_zone_metadata (" .. table.concat(columns, ", ") .. ")"
         sql = sql .. " VALUES (" .. table.concat(placeholders, ", ") .. ")"
-        -- (key, key, key ..)
 
         return sql
     end
@@ -671,7 +674,6 @@ local function handle_meta_set(msg)
                      ERROR = Db:errmsg()
             }
         })
-        print("Failed to prepare update statement")
         return json.encode({ Code = 'DB_PREPARE_FAILED' })
     end
 
@@ -680,20 +682,17 @@ local function handle_meta_set(msg)
     local step_status = stmt:step()
     if step_status ~= sqlite3.OK and step_status ~= sqlite3.DONE and step_status ~= sqlite3.ROW then
         stmt:finalize()
-        print("Error: " .. Db:errmsg())
-        print("SQL" .. sql)
         ao.send({
             Target = reply_to,
             Action = 'DB_STEP_CODE',
             Tags = {
                 Status = NOTICE_ERROR,
-                Message = 'sqlite step error'
+                Message = Db:errmsg()
             },
             Data = { DB_STEP_MSG = step_status }
         })
         return json.encode({ Code = step_status })
     end
-    print('added metadata')
     stmt:finalize()
     ao.send({
         Target = zone_id,
@@ -752,7 +751,6 @@ Handlers.add(H_GET_ZONES_USERS, Handlers.utils.hasMatchingTag('Action', H_GET_ZO
                                 },
                                 Data = { Code = "Failed to prepare query statement" }
                             })
-                            print("Failed to prepare query statement")
                             return json.encode({ Code = 'DB_PREPARE_FAILED' })
                         end
 
@@ -767,7 +765,6 @@ Handlers.add(H_GET_ZONES_USERS, Handlers.utils.hasMatchingTag('Action', H_GET_ZO
                         end
 
                         if not foundRows then
-                            print('No rows found matching the criteria.')
                             ao.send({
                                 Target = msg.From,
                                 Action = 'Get-Metadata-Success',
