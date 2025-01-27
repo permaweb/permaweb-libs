@@ -21,7 +21,8 @@ local H_ZONE_BOOT = "Create-Zone"
 local ASSIGNABLES = {
     H_ZONE_UPDATE, H_ROLE_SET, H_ZONE_BOOT }
 
-local RELEVANT_METADATA = { "UserName", "DisplayName", "Description", "Banner", "Thumbnail", "Tags", "DateUpdated" }
+local RELEVANT_METADATA = { "UserName", "DisplayName", "Description", "Banner", "Thumbnail", "DateUpdated" }
+-- removed Tags from relevant metadata for now. Decide how to handle Arrays types in DB and return values later.
 
 if not NotifiedPending then
     NotifiedPending = {}
