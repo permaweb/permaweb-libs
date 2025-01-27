@@ -1,6 +1,6 @@
 # @permaweb/libs
 
-This SDK provides a set of libraries designed as foundational building blocks for developers to create and interact with applications on Arweave"s permaweb. These libraries aim to contribute building on the composable web, promoting interoperability and reusability across decentralized applications. With libraries for managing profiles, atomic assets, collections, and more, this SDK simplifies the development of decentralized, permanent applications.
+This SDK provides a set of libraries designed as foundational building blocks for developers to create and interact with applications on Arweave's permaweb. These libraries aim to contribute building on the composable web, promoting interoperability and reusability across decentralized applications. With libraries for managing profiles, atomic assets, collections, and more, this SDK simplifies the development of decentralized, permanent applications.
 
 ## Table of Contents
 
@@ -342,6 +342,7 @@ const asset = await permaweb.getAtomicAsset(assetId);
   <summary><strong>Parameters</strong></summary>
 
 - `assetId`: The ID of the asset to fetch
+- `args (optional)`: Object for additional options with field `useGateway (boolean)` to also query the gateway for asset data
 
 </details>
 
@@ -352,15 +353,19 @@ const asset = await permaweb.getAtomicAsset(assetId);
 
 ```typescript
 {
-  ticker: "ATOMIC",
-  metadata: { status: "Initial Status" },
-  creator: "CREATOR_ADDRESS",
-  denomination: "1",
-  name: "Example Name",
-  lastUpdate: "nil",
+  id: "htWiEU2Gh2h0Dv8nfXrtVcKZBqDQTi8NTb6hL_e7atg",
   transferable: "true",
-  dateCreated: "1737827430138",
-  balances: { CREATOR_ADDRESS: "1" }
+  name: "Example Name",
+  metadata: {
+    status: "Initial Status",
+    topics: [ "Topic 1", "Topic 2", "Topic 3" ],
+    description: "Example Description"
+  },
+  creator: "creator",
+  balances: { creator: "1" },
+  ticker: "ATOMIC",
+  denomination: "1",
+  dateCreated: "1738002523328"
 }
 ```
 
@@ -387,56 +392,54 @@ const assets = await permaweb.getAtomicAssets(assetIds);
 ```typescript
 [
   {
-    id: "AssetProcessId1",
-    title: "City",
-    description:
-      "A collection of AI generated images of different settings and areas",
-    type: null,
-    topics: null,
-    contentType: "image/png",
-    renderWith: null,
-    thumbnail: null,
-    udl: {
-      access: { value: "One-Time-0.1" },
-      derivations: { value: "Allowed-With-One-Time-Fee-0.1" },
-      commercialUse: { value: "Allowed-With-One-Time-Fee-0.1" },
-      dataModelTraining: { value: "Disallowed" },
-      paymentMode: "Single",
-      paymentAddress: "uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk",
-      currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
-    },
-    creator: "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M",
-    collectionId: "XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc",
-    implementation: "ANS-110",
-    dateCreated: 1717663091000,
-    blockHeight: 1439467,
-    tags: [{ name: "Remaining", value: "Tag" }],
+    id: "htWiEU2Gh2h0Dv8nfXrtVcKZBqDQTi8NTb6hL_e7atg",
+    owner: "nl5hKKS6qrwaGZST_jAcxzgec9rZcB-pCyNFDiPgPpE",
+    authority: "fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY",
+    onBoot: "XYz8buLR5LQdhOOzWuCt9kBjoXHMowouWpXcGm9wdEE",
+    creator: "creator",
+    assetType: "Example Atomic Asset Type",
+    contentType: "text/plain",
+    implements: "ANS-110",
+    dateCreated: 1738002523328,
+    name: "Example Name",
+    description: "Example Description",
+    topics: ["Topic 1", "Topic 2", "Topic 3"],
+    ticker: "ATOMIC",
+    denomination: 1,
+    totalsupply: 1,
+    transferable: true,
+    status: "Initial Status",
+    dataProtocol: "ao",
+    variant: "ao.TN.1",
+    type: "Process",
+    module: "Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM",
+    scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
+    sdk: "aoconnect",
   },
   {
-    id: "AssetProcessId2",
-    title: "City",
-    description:
-      "A collection of AI generated images of different settings and areas",
-    type: null,
-    topics: null,
-    contentType: "image/png",
-    renderWith: null,
-    thumbnail: null,
-    udl: {
-      access: { value: "One-Time-0.1" },
-      derivations: { value: "Allowed-With-One-Time-Fee-0.1" },
-      commercialUse: { value: "Allowed-With-One-Time-Fee-0.1" },
-      dataModelTraining: { value: "Disallowed" },
-      paymentMode: "Single",
-      paymentAddress: "uf_FqRvLqjnFMc8ZzGkF4qWKuNmUIQcYP0tPlCGORQk",
-      currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
-    },
-    creator: "SaXnsUgxJLkJRghWQOUs9-wB0npVviewTkUbh2Yk64M",
-    collectionId: "XcfPzHzxt2H8FC03MAC_78U1YwO9Gdk72spbq70NuNc",
-    implementation: "ANS-110",
-    dateCreated: 1717663091000,
-    blockHeight: 1439467,
-    tags: [{ name: "Remaining", value: "Tag" }],
+    id: "tgClfHwR3HqP23vBbKmyXQf3N-LTqsR3-Fm9oH3KCG0",
+    owner: "nl5hKKS6qrwaGZST_jAcxzgec9rZcB-pCyNFDiPgPpE",
+    authority: "fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY",
+    onBoot: "XYz8buLR5LQdhOOzWuCt9kBjoXHMowouWpXcGm9wdEE",
+    creator: "creator",
+    assetType: "Example Atomic Asset Type",
+    contentType: "text/plain",
+    implements: "ANS-110",
+    dateCreated: 1738002535187,
+    name: "Example Name",
+    description: "Example Description",
+    topics: ["Topic 1", "Topic 2", "Topic 3"],
+    ticker: "ATOMIC",
+    denomination: 1,
+    totalsupply: 1,
+    transferable: true,
+    status: "Initial Status",
+    dataProtocol: "ao",
+    variant: "ao.TN.1",
+    type: "Process",
+    module: "Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM",
+    scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
+    sdk: "aoconnect",
   },
 ];
 ```
