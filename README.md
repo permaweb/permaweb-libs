@@ -730,48 +730,44 @@ To streamline the integration of `@permaweb/libs` into your React applications, 
 The following example demonstrates how to create a React Context and Provider for `@permaweb/libs`.
 
 ```typescript
-import React from "react";
-import Arweave from "arweave";
-import { connect, createDataItemSigner } from "@permaweb/aoconnect";
-import Permaweb from "@permaweb/libs";
+import React from 'react';
 
-// Define the context shape
+import Arweave from 'arweave';
+import { connect, createDataItemSigner } from '@permaweb/aoconnect';
+import Permaweb from '@permaweb/libs';
+
+import { useArweaveProvider } from './ArweaveProvider';
+
 interface PermawebContextState {
-  libs: Permaweb | null;
+	libs: any | null;
 }
 
-// Create a React context for Permaweb
 const PermawebContext = React.createContext<PermawebContextState>({
-  libs: null,
+	libs: null,
 });
 
-// Hook to access the Permaweb context
 export function usePermawebProvider(): PermawebContextState {
-  return React.useContext(PermawebContext);
+	return React.useContext(PermawebContext);
 }
 
-// Provider component for initializing and sharing the Permaweb instance
 export function PermawebProvider(props: { children: React.ReactNode }) {
-  const [libs, setLibs] = React.useState<Permaweb | null>(null);
+	const arProvider = useArweaveProvider();
 
-  React.useEffect(() => {
-    // Initialize dependencies
-    const dependencies: any = { ao: connect(), arweave: Arweave.init() };
-    if (wallet) {
-      dependencies.signer = createDataItemSigner(wallet);
-    }
+	const [libs, setLibs] = React.useState<any>(null);
 
-    // Initialize Permaweb SDK and set it in the state
-    const permawebInstance = Permaweb.init(dependencies);
-    setLibs(permawebInstance);
-  }, []);
+	React.useEffect(() => {
+		const dependencies: any = { ao: connect(), arweave: Arweave.init({}) };
+		if (arProvider.wallet) {
+			dependencies.signer = createDataItemSigner(arProvider.wallet);
+		}
 
-  return (
-    <PermawebContext.Provider value={{ libs }}>
-      {props.children}
-    </PermawebContext.Provider>
-  );
+		const permawebInstance = Permaweb.init(dependencies);
+		setLibs(permawebInstance);
+	}, [arProvider.wallet]);
+
+	return <PermawebContext.Provider value={{ libs }}>{props.children}</PermawebContext.Provider>;
 }
+
 ```
 
 ### Explanation:

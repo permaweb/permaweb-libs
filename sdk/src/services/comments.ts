@@ -4,13 +4,11 @@ import { GATEWAYS } from 'helpers/config';
 import { getTxEndpoint } from 'helpers/endpoints';
 import {
 	AssetCreateArgsType,
-	AssetHeaderType,
 	CommentCreateArgType,
 	CommentDetailType,
 	DependencyType,
 	GQLNodeResponseType,
 	TagFilterType,
-	TagType,
 } from 'helpers/types';
 
 import { buildAsset, createAtomicAssetWith, getAtomicAsset } from './assets';
