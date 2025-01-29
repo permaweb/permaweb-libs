@@ -15,7 +15,7 @@ import { getGQLData } from './gql';
 
 const GATEWAY = GATEWAYS.goldsky;
 
-const GATEWAY_RETRY_COUNT = 1000;
+const GATEWAY_RETRY_COUNT = 100;
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
 	const tags = [{ name: 'Authority', value: AO.mu }];

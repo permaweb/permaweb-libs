@@ -4,7 +4,7 @@ import { resolveTransaction } from 'common/arweave';
 import { AO, TAGS } from 'helpers/config';
 import { getTxEndpoint } from 'helpers/endpoints';
 import { CollectionDetailType, CollectionType, DependencyType, TagType } from 'helpers/types';
-import { cleanProcessField, cleanTagValue } from 'helpers/utils';
+import { cleanProcessField, cleanTagValue, globalLog } from 'helpers/utils';
 
 const DEFAULT_COLLECTION_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
 const DEFAULT_COLLECTION_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';
@@ -14,10 +14,11 @@ export function createCollectionWith(deps: DependencyType) {
 		title: string;
 		description: string;
 		creator: string;
-		banner: any;
 		thumbnail: any;
+		banner: any;
+		skipRegistry?: boolean
 	}, callback?: (status: any) => void) => {
-		if (!deps.signer) throw new Error(`Must provide a signer when initializing to create collections`);
+		if (!deps.signer) throw new Error(`No signer provided`);
 
 		const dateTime = new Date().getTime().toString();
 
@@ -84,6 +85,8 @@ export function createCollectionWith(deps: DependencyType) {
 				callback ? (status) => callback(status) : undefined,
 			);
 
+			globalLog('Sending eval message to collection...');
+			if (callback) callback('Sending eval message to collection...');
 			await deps.ao.message({
 				process: collectionId,
 				signer: deps.signer,
@@ -101,13 +104,19 @@ export function createCollectionWith(deps: DependencyType) {
 
 			if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
 			if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
-			
-			await deps.ao.message({
-				process: AO.collectionsRegistry,
-				signer: deps.signer,
-				tags: registryTags,
-			});
 
+			if (!args.skipRegistry) {
+				globalLog('Sending collection to registry...');
+				if (callback) callback('Sending collection to registry...');
+				await deps.ao.message({
+					process: AO.collectionsRegistry,
+					signer: deps.signer,
+					tags: registryTags,
+				});
+			}
+
+			globalLog('Sending profile request...');
+			if (callback) callback('Sending profile request...');
 			await deps.ao.message({
 				process: collectionId,
 				signer: deps.signer,

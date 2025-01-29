@@ -264,7 +264,7 @@ local function getIndexData(args) -- AssetType, ContentType
 
     if args then
         if args.AssetType then indexData.AssetType = args.AssetType end;
-        if args.ContentType then indexData.ContentType = args.ContentType end; 
+        if args.ContentType then indexData.ContentType = args.ContentType end;
     end
 
     return json.encode(indexData)
@@ -386,25 +386,44 @@ local function setStoreValue(key, value)
 
     local finalKey = parts[#parts]
 
+    local status, decodedValue = pcall(json.decode, value)
+
+    if not status or decodedValue == nil then
+        decodedValue = value
+    end
+
     if isAppend then
         -- Append mode
-        if isArray then
+        if type(current[finalKey]) == 'table' then
+            -- Append to an existing table
+            table.insert(current[finalKey], decodedValue)
+        elseif isArray then
             -- Append to the last array element
             local arr = current[finalKey]
             arr[#arr] = arr[#arr] .. value
         else
-            current[finalKey] = current[finalKey] .. value
+            -- Append to a string or create a new array
+            current[finalKey] = current[finalKey] and { current[finalKey], decodedValue } or { decodedValue }
         end
     else
         -- Normal mode
-        if isArray then
+        if type(decodedValue) == 'table' then
+            if current[finalKey] == nil then
+                current[finalKey] = decodedValue
+            else
+                -- Merge tables
+                for k, v in pairs(decodedValue) do
+                    current[finalKey][k] = v
+                end
+            end
+        elseif isArray then
             if current[finalKey] == nil then
                 current[finalKey] = { value }
             else
                 table.insert(current[finalKey], value)
             end
         else
-            current[finalKey] = value
+            current[finalKey] = decodedValue
         end
     end
 end
@@ -439,8 +458,12 @@ local function setTokenProps(collectedValues)
     end
 end
 
+local isInitialized = false
+
 -- Boot Initialization
-if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
+if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
+    isInitialized = true
+
     local collectedValues = {}
     for _, tag in ipairs(Inbox[1].TagArray) do
         if tag.name == 'Date-Created' then

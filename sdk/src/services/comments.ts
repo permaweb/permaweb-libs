@@ -4,13 +4,11 @@ import { GATEWAYS } from 'helpers/config';
 import { getTxEndpoint } from 'helpers/endpoints';
 import {
 	AssetCreateArgsType,
-	AssetHeaderType,
 	CommentCreateArgType,
 	CommentDetailType,
 	DependencyType,
 	GQLNodeResponseType,
 	TagFilterType,
-	TagType,
 } from 'helpers/types';
 
 import { buildAsset, createAtomicAssetWith, getAtomicAsset } from './assets';
@@ -43,13 +41,8 @@ export function getCommentWith(deps: DependencyType) {
 		try {
 			const asset: any = await getAtomicAsset(deps, id, { useGateway: true });
 
-			const dataSource = asset?.tags?.find((t: TagType) => {
-				return t.name === 'Data-Source';
-			})?.value;
-
-			const rootSource = asset?.tags?.find((t: TagType) => {
-				return t.name === 'Root-Source';
-			})?.value;
+			const dataSource = asset?.dataSource
+			const rootSource = asset?.rootSource
 
 			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
 
@@ -93,7 +86,7 @@ export function getCommentsWith(_deps: DependencyType) {
 			cursor: null,
 		});
 
-		let assets: AssetHeaderType[] = [];
+		let assets: any[] = [];
 
 		if (gqlResponse && gqlResponse.data.length) {
 			assets = gqlResponse.data.map((element: GQLNodeResponseType) => buildAsset(element));
@@ -101,13 +94,8 @@ export function getCommentsWith(_deps: DependencyType) {
 
 		const comments = [];
 		for (const asset of assets) {
-			const dataSource = asset?.tags?.find((t: TagType) => {
-				return t.name === 'Data-Source';
-			})?.value;
-
-			const rootSource = asset?.tags?.find((t: TagType) => {
-				return t.name === 'Root-Source';
-			})?.value;
+			const dataSource = asset?.dataSource;
+			const rootSource = asset?.rootSource;
 
 			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
 

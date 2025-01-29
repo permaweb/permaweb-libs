@@ -1,17 +1,16 @@
 import { aoCreateProcess, aoDryRun } from 'common/ao';
 import { getGQLData } from 'common/gql';
 
-import { AO, CONTENT_TYPES, GATEWAYS, LICENSES, TAGS } from 'helpers/config';
+import { AO, CONTENT_TYPES, GATEWAYS, TAGS } from 'helpers/config';
 import {
 	AssetCreateArgsType,
 	AssetDetailType,
 	AssetHeaderType,
 	DependencyType,
 	GQLNodeResponseType,
-	TagType,
-	UDLicenseType,
+	TagType
 } from 'helpers/types';
-import { formatAddress, getBootTag, getTagValue, mapFromProcessCase, mapToProcessCase } from 'helpers/utils';
+import { getBootTag, mapFromProcessCase, mapToProcessCase } from 'helpers/utils';
 
 export function createAtomicAssetWith(deps: DependencyType) {
 	return async (args: AssetCreateArgsType, callback?: (status: any) => void) => {
@@ -35,12 +34,16 @@ export function createAtomicAssetWith(deps: DependencyType) {
 	};
 }
 
-export async function getAtomicAsset(deps: DependencyType, id: string, args?: { useGateway?: boolean }): Promise<AssetDetailType | null> {
+export async function getAtomicAsset(
+	deps: DependencyType,
+	id: string,
+	args?: { useGateway?: boolean }
+): Promise<AssetDetailType | null> {
 	try {
-		const processInfo = await aoDryRun(deps, {
+		const processInfo = mapFromProcessCase(await aoDryRun(deps, {
 			processId: id,
 			action: 'Info',
-		});
+		}));
 
 		if (args?.useGateway) {
 			const gqlResponse = await getGQLData({
@@ -51,22 +54,28 @@ export async function getAtomicAsset(deps: DependencyType, id: string, args?: { 
 				cursor: null,
 			});
 
+			const gatewayAsset = gqlResponse?.data?.[0]
+				? buildAsset(gqlResponse.data[0])
+				: {};
+			
 			return {
-				tags: gqlResponse?.data?.[0]?.node?.tags,
-				...mapFromProcessCase(processInfo)
-			}
+				...gatewayAsset,
+				...processInfo,
+			};
 		}
 
-		return mapFromProcessCase(processInfo);
-
+		return {
+			id: id,
+			...processInfo
+		}
 	} catch (e: any) {
 		throw new Error(e.message || 'Error fetching atomic asset');
 	}
 }
 
 export function getAtomicAssetWith(deps: DependencyType) {
-	return async (id: string): Promise<AssetDetailType | null> => {
-		return await getAtomicAsset(deps, id);
+	return async (id: string, args?: { useGateway?: boolean }): Promise<AssetDetailType | null> => {
+		return await getAtomicAsset(deps, id, args);
 	};
 }
 
@@ -90,92 +99,36 @@ export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] 
 	}
 }
 
-export function buildAsset(element: GQLNodeResponseType): AssetHeaderType {
-	const mappedTagKeys = new Set([
-		TAGS.keys.creator,
-		TAGS.keys.title,
-		TAGS.keys.name,
-		TAGS.keys.description,
-		TAGS.keys.type,
-		TAGS.keys.topic,
-		TAGS.keys.implements,
-		TAGS.keys.contentType,
-		TAGS.keys.renderWith,
-		TAGS.keys.thumbnail,
-		TAGS.keys.license,
-		TAGS.keys.access,
-		TAGS.keys.derivations,
-		TAGS.keys.commericalUse,
-		TAGS.keys.dataModelTraining,
-		TAGS.keys.paymentMode,
-		TAGS.keys.paymentAddress,
-		TAGS.keys.currency,
-		TAGS.keys.collectionId,
-		TAGS.keys.dateCreated,
-	]);
+export function buildAsset(element: GQLNodeResponseType): any {
+	const asset: any = { id: element.node.id, owner: element.node.owner.address };
 
-	const asset = {
-		id: element.node.id,
-		owner: element.node.owner.address,
-		creator: getTagValue(element.node.tags, TAGS.keys.creator),
-		name: getName(element),
-		description: getTagValue(element.node.tags, TAGS.keys.description),
-		type: getTagValue(element.node.tags, TAGS.keys.type),
-		topics: getTopics(element),
-		implementation: getTagValue(element.node.tags, TAGS.keys.implements),
-		contentType: getTagValue(element.node.tags, TAGS.keys.contentType),
-		renderWith: getTagValue(element.node.tags, TAGS.keys.renderWith),
-		thumbnail: getTagValue(element.node.tags, TAGS.keys.thumbnail),
-		udl: getLicense(element),
-		collectionId: getTagValue(element.node.tags, TAGS.keys.collectionId),
-		dateCreated: getDateCreated(element),
-		blockHeight: element.node.block ? element.node.block.height : 0,
-		tags: element.node.tags.filter((tag) => !mappedTagKeys.has(tag.name)),
-	};
+	for (const tag of element.node.tags) {
+		const originalKey = tag.name;
+
+		const keyWithoutPrefix = originalKey.startsWith(`${TAGS.keys.bootloader}-`)
+			? originalKey.slice(`${TAGS.keys.bootloader}-`.length)
+			: originalKey;
+
+		const formattedKey = keyWithoutPrefix
+			.split('-')
+			.map((part, index) =>
+				index === 0
+					? part.toLowerCase()
+					: part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+			)
+			.join('');
+
+		let decodedValue;
+		try {
+			decodedValue = JSON.parse(tag.value);
+		} catch {
+			decodedValue = tag.value.toString();
+		}
+
+		asset[formattedKey] = decodedValue;
+	}
 
 	return asset;
-}
-
-function getName(element: GQLNodeResponseType): string {
-	return (
-		getTagValue(element.node.tags, TAGS.keys.name) ||
-		getTagValue(element.node.tags, TAGS.keys.title) ||
-		formatAddress(element.node.id, false)
-	);
-}
-
-function getTopics(element: GQLNodeResponseType): string[] {
-	return element.node.tags.filter((tag) => tag.name.includes(TAGS.keys.topic.toLowerCase())).map((tag) => tag.value);
-}
-
-function getDateCreated(element: GQLNodeResponseType): number {
-	if (element.node.block) {
-		return element.node.block.timestamp * 1000;
-	}
-
-	const dateCreatedTag = getTagValue(element.node.tags, TAGS.keys.dateCreated);
-	if (dateCreatedTag) {
-		return Number(dateCreatedTag);
-	}
-
-	return 0;
-}
-
-function getLicense(element: GQLNodeResponseType): UDLicenseType | null {
-	const license = getTagValue(element.node.tags, TAGS.keys.license);
-
-	if (license && license === LICENSES.udl.address) {
-		return {
-			access: { value: getTagValue(element.node.tags, TAGS.keys.access) },
-			derivations: { value: getTagValue(element.node.tags, TAGS.keys.derivations) },
-			commercialUse: { value: getTagValue(element.node.tags, TAGS.keys.commericalUse) },
-			dataModelTraining: { value: getTagValue(element.node.tags, TAGS.keys.dataModelTraining) },
-			paymentMode: getTagValue(element.node.tags, TAGS.keys.paymentMode),
-			paymentAddress: getTagValue(element.node.tags, TAGS.keys.paymentAddress),
-			currency: getTagValue(element.node.tags, TAGS.keys.currency),
-		};
-	}
-	return null;
 }
 
 function buildAssetCreateTags(args: AssetCreateArgsType): { name: string; value: string }[] {
@@ -187,6 +140,8 @@ function buildAssetCreateTags(args: AssetCreateArgsType): { name: string; value:
 		{ name: TAGS.keys.implements, value: 'ANS-110' },
 		{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
 		getBootTag('Name', args.name),
+		getBootTag('Description', args.description),
+		getBootTag('Topics', JSON.stringify(args.topics)),
 		getBootTag('Ticker', 'ATOMIC'),
 		getBootTag('Denomination', args.denomination?.toString() ?? '1'),
 		getBootTag('TotalSupply', args.supply?.toString() ?? '1'),
@@ -221,7 +176,7 @@ function getValidationErrorMessage(args: AssetCreateArgsType): string | null {
 	if (typeof args.contentType !== 'string' || args.contentType.trim() === '')
 		return 'Content type must be a non-empty string';
 	if (typeof args.assetType !== 'string' || args.assetType.trim() === '') return 'Type must be a non-empty string';
-	
+
 	if ('supply' in args && (typeof args.supply !== 'number' || args.supply <= 0))
 		return 'Supply must be a positive number';
 	if ('denomination' in args && (typeof args.denomination !== 'number' || args.denomination <= 0))
@@ -231,6 +186,6 @@ function getValidationErrorMessage(args: AssetCreateArgsType): string | null {
 	if ('tags' in args && (!Array.isArray(args.tags) || args.tags.some((tag) => typeof tag !== 'object')))
 		return 'Tags must be an array of objects';
 	if ('src' in args && typeof args.src !== 'string') return 'Source must be a valid string';
-	
+
 	return null;
 }
