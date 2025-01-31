@@ -1,3 +1,7 @@
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
+
 import Arweave from 'arweave';
 import { connect, createDataItemSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
@@ -85,7 +89,6 @@ function logError(message) {
 
 	logTest('Generating wallet...');
 	const wallet = await arweave.wallets.generate();
-
 	console.log(`Wallet address: ${await arweave.wallets.jwkToAddress(wallet)}`);
 
 	const permaweb = Permaweb.init({
@@ -137,7 +140,7 @@ function logError(message) {
 		try {
 			logTest('Testing profile creation...');
 			const profileId = await permaweb.createProfile({
-				username: 'My username',
+				userName: 'My username',
 				displayName: 'My display name',
 				description: 'My description'
 			}, (status) => console.log(`Callback: ${status}`));
@@ -149,13 +152,30 @@ function logError(message) {
 			const profileById = await permaweb.getProfileById(profileId);
 
 			expect(profileById).toBeDefined();
-			expect(profileById.username).toEqual('My username');
+			expect(profileById.userName).toEqual('My username');
 
 			logTest('Testing profile fetch by address...');
 			const profileByWalletAddress = await permaweb.getProfileByWalletAddress(await arweave.wallets.jwkToAddress(wallet));
 
 			expect(profileByWalletAddress).toBeDefined();
-			expect(profileByWalletAddress.username).toEqual('My username');
+			expect(profileByWalletAddress.userName).toEqual('My username');
+
+			logTest('Testing profile update...');
+			const profileUpdateId = await permaweb.updateProfile({
+				userName: 'My updated username',
+				displayName: 'My updated display name',
+				description: 'My updated description'
+			}, profileId, (status) => console.log(`Callback: ${status}`));
+
+			expect(profileUpdateId).toBeDefined();
+			expect(profileUpdateId).toEqualType('string');
+
+			logTest('Testing updated profile fetch...');
+			const updatedProfileById = await permaweb.getProfileById(profileId);
+
+			expect(updatedProfileById).toBeDefined();
+			expect(updatedProfileById.userName).toEqual('My updated username');
+
 		}
 		catch (e) {
 			logError(e.message ?? 'Profile tests failed');
@@ -277,7 +297,7 @@ function logError(message) {
 		try {
 			logTest('Creating profile to own collection...')
 			const profileId = await permaweb.createProfile({
-				username: 'My username',
+				userName: 'My username',
 				displayName: 'My display name',
 				description: 'My description'
 			}, (status) => console.log(`Callback: ${status}`));

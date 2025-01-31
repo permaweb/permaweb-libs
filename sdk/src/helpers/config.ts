@@ -4,10 +4,12 @@ export const AO = {
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
 		asset: 'XYz8buLR5LQdhOOzWuCt9kBjoXHMowouWpXcGm9wdEE',
-		zone: 'M9G2B9Uvk8VK1pxloESeT4XScguRKSzLyd4as1HFOJ8',
 		collection: '2ZDuM2VUCN8WHoAKOOjiH4_7Apq0ZHKnTWdLppxCdGY',
+		profile: 'WBhJpPafkykqZZgTr7TAsz48RKG4vbOEAH4rZ3JxIQ8',
+		zone: 'M9G2B9Uvk8VK1pxloESeT4XScguRKSzLyd4as1HFOJ8',
 	},
-	collectionsRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg',
+	collectionRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg',
+	profileRegistry: 'SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY'
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {
