@@ -1,14 +1,148 @@
+import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
 import { resolveTransaction } from 'common/arweave';
 import { getGQLData } from 'common/gql';
 
-import { GATEWAYS, TAGS } from 'helpers/config';
+import { AO, GATEWAYS, TAGS } from 'helpers/config';
 import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from 'helpers/types';
-import { getBootTag, mapFromProcessCase } from 'helpers/utils';
+import { getBootTag, globalLog, mapFromProcessCase } from 'helpers/utils';
 
 import { createZoneWith, getZoneWith, updateZoneWith } from './zones';
 
-// TODO: Bootloader registry
 export function createProfileWith(deps: DependencyType) {
+	return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
+		try {
+			if (!deps.signer) throw new Error(`No signer provided`);
+
+			const dateTime = new Date().getTime().toString();
+			const tags: { name: string; value: string }[] = [
+				{ name: 'Date-Created', value: dateTime },
+				{ name: 'Action', value: 'Create-Profile' },
+			];
+
+			let thumbnailTx = null;
+			let bannerTx = null;
+
+			try {
+				if (args.thumbnail) thumbnailTx = await resolveTransaction(deps, args.thumbnail);
+				if (args.banner) bannerTx = await resolveTransaction(deps, args.banner);
+			}
+			catch (e: any) {
+				console.error(e);
+			}
+
+			const profileId = await aoCreateProcess(deps, {
+				spawnTags: tags,
+				evalTxId: AO.src.profile
+			}, (status: any) => globalLog(status));
+
+			const updateData: any = {
+				UserName: args.userName,
+				DisplayName: args.displayName,
+				Description: args.description
+			}
+
+			if (thumbnailTx) updateData.ProfileImage = thumbnailTx;
+			if (bannerTx) updateData.CoverImage = bannerTx;
+
+			globalLog('Updating profile...');
+			if (callback) callback('Updating profile...');
+			const profileUpdateId = await aoSend(deps, {
+				processId: profileId,
+				action: 'Update-Profile',
+				data: updateData
+			});
+			globalLog(`Profile update: ${profileUpdateId}`);
+
+			return profileId;
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error creating profile');
+		}
+	};
+}
+
+export function updateProfileWith(deps: DependencyType) {
+	return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
+		if (profileId) {
+			let updateData: any = {
+				UserName: args.userName,
+				DisplayName: args.displayName,
+				Description: args.description,
+			};
+
+			if (args.thumbnail) {
+				try {
+					updateData.Thumbnail = await resolveTransaction(deps, args.thumbnail);
+				} catch (e: any) {
+					if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
+				}
+			}
+
+			if (args.banner) {
+				try {
+					updateData.Banner = await resolveTransaction(deps, args.banner);
+				} catch (e: any) {
+					if (callback) callback(`Failed to resolve banner: ${e.message}`);
+				}
+			}
+
+			try {
+				globalLog('Updating profile...');
+				if (callback) callback('Updating profile...');
+				const profileUpdateId = await aoSend(deps, {
+					processId: profileId,
+					action: 'Update-Profile',
+					data: updateData
+				});
+				globalLog(`Profile update: ${profileUpdateId}`);
+				return profileUpdateId;
+			} catch (e: any) {
+				throw new Error(e.message ?? 'Error updating profile');
+			}
+		} else {
+			throw new Error('No profile provided');
+		}
+	};
+}
+
+export function getProfileByIdWith(deps: DependencyType) {
+	return async (profileId: string): Promise<ProfileType | null> => {
+		try {
+			const processInfo = await aoDryRun(deps, {
+				processId: profileId,
+				action: 'Info',
+			});
+			const { Profile = {}, ...rest } = processInfo;
+			const flattenedProcessInfo = { ...rest, ...Profile };
+			return { id: profileId, ...mapFromProcessCase(flattenedProcessInfo) };
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error fetching profile');
+		}
+	};
+}
+
+export function getProfileByWalletAddressWith(deps: DependencyType) {
+	const getProfileById = getProfileByIdWith(deps);
+
+	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
+		try {
+			const profileLookup = await aoDryRun(deps, {
+				processId: AO.profileRegistry,
+				action: 'Get-Profiles-By-Delegate',
+				data: { Address: walletAddress }
+			});
+
+			let activeProfileId: string;
+			if (profileLookup && profileLookup.length > 0 && profileLookup[0].ProfileId) {
+				activeProfileId = profileLookup[0].ProfileId;
+				return await getProfileById(activeProfileId);
+			}
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error fetching profile');
+		}
+	};
+}
+
+export function createProfileWith_ZONE(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
 
 	return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
@@ -32,7 +166,7 @@ export function createProfileWith(deps: DependencyType) {
 			}
 		};
 
-		tags.push(getBootTag('Username', args.username));
+		tags.push(getBootTag('Username', args.userName));
 		tags.push(getBootTag('DisplayName', args.displayName));
 		tags.push(getBootTag('Description', args.description));
 
@@ -40,24 +174,6 @@ export function createProfileWith(deps: DependencyType) {
 
 		try {
 			profileId = await createZone({ tags: tags }, callback);
-
-			// if (profileId) {
-			// 	globalLog(`Profile ID: ${profileId}`);
-
-			// 	await waitForProcess(profileId);
-
-			// 	const registerId = await aoSend({
-			// 		processId: profileId,
-			// 		wallet: wallet,
-			// 		action: 'Register-Whitelisted-Subscriber',
-			// 		tags: [
-			// 			{ name: 'Topics', value: JSON.stringify(['Zone-Update']) },
-			// 			{ name: 'Subscriber-Process-Id', value: 'Wl7pTf-UEp6SIIu3S5MsTX074Sg8MhCx40NuG_YEhmk' },
-			// 		]
-			// 	});
-
-			// 	console.log(`Register ID: ${registerId}`);
-			// }
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error creating profile');
 		}
@@ -66,13 +182,13 @@ export function createProfileWith(deps: DependencyType) {
 	};
 }
 
-export function updateProfileWith(deps: DependencyType) {
+export function updateProfileWith_ZONE(deps: DependencyType) {
 	const updateZone = updateZoneWith(deps);
 
 	return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
 		if (profileId) {
 			let data: any = {
-				Username: args.username,
+				Username: args.userName,
 				DisplayName: args.displayName,
 				Description: args.description,
 			};
@@ -104,7 +220,7 @@ export function updateProfileWith(deps: DependencyType) {
 	};
 }
 
-export function getProfileByIdWith(deps: DependencyType) {
+export function getProfileByIdWith_ZONE(deps: DependencyType) {
 	const getZone = getZoneWith(deps);
 
 	return async (profileId: string): Promise<ProfileType | null> => {
@@ -117,7 +233,7 @@ export function getProfileByIdWith(deps: DependencyType) {
 	};
 }
 
-export function getProfileByWalletAddressWith(deps: DependencyType) {
+export function getProfileByWalletAddressWith_ZONE(deps: DependencyType) {
 	const getProfileById = getProfileByIdWith(deps);
 
 	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {

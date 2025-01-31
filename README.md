@@ -164,7 +164,7 @@ Profiles are a digital representation of entities, such as users, organizations,
 
 ```typescript
 const profileId = await permaweb.createProfile({
-  username: "My username",
+  userName: "My username",
   displayName: "My display name",
   description: "My description",
   thumbnail: "Thumbnail image data",
@@ -175,7 +175,7 @@ const profileId = await permaweb.createProfile({
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing profile details, including `username`, `displayName`, `description`, `thumbnail (optional)`, and `banner (optional)`
+- `args`: Object containing profile details, including `userName`, `displayName`, `description`, `thumbnail (optional)`, and `banner (optional)`
 - `callback (optional)`: Callback function for client use
 
 </details>
@@ -192,16 +192,13 @@ ProfileProcessId;
 #### `updateProfile`
 
 ```typescript
-const profileId = await permaweb.updateProfile(
-  {
-    username: "My usename",
+const profileId = await permaweb.updateProfile({
+    userName: "My usename",
     displayName: "My display name",
     description: "My description",
     thumbnail: "Thumbnail image data",
     banner: "Banner image data",
-  },
-  profileId
-);
+  }, profileId);
 ```
 
 <details>
@@ -242,7 +239,7 @@ const profile = await permaweb.getProfileById(profileId);
 {
   id: "ProfileProcessId",
   walletAddress: "WalletAddress",
-  username: "Sample username",
+  userName: "Sample username",
   displayName: "Sample display name",
   description: "Sample description",
   thumbnail: "ThumbnailTxId",
@@ -277,7 +274,7 @@ const profile = await permaweb.getProfileByWalletAddress(walletAddress);
 {
   id: "ProfileProcessId",
   walletAddress: "WalletAddress",
-  username: "Sample username",
+  userName: "Sample username",
   displayName: "Sample display name",
   description: "Sample description",
   thumbnail: "ThumbnailTxId",
@@ -805,6 +802,23 @@ export default function MyComponent() {
   return <h1>Permaweb Libs Component</h1>;
 }
 ```
+
+## Contributions
+
+Contributions to **@permaweb/libs** are welcome! Before submitting a new feature or service, please ensure that it:
+
+- **Aligns with the ecosystem**: Consider how the service can be broadly applicable across decentralized applications on Arweave. We strive to maintain composable, reusable, and interoperable building blocks.  
+- **Is interoperable**: New services or modules should easily integrate with existing modules (e.g., Profiles, Zones, Atomic Assets) to provide a cohesive developer experience.  
+- **Includes documentation and tests**: Provide clear documentation, usage examples, and sufficient test coverage to ensure quality and maintainability.
+
+### How to Contribute
+
+1. **Open an Issue**: Start by creating a new issue describing your proposal or bug fix. This helps gather feedback from the community and maintainers.  
+2. **Discuss**: Collaborate on the issue, refine the idea, and outline a plan.  
+3. **Implement**: Submit a Pull Request once you have a working solution. Please follow the existing code style and conventions.  
+4. **Review**: Engage in the review process—address comments, refine your code, and finalize changes.  
+
+By ensuring new contributions are designed with the broader ecosystem in mind, we maintain a robust and versatile platform for permaweb developers.
 
 ## Resources
 

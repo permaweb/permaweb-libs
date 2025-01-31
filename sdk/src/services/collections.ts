@@ -21,7 +21,6 @@ export function createCollectionWith(deps: DependencyType) {
 		if (!deps.signer) throw new Error(`No signer provided`);
 
 		const dateTime = new Date().getTime().toString();
-
 		const tags: TagType[] = [
 			{ name: TAGS.keys.contentType, value: 'application/json' },
 			{ name: TAGS.keys.creator, value: args.creator },
@@ -109,7 +108,7 @@ export function createCollectionWith(deps: DependencyType) {
 				globalLog('Sending collection to registry...');
 				if (callback) callback('Sending collection to registry...');
 				await deps.ao.message({
-					process: AO.collectionsRegistry,
+					process: AO.collectionRegistry,
 					signer: deps.signer,
 					tags: registryTags,
 				});
@@ -184,7 +183,7 @@ export function getCollectionsWith(deps: DependencyType) {
 		const action = args.creator ? 'Get-Collections-By-User' : 'Get-Collections';
 
 		const response = await aoDryRun(deps, {
-			processId: AO.collectionsRegistry,
+			processId: AO.collectionRegistry,
 			action: action,
 			tags: args.creator ? [{ name: 'Creator', value: args.creator }] : null,
 		});
