@@ -2,7 +2,7 @@
 
 **Status:** Draft  
 **Version:** 0.0.1  
-**Authors:** Nick Juliano (nick@arweave.org)  
+**Authors:** Nick Juliano (nick@arweave.org)
 
 ## Introduction
 
@@ -29,23 +29,27 @@ Atomic Assets serve as foundational building blocks for the permaweb, providing 
 An Atomic Asset consists of the following components:
 
 ### 1. **AO Token Process**
-   - Atomic Assets are defined as AO processes adhering to the [AO Token Blueprint](https://cookbook_ao.arweave.net/guides/aos/blueprints/token.html).
-   - This ensures compliance with standards for token creation, transfer, and ownership management.
+
+- Atomic Assets are defined as AO processes adhering to the [AO Token Blueprint](https://cookbook_ao.arweave.net/guides/aos/blueprints/token.html).
+- This ensures compliance with standards for token creation, transfer, and ownership management.
 
 ### 2. **Metadata**
-   - Metadata describes the asset and follows the [ANS-110 Standard](https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-110.md).  
-   - Required metadata includes:
-     - **Name**: The asset's name.
-     - **Ticker**: A unique identifier for the asset.
-     - **Denomination**: The smallest divisible unit of the asset.
-     - **Creator**: The asset's creator.
-     - **Collection**: (Optional) The Collection ID if the asset belongs to a group.
+
+- Metadata describes the asset and follows the [ANS-110 Standard](https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-110.md).
+- Required metadata includes:
+  - **Name**: The asset's name.
+  - **Ticker**: A unique identifier for the asset.
+  - **Denomination**: The smallest divisible unit of the asset.
+  - **Creator**: The asset's creator.
+  - **Collection**: (Optional) The Collection ID if the asset belongs to a group.
 
 ### 4. **Transferability**
-   - Assets may optionally be non-transferable, in which case only the creator or AO system can modify their state.
+
+- Assets may optionally be non-transferable, in which case only the creator or AO system can modify their state.
 
 ### 5. **Data**
-   - Atomic Assets include the actual data they represent (e.g., digital artwork, application code, or metadata) within their transaction.
+
+- Atomic Assets include the actual data they represent (e.g., digital artwork, application code, or metadata) within their transaction.
 
 ## Use Cases
 

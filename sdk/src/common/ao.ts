@@ -288,16 +288,16 @@ export function aoCreateProcessWith(deps: DependencyType) {
 				scheduler: args.scheduler || AO.scheduler,
 			};
 
-			if (args.spawnData) spawnArgs.data = args.spawnData;
-			if (args.spawnTags) spawnArgs.tags = args.spawnTags;
+			if (args.data) spawnArgs.data = args.data;
+			if (args.tags) spawnArgs.tags = args.tags;
 
 			statusCB && statusCB(`Spawning process...`);
 			const processId = await aoSpawn(deps, spawnArgs);
 
+			statusCB && statusCB(`Retrieving process...`);
+			await waitForProcess(processId, statusCB);
+			
 			if (args.evalTxId || args.evalSrc) {
-				statusCB && statusCB(`Retrieving process...`);
-				await waitForProcess(processId, statusCB);
-
 				statusCB && statusCB(`Process retrieved!`);
 				statusCB && statusCB('Sending eval...');
 
@@ -333,8 +333,8 @@ export async function aoCreateProcess(
 			scheduler: args.scheduler || AO.scheduler,
 		};
 
-		if (args.spawnData) spawnArgs.data = args.spawnData;
-		if (args.spawnTags) spawnArgs.tags = args.spawnTags;
+		if (args.data) spawnArgs.data = args.data;
+		if (args.tags) spawnArgs.tags = args.tags;
 
 		statusCB && statusCB(`Spawning process...`);
 		const processId = await aoSpawn(deps, spawnArgs);

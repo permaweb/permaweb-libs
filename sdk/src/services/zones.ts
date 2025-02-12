@@ -12,7 +12,7 @@ export function createZoneWith(deps: DependencyType) {
 
 			const zoneId = await aoCreateProcess(
 				deps,
-				{ spawnTags: tags },
+				{ tags: tags },
 				callback ? (status) => callback(status) : undefined,
 			);
 

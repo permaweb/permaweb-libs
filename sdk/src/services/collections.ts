@@ -80,7 +80,7 @@ export function createCollectionWith(deps: DependencyType) {
 		try {
 			const collectionId = await aoCreateProcess(
 				deps,
-				{ spawnTags: tags },
+				{ tags: tags },
 				callback ? (status) => callback(status) : undefined,
 			);
 
