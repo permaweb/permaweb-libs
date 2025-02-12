@@ -31,7 +31,7 @@ export function createProfileWith(deps: DependencyType) {
 			}
 
 			const profileId = await aoCreateProcess(deps, {
-				spawnTags: tags,
+				tags: tags,
 				evalTxId: AO.src.profile
 			}, (status: any) => globalLog(status));
 

@@ -15,8 +15,8 @@ export type ProcessSpawnType = {
 export type ProcessCreateType = {
 	module?: string;
 	scheduler?: string;
-	spawnData?: any;
-	spawnTags?: TagType[];
+	data?: any;
+	tags?: TagType[];
 	evalTags?: TagType[];
 	evalTxId?: string;
 	evalSrc?: string;

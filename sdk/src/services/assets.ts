@@ -23,7 +23,7 @@ export function createAtomicAssetWith(deps: DependencyType) {
 		try {
 			const assetId = await aoCreateProcess(
 				deps,
-				{ spawnTags: tags, spawnData: data },
+				{ tags: tags, data: data },
 				callback ? (status) => callback(status) : undefined,
 			);
 
