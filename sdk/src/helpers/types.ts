@@ -96,7 +96,7 @@ export type AssetDetailType = {
 	transferable: string;
 	creator: string;
 	balances: object;
-	metadata: object;
+	metadata: any;
 	dateCreated: string;
 	lastUpdate: string;
 }

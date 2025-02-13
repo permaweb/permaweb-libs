@@ -5,6 +5,7 @@ if Description ~= '<DESCRIPTION>' then Description = '<DESCRIPTION>' end
 if Creator ~= '<CREATOR>' then Creator = '<CREATOR>' end
 if Banner ~= '<BANNER>' then Banner = '<BANNER>' end
 if Thumbnail ~= '<THUMBNAIL>' then Thumbnail = '<THUMBNAIL>' end
+if ActivityId ~= '<ACTIVITY_ID>' then ActivityId = '<ACTIVITY_ID>' end
 
 if DateCreated ~= '<DATECREATED>' then DateCreated = '<DATECREATED>' end
 if LastUpdate ~= '<LASTUPDATE>' then LastUpdate = '<LASTUPDATE>' end
@@ -139,28 +140,56 @@ Handlers.add('Update-Assets', Handlers.utils.hasMatchingTag('Action', 'Update-As
 end)
 
 -- Initialize a request to add the collection to a profile
-Handlers.add('Add-Collection-To-Profile', Handlers.utils.hasMatchingTag('Action', 'Add-Collection-To-Profile'), function(msg)
-	if msg.From ~= Owner and msg.From ~= Creator and msg.From ~= ao.id then
-		ao.send({
-			Target = msg.From,
-			Action = 'Authorization-Error',
-			Tags = {
-				Status = 'Error',
-				Message = 'Unauthorized to access this handler'
-			}
-		})
-		return
-	end
-	if checkValidAddress(Creator) then
-    	ao.assign({Processes = { Creator }, Message = ao.id})
-    else
-    	ao.send({
-    		Target = msg.From,
-    		Action = 'Input-Error',
-    		Tags = {
-    			Status = 'Error',
-    			Message = 'ProfileProcess tag not specified or not a valid Process ID'
-    		}
-    	})
-    end
-end)
+Handlers.add('Update-Collection-Activity', Handlers.utils.hasMatchingTag('Action', 'Update-Collection-Activity'),
+	function(msg)
+		if msg.From ~= Owner and msg.From ~= Creator and msg.From ~= ao.id then
+			ao.send({
+				Target = msg.From,
+				Action = 'Authorization-Error',
+				Tags = {
+					Status = 'Error',
+					Message = 'Unauthorized to access this handler'
+				}
+			})
+			return
+		end
+
+		if msg.Tags.ActivityId then
+			ao.send({
+				Target = ActivityId,
+				Action = 'Update-OrderbookIds',
+				Data = json.encode({
+					OrderbookIds = msg.Tags.OrderbookId,
+					UpdateType = msg.Tags.UpdateType
+				})
+			})
+		end
+	end)
+
+-- Initialize a request to add the collection to a profile
+Handlers.add('Add-Collection-To-Profile', Handlers.utils.hasMatchingTag('Action', 'Add-Collection-To-Profile'),
+	function(msg)
+		if msg.From ~= Owner and msg.From ~= Creator and msg.From ~= ao.id then
+			ao.send({
+				Target = msg.From,
+				Action = 'Authorization-Error',
+				Tags = {
+					Status = 'Error',
+					Message = 'Unauthorized to access this handler'
+				}
+			})
+			return
+		end
+		if checkValidAddress(Creator) then
+			ao.assign({ Processes = { Creator }, Message = ao.id })
+		else
+			ao.send({
+				Target = msg.From,
+				Action = 'Input-Error',
+				Tags = {
+					Status = 'Error',
+					Message = 'ProfileProcess tag not specified or not a valid Process ID'
+				}
+			})
+		end
+	end)

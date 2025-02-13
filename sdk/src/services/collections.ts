@@ -16,7 +16,8 @@ export function createCollectionWith(deps: DependencyType) {
 		creator: string;
 		thumbnail: any;
 		banner: any;
-		skipRegistry?: boolean
+		skipRegistry?: boolean;
+		skipActivity?: boolean;
 	}, callback?: (status: any) => void) => {
 		if (!deps.signer) throw new Error(`No signer provided`);
 
@@ -93,20 +94,21 @@ export function createCollectionWith(deps: DependencyType) {
 				data: processSrc,
 			});
 
-			const registryTags = [
-				{ name: 'Action', value: 'Add-Collection' },
-				{ name: 'CollectionId', value: collectionId },
-				{ name: 'Name', value: cleanTagValue(args.title) },
-				{ name: 'Creator', value: args.creator },
-				{ name: 'DateCreated', value: dateTime },
-			];
-
-			if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
-			if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
-
 			if (!args.skipRegistry) {
 				globalLog('Sending collection to registry...');
 				if (callback) callback('Sending collection to registry...');
+
+				const registryTags = [
+					{ name: 'Action', value: 'Add-Collection' },
+					{ name: 'CollectionId', value: collectionId },
+					{ name: 'Name', value: cleanTagValue(args.title) },
+					{ name: 'Creator', value: args.creator },
+					{ name: 'DateCreated', value: dateTime },
+				];
+	
+				if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
+				if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
+
 				await deps.ao.message({
 					process: AO.collectionRegistry,
 					signer: deps.signer,
@@ -114,16 +116,31 @@ export function createCollectionWith(deps: DependencyType) {
 				});
 			}
 
-			globalLog('Sending profile request...');
-			if (callback) callback('Sending profile request...');
-			await deps.ao.message({
-				process: collectionId,
-				signer: deps.signer,
-				tags: [
-					{ name: 'Action', value: 'Add-Collection-To-Profile' },
-					{ name: 'ProfileProcess', value: args.creator },
-				],
-			});
+			if (!args.skipActivity) {
+				globalLog('Creating collection activity process...');
+				if (callback) callback('Creating collection activity process...');
+				
+				const activityTags = [
+					{ name: 'CollectionId', value: collectionId },
+					{ name: 'DateCreated', value: dateTime },
+					{ name: 'On-Boot', value: 'Us-iehkFM0rNxfGK6oyKzoIT3ihEsrT5zlQ_LO0bDTg' },
+				];
+				
+				const collectionActivityId = await aoCreateProcess(
+					deps,
+					{ tags: activityTags },
+					callback ? (status) => callback(status) : undefined,
+				);
+				
+				globalLog('Adding activity to collection process...');
+				if (callback) callback('Adding activity to collection process...');
+				await deps.ao.message({
+					process: collectionId,
+					signer: deps.signer,
+					tags: [{ name: 'Action', value: 'Eval' }],
+					data: `ActivityId = ActivityId or '${collectionActivityId}'`,
+				});
+			}
 
 			return collectionId;
 		}
