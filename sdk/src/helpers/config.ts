@@ -1,6 +1,7 @@
 export const AO = {
 	module: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM',
-	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
+	// scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA', // Legacynet
+	scheduler: 'yTVz5K0XU52lD9O0iHh42wgBGSXgsPcu7wEY8GqWnFY', // Mainnet relay https://relay.ao-hb.xyz
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
 		asset: 'XYz8buLR5LQdhOOzWuCt9kBjoXHMowouWpXcGm9wdEE',

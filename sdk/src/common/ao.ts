@@ -18,7 +18,16 @@ const GATEWAY = GATEWAYS.goldsky;
 const GATEWAY_RETRY_COUNT = 100;
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
-	const tags = [{ name: 'Authority', value: AO.mu }];
+	const address = await fetch('http://192.168.1.11:10000' + '/~meta@1.0/info/address').then((res) => res.text())
+	
+	const tags = [
+		{ name: 'authority', value: 'tYRUqrx6zuFFiix3MoSBYSPP3nMzi5EKf-lVYDEQz8A' }, // TODO: Mainnet
+		{ name: 'device', value: 'process@1.0' },
+		{ name: 'scheduler-device', value: 'scheduler@1.0' },
+		{ name: 'execution-device', value: 'compute-lite@1.0' },
+		{ name: 'scheduler-location', value: address },
+		{ name: 'scheduler', value: address },
+	];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	try {
@@ -27,7 +36,7 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 			scheduler: args.scheduler,
 			signer: deps.signer,
 			tags: tags,
-			data: args.data,
+			data: args.data ?? '1234',
 		});
 
 		globalLog(`Process ID: ${processId}`);
@@ -55,7 +64,7 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 			process: args.processId,
 			signer: deps.signer,
 			tags: tags,
-			data: data,
+			data: data ?? '1234',
 		});
 
 		return txId;
@@ -295,8 +304,8 @@ export function aoCreateProcessWith(deps: DependencyType) {
 			const processId = await aoSpawn(deps, spawnArgs);
 
 			statusCB && statusCB(`Retrieving process...`);
-			await waitForProcess(processId, statusCB);
-			
+			// await waitForProcess(processId, statusCB);
+
 			if (args.evalTxId || args.evalSrc) {
 				statusCB && statusCB(`Process retrieved!`);
 				statusCB && statusCB('Sending eval...');
@@ -340,7 +349,7 @@ export async function aoCreateProcess(
 		const processId = await aoSpawn(deps, spawnArgs);
 
 		statusCB && statusCB(`Retrieving process...`);
-		await waitForProcess(processId, statusCB);
+		// await waitForProcess(processId, statusCB);
 
 		if (args.evalTxId || args.evalSrc) {
 			statusCB && statusCB(`Process retrieved!`);
