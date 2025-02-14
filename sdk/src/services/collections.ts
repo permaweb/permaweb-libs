@@ -123,7 +123,7 @@ export function createCollectionWith(deps: DependencyType) {
 				const activityTags = [
 					{ name: 'CollectionId', value: collectionId },
 					{ name: 'DateCreated', value: dateTime },
-					{ name: 'On-Boot', value: 'Us-iehkFM0rNxfGK6oyKzoIT3ihEsrT5zlQ_LO0bDTg' },
+					{ name: 'On-Boot', value: AO.src.collectionActivity },
 				];
 				
 				const collectionActivityId = await aoCreateProcess(
@@ -138,7 +138,7 @@ export function createCollectionWith(deps: DependencyType) {
 					process: collectionId,
 					signer: deps.signer,
 					tags: [{ name: 'Action', value: 'Eval' }],
-					data: `ActivityId = ActivityId or '${collectionActivityId}'`,
+					data: `ActivityProcess = '${collectionActivityId}'`,
 				});
 			}
 

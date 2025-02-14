@@ -5,13 +5,13 @@ if Description ~= '<DESCRIPTION>' then Description = '<DESCRIPTION>' end
 if Creator ~= '<CREATOR>' then Creator = '<CREATOR>' end
 if Banner ~= '<BANNER>' then Banner = '<BANNER>' end
 if Thumbnail ~= '<THUMBNAIL>' then Thumbnail = '<THUMBNAIL>' end
-if ActivityId ~= '<ACTIVITY_ID>' then ActivityId = '<ACTIVITY_ID>' end
 
 if DateCreated ~= '<DATECREATED>' then DateCreated = '<DATECREATED>' end
 if LastUpdate ~= '<LASTUPDATE>' then LastUpdate = '<LASTUPDATE>' end
 
--- Assets: Id[]
-if not Assets then Assets = {} end
+Assets = Assets or {}
+ActivityIds = ActivityIds or {}
+ActivityProcess = ActivityProcess or '<ACTIVITY_ID>'
 
 local function decodeMessageData(data)
 	local status, decodedData = pcall(json.decode, data)
@@ -50,7 +50,8 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
 			Banner = Banner,
 			Thumbnail = Thumbnail,
 			DateCreated = DateCreated,
-			Assets = Assets
+			Assets = Assets,
+			ActivityProcess = ActivityProcess
 		})
 	})
 end)
@@ -139,7 +140,7 @@ Handlers.add('Update-Assets', Handlers.utils.hasMatchingTag('Action', 'Update-As
 	end
 end)
 
--- Initialize a request to add the collection to a profile
+-- Initialize a request to add a new orderbook to collection activity
 Handlers.add('Update-Collection-Activity', Handlers.utils.hasMatchingTag('Action', 'Update-Collection-Activity'),
 	function(msg)
 		if msg.From ~= Owner and msg.From ~= Creator and msg.From ~= ao.id then
@@ -154,16 +155,43 @@ Handlers.add('Update-Collection-Activity', Handlers.utils.hasMatchingTag('Action
 			return
 		end
 
-		if msg.Tags.ActivityId then
-			ao.send({
-				Target = ActivityId,
-				Action = 'Update-OrderbookIds',
-				Data = json.encode({
-					OrderbookIds = msg.Tags.OrderbookId,
-					UpdateType = msg.Tags.UpdateType
-				})
-			})
+		if msg.Tags.ActivityId and msg.Tags.UpdateType then
+			if msg.Tags.UpdateType == 'Add' then
+				local exists = false
+				for _, existingId in ipairs(ActivityIds) do
+					if existingId == msg.Tags.ActivityId then
+						exists = true
+						break
+					end
+				end
+				if not exists then
+					table.insert(ActivityIds, msg.Tags.ActivityId)
+				end
+			end
+
+			if msg.Tags.UpdateType == 'Remove' then
+				for _, id in ipairs(ActivityIds) do
+					for i, existingId in ipairs(ActivityIds) do
+						if existingId == id then
+							table.remove(ActivityIds, i)
+							break
+						end
+					end
+				end
+			end
 		end
+	end)
+
+Handlers.add('Forward-Order', Handlers.utils.hasMatchingTag('Action', 'Forward-Order'),
+	function(msg)
+		local isAllowed = false
+		for _, allowedActivityId in ipairs(ActivityIds) do
+			if msg.From == allowedActivityId then isAllowed = true end
+		end
+
+		if not isAllowed then return end
+
+		ao.send({ Target = ActivityProcess, Action = msg.Tags.UpdateType, Data = msg.Data })
 	end)
 
 -- Initialize a request to add the collection to a profile
