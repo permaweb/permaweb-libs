@@ -47,9 +47,7 @@ test("should read all metadata", async () => {
     logSendResult(result, "Read-Metadata")
     assert.equal(getTag(result?.Messages[0], "Status"), "Success")
 })
-// /*
-//     TODO: write a migration test: new lua, migration handler by owner only, supports same methods
-//  */
+
 test("STEVE should create profile A in registry from old profile code", async () => {
     // recieve profile data via send from profile
     const inputData = { AuthorizedAddress: STEVE_WALLET, UserName: PROFILE_A_USERNAME, DateCreated: 125555, DateUpdated: 125555 }
@@ -181,5 +179,3 @@ test('should add, update, remove role', async () => {
         undefined
     )
 })
-
-// // TODO add/remove from tables: languages, following, followed, topic-tags, locations, external_links, external_wallets

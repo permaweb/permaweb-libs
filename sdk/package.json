@@ -1,6 +1,6 @@
 {
 	"name": "@permaweb/libs",
-	"version": "0.0.25",
+	"version": "0.0.26",
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
@@ -18,7 +18,8 @@
 	},
 	"description": "",
 	"files": [
-		"dist"
+		"dist",
+		"README.md"
 	],
 	"keywords": [],
 	"author": "",

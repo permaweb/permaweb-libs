@@ -155,6 +155,7 @@ export type BaseGQLArgsType = {
 	ids?: string[] | null;
 	tags?: TagFilterType[] | null;
 	owners?: string[] | null;
+	recipients?: string[] | null;
 	cursor?: string | null;
 	paginator?: number;
 	minBlock?: number;
