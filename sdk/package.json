@@ -33,7 +33,8 @@
 		".": {
 			"import": "./dist/index.esm.js",
 			"require": "./dist/index.cjs",
-			"default": "./dist/index.js"
+			"default": "./dist/index.js",
+			"types": "./dist/types/index.d.ts"
 		},
 		"./browser": "./dist/index.esm.js",
 		"./node": "./dist/index.js"
