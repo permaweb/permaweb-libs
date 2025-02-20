@@ -36,6 +36,7 @@ function init(deps: Helpers.DependencyType) {
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),
 		getGQLData: Common.getGQLData,
+		getAggregatedGQLData: Common.getAggregatedGQLData,
 		createProcess: Common.aoCreateProcessWith(deps),
 		readProcess: Common.aoDryRunWith(deps),
 		sendMessage: Common.aoSendWith(deps),

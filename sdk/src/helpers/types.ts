@@ -96,7 +96,7 @@ export type AssetDetailType = {
 	transferable: string;
 	creator: string;
 	balances: object;
-	metadata: object;
+	metadata: any;
 	dateCreated: string;
 	lastUpdate: string;
 }
@@ -155,6 +155,7 @@ export type BaseGQLArgsType = {
 	ids?: string[] | null;
 	tags?: TagFilterType[] | null;
 	owners?: string[] | null;
+	recipients?: string[] | null;
 	cursor?: string | null;
 	paginator?: number;
 	minBlock?: number;
