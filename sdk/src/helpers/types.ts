@@ -176,6 +176,7 @@ export type GQLNodeResponseType = {
 	node: {
 		id: string;
 		tags: TagType[];
+		recipient?: string;
 		data: {
 			size: string;
 			type: string;

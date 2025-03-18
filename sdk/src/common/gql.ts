@@ -172,6 +172,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 		case GATEWAYS.goldsky:
 			if (!cursor) txCount = `count`;
 			if (recipients) recipientsfield = `recipients: ${recipients}`;
+			nodeFields += ` recipient`
 			break;
 	}
 
@@ -185,7 +186,6 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 				block: ${blockFilterStr},
 				after: ${cursor},
 				${order}
-				
 			){
 			${txCount}
 				pageInfo {
