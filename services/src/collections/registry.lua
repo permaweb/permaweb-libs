@@ -134,69 +134,68 @@ end)
 
 -- Remove collection by ID
 Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remove-Collection'), function(msg)
-	if msg.From ~= Owner and msg.From ~= ao.id then
-		ao.send({
-			Target = msg.From,
-			Action = 'Authorization-Error',
-			Tags = {
-				Status = 'Error',
-				Message = 'Unauthorized to access this handler'
-			}
-		})
-		return
-	end
+    local collectionId = msg.Tags.CollectionId
 
-	local collectionId = msg.Tags.CollectionId
+    if not collectionId or collectionId == '' then
+        ao.send({
+            Target = msg.From,
+            Action = 'Action-Response',
+            Tags = {
+                Status = 'Error',
+                Message = 'Invalid or missing CollectionId'
+            }
+        })
+        return
+    end
 
-	if not collectionId or collectionId == '' then
-		ao.send({
-			Target = msg.From,
-			Action = 'Action-Response',
-			Tags = {
-				Status = 'Error',
-				Message = 'Invalid or missing CollectionId'
-			}
-		})
-		return
-	end
+    local collection = nil
+    local collectionIndex = nil
+    for index, col in ipairs(Collections) do
+        if col.Id == collectionId then
+            collection = col
+            collectionIndex = index
+            break
+        end
+    end
 
-	local collectionIndex = nil
-	local collectionOwner = nil
+    if not collection then
+        ao.send({
+            Target = msg.From,
+            Action = 'Action-Response',
+            Tags = {
+                Status = 'Error',
+                Message = 'Collection not found'
+            }
+        })
+        return
+    end
 
-	for index, collection in ipairs(Collections) do
-		if collection.Id == collectionId then
-			collectionIndex = index
-			collectionOwner = collection.Creator
-			break
-		end
-	end
+    if msg.From ~= Owner and msg.From ~= ao.id and msg.From ~= collection.Creator then
+        ao.send({
+            Target = msg.From,
+            Action = 'Authorization-Error',
+            Tags = {
+                Status = 'Error',
+                Message = 'Unauthorized to remove this collection'
+            }
+        })
+        return
+    end
 
-	if not collectionIndex then
-		ao.send({
-			Target = msg.From,
-			Action = 'Action-Response',
-			Tags = {
-				Status = 'Error',
-				Message = 'Collection not found'
-			}
-		})
-		return
-	end
+    table.remove(Collections, collectionIndex)
+    for i, id in ipairs(CollectionsByUser[collection.Creator]) do
+        if id == collectionId then
+            table.remove(CollectionsByUser[collection.Creator], i)
+            break
+        end
+    end
 
-	table.remove(Collections, collectionIndex)
-	for i, id in ipairs(CollectionsByUser[collectionOwner]) do
-		if id == collectionId then
-			table.remove(CollectionsByUser[collectionOwner], i)
-			break
-		end
-	end
-
-	ao.send({
-		Target = msg.From,
-		Action = 'Action-Response',
-		Tags = {
-			Status = 'Success',
-			Message = 'Collection removed successfully'
-		}
-	})
+    ao.send({
+        Target = msg.From,
+        Action = 'Action-Response',
+        Tags = {
+            Status = 'Success',
+            Message = 'Collection removed successfully'
+        }
+    })
 end)
