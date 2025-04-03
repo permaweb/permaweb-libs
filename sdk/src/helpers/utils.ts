@@ -1,4 +1,4 @@
-import { TAGS } from './config';
+import { TAGS } from './config.ts';
 
 declare const InstallTrigger: any;
 

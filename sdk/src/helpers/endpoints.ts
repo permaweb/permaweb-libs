@@ -1,4 +1,4 @@
-import { checkValidAddress } from './utils';
+import { checkValidAddress } from './utils.ts';
 
 const arweaveEndpoint = 'https://arweave.net';
 

@@ -1,7 +1,6 @@
-import { getGQLData } from 'common/gql';
-
-import { GATEWAYS } from 'helpers/config';
-import { getTxEndpoint } from 'helpers/endpoints';
+import { getGQLData } from '../common/gql.ts';
+import { GATEWAYS } from '../helpers/config.ts';
+import { getTxEndpoint } from '../helpers/endpoints.ts';
 import {
 	AssetCreateArgsType,
 	CommentCreateArgType,
@@ -9,9 +8,9 @@ import {
 	DependencyType,
 	GQLNodeResponseType,
 	TagFilterType,
-} from 'helpers/types';
+} from '../helpers/types.ts';
 
-import { buildAsset, createAtomicAssetWith, getAtomicAsset } from './assets';
+import { buildAsset, createAtomicAssetWith, getAtomicAsset } from './assets.ts';
 
 export function createCommentWith(deps: DependencyType) {
 	const createAtomicAsset = createAtomicAssetWith(deps);

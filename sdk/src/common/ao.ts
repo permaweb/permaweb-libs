@@ -1,5 +1,5 @@
-import { AO, GATEWAYS } from 'helpers/config';
-import { getTxEndpoint } from 'helpers/endpoints';
+import { AO, GATEWAYS } from '../helpers/config.ts';
+import { getTxEndpoint } from '../helpers/endpoints.ts';
 import {
 	DependencyType,
 	MessageDryRunType,
@@ -8,10 +8,10 @@ import {
 	ProcessCreateType,
 	ProcessSpawnType,
 	TagType,
-} from 'helpers/types';
-import { getTagValue, globalLog } from 'helpers/utils';
+} from '../helpers/types.ts';
+import { getTagValue, globalLog } from '../helpers/utils.ts';
 
-import { getGQLData } from './gql';
+import { getGQLData } from './gql.ts';
 
 const GATEWAY = GATEWAYS.goldsky;
 

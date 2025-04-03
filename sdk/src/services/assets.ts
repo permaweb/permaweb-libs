@@ -1,7 +1,6 @@
-import { aoCreateProcess, aoDryRun } from 'common/ao';
-import { getGQLData } from 'common/gql';
-
-import { AO, CONTENT_TYPES, GATEWAYS, TAGS } from 'helpers/config';
+import { aoCreateProcess, aoDryRun } from '../common/ao.ts';
+import { getGQLData } from '../common/gql.ts';
+import { AO, CONTENT_TYPES, GATEWAYS, TAGS } from '../helpers/config.ts';
 import {
 	AssetCreateArgsType,
 	AssetDetailType,
@@ -9,8 +8,8 @@ import {
 	DependencyType,
 	GQLNodeResponseType,
 	TagType
-} from 'helpers/types';
-import { getBootTag, mapFromProcessCase, mapToProcessCase } from 'helpers/utils';
+} from '../helpers/types.ts';
+import { getBootTag, mapFromProcessCase, mapToProcessCase } from '../helpers/utils.ts';
 
 export function createAtomicAssetWith(deps: DependencyType) {
 	return async (args: AssetCreateArgsType, callback?: (status: any) => void) => {
@@ -24,7 +23,7 @@ export function createAtomicAssetWith(deps: DependencyType) {
 			const assetId = await aoCreateProcess(
 				deps,
 				{ tags: tags, data: data },
-				callback ? (status) => callback(status) : undefined,
+				callback ? (status: any) => callback(status) : undefined,
 			);
 
 			return assetId;

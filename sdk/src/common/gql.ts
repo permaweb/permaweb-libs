@@ -1,4 +1,4 @@
-import { GATEWAYS } from 'helpers/config';
+import { GATEWAYS } from '../helpers/config.ts';
 import {
 	BatchAGQLResponseType,
 	BatchGQLArgsType,
@@ -6,7 +6,7 @@ import {
 	GQLArgsType,
 	GQLNodeResponseType,
 	QueryBodyGQLArgsType,
-} from 'helpers/types';
+} from '../helpers/types.ts';
 
 const CURSORS = {
 	p1: 'P1',

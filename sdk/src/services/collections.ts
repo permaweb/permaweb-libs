@@ -1,10 +1,9 @@
-import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
-import { resolveTransaction } from 'common/arweave';
-
-import { AO, TAGS } from 'helpers/config';
-import { getTxEndpoint } from 'helpers/endpoints';
-import { CollectionDetailType, CollectionType, DependencyType, TagType } from 'helpers/types';
-import { cleanProcessField, cleanTagValue, globalLog } from 'helpers/utils';
+import { aoCreateProcess, aoDryRun, aoSend } from '../common/ao.ts';
+import { resolveTransaction } from '../common/arweave.ts';
+import { AO, TAGS } from '../helpers/config.ts';
+import { getTxEndpoint } from '../helpers/endpoints.ts';
+import { CollectionDetailType, CollectionType, DependencyType, TagType } from '../helpers/types.ts';
+import { cleanProcessField, cleanTagValue, globalLog } from '../helpers/utils.ts';
 
 const DEFAULT_COLLECTION_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
 const DEFAULT_COLLECTION_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';

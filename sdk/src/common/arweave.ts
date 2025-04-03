@@ -1,9 +1,10 @@
 /* Used for build - Do not remove ! */
 import Arweave from 'arweave';
+import { ArconnectSigner, TurboFactory } from '@ardrive/turbo-sdk/web';
 
-import { TAGS, UPLOAD } from 'helpers/config';
-import { DependencyType, TagType } from 'helpers/types';
-import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType, globalLog } from 'helpers/utils';
+import { TAGS, UPLOAD } from '../helpers/config.ts';
+import { DependencyType, TagType } from '../helpers/types.ts';
+import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType, globalLog } from '../helpers/utils.ts';
 
 export function resolveTransactionWith(deps: DependencyType) {
 	return async (data: any) => {
@@ -53,14 +54,34 @@ export async function createTransaction(
 		globalLog(`Content upload size: ${contentSize}`);
 
 		if (contentSize < Number(UPLOAD.dispatchUploadSize)) {
-			const tx = await deps.arweave.createTransaction({ data: content }, 'use_wallet');
-			tx.addTag(TAGS.keys.contentType, contentType);
-			if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tx.addTag(tag.name, tag.value));
+			try {
+				const tx = await deps.arweave.createTransaction({ data: content }, 'use_wallet');
+				tx.addTag(TAGS.keys.contentType, contentType);
+				if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tx.addTag(tag.name, tag.value));
 
-			const response = await global.window.arweaveWallet.dispatch(tx);
-			return response.id;
+				const response = await global.window.arweaveWallet.dispatch(tx);
+				return response.id;
+			}
+			catch (e: any) {
+				throw new Error(e.message ?? 'Error dispatching transaction');
+			}
 		} else {
-			throw new Error('Data exceeds max upload limit'); // TODO
+			try {
+				const signer = new ArconnectSigner(window.arweaveWallet);
+				const turbo = TurboFactory.authenticated({ signer });
+				
+				const response = await turbo.uploadFile({
+					fileStreamFactory: () => content,
+					fileSizeFactory: () => contentSize,
+					dataItemOpts: {
+						tags: [{ name: TAGS.keys.contentType, value: contentType }]
+					},
+				});
+				return response.id;
+			}
+			catch (e: any) {
+				throw new Error(e.message ?? 'Error bundling transaction');
+			}
 		}
 	} else {
 		throw new Error('Error preparing transaction data');
