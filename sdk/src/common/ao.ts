@@ -293,9 +293,6 @@ export function aoCreateProcessWith(deps: DependencyType) {
 
 			statusCB && statusCB(`Spawning process...`);
 			const processId = await aoSpawn(deps, spawnArgs);
-
-			statusCB && statusCB(`Retrieving process...`);
-			await waitForProcess(processId, statusCB);
 			
 			if (args.evalTxId || args.evalSrc) {
 				statusCB && statusCB(`Process retrieved!`);
@@ -338,9 +335,6 @@ export async function aoCreateProcess(
 
 		statusCB && statusCB(`Spawning process...`);
 		const processId = await aoSpawn(deps, spawnArgs);
-
-		statusCB && statusCB(`Retrieving process...`);
-		await waitForProcess(processId, statusCB);
 
 		if (args.evalTxId || args.evalSrc) {
 			statusCB && statusCB(`Process retrieved!`);
