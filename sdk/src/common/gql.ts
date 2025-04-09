@@ -1,4 +1,4 @@
-import { GATEWAYS } from 'helpers/config';
+import { GATEWAYS } from '../helpers/config.ts';
 import {
 	BatchAGQLResponseType,
 	BatchGQLArgsType,
@@ -6,7 +6,7 @@ import {
 	GQLArgsType,
 	GQLNodeResponseType,
 	QueryBodyGQLArgsType,
-} from 'helpers/types';
+} from '../helpers/types.ts';
 
 const CURSORS = {
 	p1: 'P1',
@@ -172,6 +172,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 		case GATEWAYS.goldsky:
 			if (!cursor) txCount = `count`;
 			if (recipients) recipientsfield = `recipients: ${recipients}`;
+			nodeFields += ` recipient`
 			break;
 	}
 
@@ -185,7 +186,6 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 				block: ${blockFilterStr},
 				after: ${cursor},
 				${order}
-				
 			){
 			${txCount}
 				pageInfo {

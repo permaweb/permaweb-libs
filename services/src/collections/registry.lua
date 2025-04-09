@@ -6,6 +6,18 @@ if not Collections then Collections = {} end
 -- CollectionsByUser: { Creator: { CollectionIds } }
 if not CollectionsByUser then CollectionsByUser = {} end
 
+InitialSync = InitialSync or 'INCOMPLETE'
+if InitialSync == 'INCOMPLETE' then
+	Send({
+		device = 'patch@1.0',
+		cache = {
+			Collections = Collections,
+			CollectionsByUser = CollectionsByUser
+		}
+	})
+	InitialSync = 'COMPLETE'
+end
+
 -- Add collection to registry
 Handlers.add('Add-Collection', Handlers.utils.hasMatchingTag('Action', 'Add-Collection'), function(msg)
 	local data = {
@@ -66,6 +78,14 @@ Handlers.add('Add-Collection', Handlers.utils.hasMatchingTag('Action', 'Add-Coll
 		CollectionsByUser[data.Creator] = {}
 	end
 	table.insert(CollectionsByUser[data.Creator], data.Id)
+
+	Send({
+		device = 'patch@1.0',
+		cache = {
+			Collections = Collections,
+			CollectionsByUser = CollectionsByUser
+		}
+	})
 
 	ao.send({
 		Target = msg.From,
@@ -190,6 +210,14 @@ Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remov
 			break
 		end
 	end
+
+	Send({
+		device = 'patch@1.0',
+		cache = {
+			Collections = Collections,
+			CollectionsByUser = CollectionsByUser
+		}
+	})
 
 	ao.send({
 		Target = msg.From,

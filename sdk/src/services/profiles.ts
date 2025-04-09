@@ -1,14 +1,14 @@
-import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
-import { resolveTransaction } from 'common/arweave';
-import { getGQLData } from 'common/gql';
+import { AO, GATEWAYS, TAGS } from 'helpers/config.ts';
 
-import { AO, GATEWAYS, TAGS } from 'helpers/config';
-import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from 'helpers/types';
-import { getBootTag, globalLog, mapFromProcessCase } from 'helpers/utils';
+import { aoCreateProcess, aoDryRun, aoSend } from '../common/ao.ts';
+import { resolveTransaction } from '../common/arweave.ts';
+import { getGQLData } from '../common/gql.ts';
+import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
+import { getBootTag, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
-import { createZoneWith, getZoneWith, updateZoneWith } from './zones';
+import { createZoneWith, getZoneWith, updateZoneWith } from './zones.ts';
 
-export function createProfileWith(deps: DependencyType) {
+export function createProfileWith_LEGACY(deps: DependencyType) {
 	return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
 		try {
 			if (!deps.signer) throw new Error(`No signer provided`);
@@ -36,7 +36,7 @@ export function createProfileWith(deps: DependencyType) {
 			}, (status: any) => globalLog(status));
 
 			const updateData: any = {
-				UserName: args.userName,
+				UserName: args.username,
 				DisplayName: args.displayName,
 				Description: args.description
 			}
@@ -60,11 +60,11 @@ export function createProfileWith(deps: DependencyType) {
 	};
 }
 
-export function updateProfileWith(deps: DependencyType) {
+export function updateProfileWith_LEGACY(deps: DependencyType) {
 	return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
 		if (profileId) {
 			let updateData: any = {
-				UserName: args.userName,
+				UserName: args.username,
 				DisplayName: args.displayName,
 				Description: args.description,
 			};
@@ -104,7 +104,7 @@ export function updateProfileWith(deps: DependencyType) {
 	};
 }
 
-export function getProfileByIdWith(deps: DependencyType) {
+export function getProfileByIdWith_LEGACY(deps: DependencyType) {
 	return async (profileId: string): Promise<ProfileType | null> => {
 		try {
 			const processInfo = await aoDryRun(deps, {
@@ -120,8 +120,8 @@ export function getProfileByIdWith(deps: DependencyType) {
 	};
 }
 
-export function getProfileByWalletAddressWith(deps: DependencyType) {
-	const getProfileById = getProfileByIdWith(deps);
+export function getProfileByWalletAddressWith_LEGACY(deps: DependencyType) {
+	const getProfileById = getProfileByIdWith_LEGACY(deps);
 
 	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
 		try {
@@ -142,7 +142,7 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 	};
 }
 
-export function createProfileWith_ZONE(deps: DependencyType) {
+export function createProfileWith(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
 
 	return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
@@ -166,7 +166,7 @@ export function createProfileWith_ZONE(deps: DependencyType) {
 			}
 		};
 
-		tags.push(getBootTag('Username', args.userName));
+		tags.push(getBootTag('Username', args.username));
 		tags.push(getBootTag('DisplayName', args.displayName));
 		tags.push(getBootTag('Description', args.description));
 
@@ -182,13 +182,13 @@ export function createProfileWith_ZONE(deps: DependencyType) {
 	};
 }
 
-export function updateProfileWith_ZONE(deps: DependencyType) {
+export function updateProfileWith(deps: DependencyType) {
 	const updateZone = updateZoneWith(deps);
 
 	return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
 		if (profileId) {
 			let data: any = {
-				Username: args.userName,
+				Username: args.username,
 				DisplayName: args.displayName,
 				Description: args.description,
 			};
@@ -220,7 +220,7 @@ export function updateProfileWith_ZONE(deps: DependencyType) {
 	};
 }
 
-export function getProfileByIdWith_ZONE(deps: DependencyType) {
+export function getProfileByIdWith(deps: DependencyType) {
 	const getZone = getZoneWith(deps);
 
 	return async (profileId: string): Promise<ProfileType | null> => {
@@ -233,7 +233,7 @@ export function getProfileByIdWith_ZONE(deps: DependencyType) {
 	};
 }
 
-export function getProfileByWalletAddressWith_ZONE(deps: DependencyType) {
+export function getProfileByWalletAddressWith(deps: DependencyType) {
 	const getProfileById = getProfileByIdWith(deps);
 
 	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {

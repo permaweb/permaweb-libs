@@ -1,5 +1,5 @@
-import { AO, GATEWAYS } from 'helpers/config';
-import { getTxEndpoint } from 'helpers/endpoints';
+import { AO, GATEWAYS } from '../helpers/config.ts';
+import { getTxEndpoint } from '../helpers/endpoints.ts';
 import {
 	DependencyType,
 	MessageDryRunType,
@@ -8,10 +8,10 @@ import {
 	ProcessCreateType,
 	ProcessSpawnType,
 	TagType,
-} from 'helpers/types';
-import { getTagValue, globalLog } from 'helpers/utils';
+} from '../helpers/types.ts';
+import { getTagValue, globalLog } from '../helpers/utils.ts';
 
-import { getGQLData } from './gql';
+import { getGQLData } from './gql.ts';
 
 const GATEWAY = GATEWAYS.goldsky;
 
@@ -20,6 +20,8 @@ const GATEWAY_RETRY_COUNT = 100;
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
 	const tags = [{ name: 'Authority', value: AO.mu }];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
+
+	console.log(args.data)
 
 	try {
 		const processId = await deps.ao.spawn({
@@ -34,6 +36,7 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 
 		return processId;
 	} catch (e: any) {
+		console.log(e)
 		throw new Error(e.message ?? 'Error spawning process');
 	}
 }
@@ -293,9 +296,6 @@ export function aoCreateProcessWith(deps: DependencyType) {
 
 			statusCB && statusCB(`Spawning process...`);
 			const processId = await aoSpawn(deps, spawnArgs);
-
-			statusCB && statusCB(`Retrieving process...`);
-			await waitForProcess(processId, statusCB);
 			
 			if (args.evalTxId || args.evalSrc) {
 				statusCB && statusCB(`Process retrieved!`);
@@ -338,9 +338,6 @@ export async function aoCreateProcess(
 
 		statusCB && statusCB(`Spawning process...`);
 		const processId = await aoSpawn(deps, spawnArgs);
-
-		statusCB && statusCB(`Retrieving process...`);
-		await waitForProcess(processId, statusCB);
 
 		if (args.evalTxId || args.evalSrc) {
 			statusCB && statusCB(`Process retrieved!`);

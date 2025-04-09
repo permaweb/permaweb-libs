@@ -1,6 +1,6 @@
 {
 	"name": "@permaweb/libs",
-	"version": "0.0.26",
+	"version": "0.0.29",
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
@@ -32,9 +32,7 @@
 	"exports": {
 		".": {
 			"import": "./dist/index.esm.js",
-			"require": "./dist/index.cjs",
-			"default": "./dist/index.js",
-			"types": "./dist/types/index.d.ts"
+			"require": "./dist/index.cjs"
 		},
 		"./browser": "./dist/index.esm.js",
 		"./node": "./dist/index.js"
@@ -44,10 +42,17 @@
 		"build": "node build.js"
 	},
 	"dependencies": {
+		"@ardrive/turbo-sdk": "^1.23.1",
 		"arweave": "^1.15.5",
 		"buffer": "^6.0.3",
+		"crypto-browserify": "^3.12.1",
+		"esbuild-plugin-alias": "^0.2.1",
+		"esbuild-plugin-polyfill-node": "^0.3.0",
+		"os-browserify": "^0.3.0",
 		"process": "^0.11.10",
-		"tsc-alias": "^1.8.10"
+		"stream-browserify": "^3.0.0",
+		"tsc-alias": "^1.8.10",
+		"web-streams-polyfill": "^4.1.0"
 	},
 	"devDependencies": {
 		"@types/async-retry": "^1.4.9",

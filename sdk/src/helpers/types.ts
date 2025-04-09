@@ -48,7 +48,7 @@ export type ZoneType = { store: any; assets: ZoneAssetType[] };
 export type ZoneAssetType = { id: string; balance: string; dateCreated: number; lastUpdate: number };
 
 export type ProfileArgsType = {
-	userName: string;
+	username: string;
 	displayName: string;
 	description: string;
 	thumbnail?: any;
@@ -58,7 +58,7 @@ export type ProfileArgsType = {
 export type ProfileType = {
 	id: string;
 	walletAddress: string;
-	userName: string;
+	username: string;
 	displayName: string;
 	description: string;
 	thumbnail?: any;
@@ -176,6 +176,7 @@ export type GQLNodeResponseType = {
 	node: {
 		id: string;
 		tags: TagType[];
+		recipient?: string;
 		data: {
 			size: string;
 			type: string;

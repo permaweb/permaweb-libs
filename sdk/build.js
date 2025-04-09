@@ -1,5 +1,9 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import esbuild from 'esbuild';
+import alias from 'esbuild-plugin-alias';
 import dtsPlugin from 'esbuild-plugin-d.ts';
+import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 import path from 'path';
 
 const sharedConfig = {
@@ -7,14 +11,13 @@ const sharedConfig = {
 	bundle: true,
 	sourcemap: true,
 	minify: true,
-	inject: [path.resolve('node_modules/process/browser.js')], // Explicitly inject the process polyfill
+	inject: [path.resolve('node_modules/process/browser.js')],
 	define: {
 		'process.env.NODE_ENV': JSON.stringify('production'),
 	},
 };
 
 const buildConfigs = [
-	// Node.js (CJS)
 	{
 		...sharedConfig,
 		outfile: 'dist/index.cjs',
@@ -22,7 +25,6 @@ const buildConfigs = [
 		format: 'cjs',
 		plugins: [dtsPlugin({ outDir: 'dist/types' })],
 	},
-	// Node.js (ESM)
 	{
 		...sharedConfig,
 		outfile: 'dist/index.js',
@@ -30,13 +32,21 @@ const buildConfigs = [
 		format: 'esm',
 		plugins: [dtsPlugin({ outDir: 'dist/types' })],
 	},
-	// Browser (ESM)
 	{
 		...sharedConfig,
 		outfile: 'dist/index.esm.js',
 		platform: 'browser',
 		format: 'esm',
-		plugins: [dtsPlugin({ outDir: 'dist/types' })],
+		external: ['fs', 'crypto', 'os', 'stream', 'util', 'node:buffer', 'node:stream', 'zlib', 'http', 'https', 'path'],
+		plugins: [
+			alias({
+				crypto: require.resolve('crypto-browserify'),
+				stream: require.resolve('stream-browserify'),
+				os: require.resolve('os-browserify/browser')
+			}),
+			polyfillNode(),
+			dtsPlugin({ outDir: 'dist/types' })
+		],
 	},
 ];
 async function build() {

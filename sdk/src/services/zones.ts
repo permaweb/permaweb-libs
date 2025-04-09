@@ -1,19 +1,18 @@
-import { aoCreateProcess, aoDryRun, aoSend } from 'common/ao';
-
-import { AO, TAGS } from 'helpers/config';
-import { DependencyType, TagType } from 'helpers/types';
-import { mapFromProcessCase } from 'helpers/utils';
+import { aoCreateProcess, aoDryRun, aoSend } from '../common/ao.ts';
+import { AO, TAGS } from '../helpers/config.ts';
+import { DependencyType, TagType } from '../helpers/types.ts';
+import { mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
-	return async (args: { tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
+	return async (args: { data?: any; tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
 		try {
 			const tags = [{ name: TAGS.keys.bootloaderInit, value: AO.src.zone }];
 			if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 			const zoneId = await aoCreateProcess(
 				deps,
-				{ tags: tags },
-				callback ? (status) => callback(status) : undefined,
+				{ data: args.data, tags: tags },
+				callback ? (status: any) => callback(status) : undefined,
 			);
 
 			return zoneId;

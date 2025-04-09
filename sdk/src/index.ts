@@ -1,9 +1,8 @@
 import { Buffer } from 'buffer';
 
-import * as Helpers from 'helpers';
-
-import * as Common from './common';
-import * as Services from './services';
+import * as Common from './common/index.ts';
+import * as Helpers from './helpers/index.ts';
+import * as Services from './services/index.ts';
 
 /* Used for build - Do not remove ! */
 if (!globalThis.Buffer) globalThis.Buffer = Buffer;
@@ -48,4 +47,4 @@ function init(deps: Helpers.DependencyType) {
 
 export default { init };
 
-export * from './helpers/types';
+export * from './helpers/types.ts';
