@@ -34,6 +34,7 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 
 		return processId;
 	} catch (e: any) {
+		console.log(e)
 		throw new Error(e.message ?? 'Error spawning process');
 	}
 }

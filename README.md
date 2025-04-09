@@ -164,7 +164,7 @@ Profiles are a digital representation of entities, such as users, organizations,
 
 ```typescript
 const profileId = await permaweb.createProfile({
-  userName: "My username",
+  username: "My username",
   displayName: "My display name",
   description: "My description",
   thumbnail: "Thumbnail image data",
@@ -175,7 +175,7 @@ const profileId = await permaweb.createProfile({
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing profile details, including `userName`, `displayName`, `description`, `thumbnail (optional)`, and `banner (optional)`
+- `args`: Object containing profile details, including `username`, `displayName`, `description`, `thumbnail (optional)`, and `banner (optional)`
 - `callback (optional)`: Callback function for client use
 
 </details>
@@ -193,7 +193,7 @@ ProfileProcessId;
 
 ```typescript
 const profileId = await permaweb.updateProfile({
-    userName: "My usename",
+    username: "My usename",
     displayName: "My display name",
     description: "My description",
     thumbnail: "Thumbnail image data",
@@ -239,7 +239,7 @@ const profile = await permaweb.getProfileById(profileId);
 {
   id: "ProfileProcessId",
   walletAddress: "WalletAddress",
-  userName: "Sample username",
+  username: "Sample username",
   displayName: "Sample display name",
   description: "Sample description",
   thumbnail: "ThumbnailTxId",
@@ -274,7 +274,7 @@ const profile = await permaweb.getProfileByWalletAddress(walletAddress);
 {
   id: "ProfileProcessId",
   walletAddress: "WalletAddress",
-  userName: "Sample username",
+  username: "Sample username",
   displayName: "Sample display name",
   description: "Sample description",
   thumbnail: "ThumbnailTxId",

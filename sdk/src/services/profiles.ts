@@ -36,7 +36,7 @@ export function createProfileWith_LEGACY(deps: DependencyType) {
 			}, (status: any) => globalLog(status));
 
 			const updateData: any = {
-				UserName: args.userName,
+				UserName: args.username,
 				DisplayName: args.displayName,
 				Description: args.description
 			}
@@ -64,7 +64,7 @@ export function updateProfileWith_LEGACY(deps: DependencyType) {
 	return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
 		if (profileId) {
 			let updateData: any = {
-				UserName: args.userName,
+				UserName: args.username,
 				DisplayName: args.displayName,
 				Description: args.description,
 			};
@@ -166,7 +166,7 @@ export function createProfileWith(deps: DependencyType) {
 			}
 		};
 
-		tags.push(getBootTag('Username', args.userName));
+		tags.push(getBootTag('Username', args.username));
 		tags.push(getBootTag('DisplayName', args.displayName));
 		tags.push(getBootTag('Description', args.description));
 
@@ -188,7 +188,7 @@ export function updateProfileWith(deps: DependencyType) {
 	return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
 		if (profileId) {
 			let data: any = {
-				Username: args.userName,
+				Username: args.username,
 				DisplayName: args.displayName,
 				Description: args.description,
 			};
