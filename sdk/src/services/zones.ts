@@ -4,14 +4,14 @@ import { DependencyType, TagType } from '../helpers/types.ts';
 import { mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
-	return async (args: { tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
+	return async (args: { data?: any; tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
 		try {
 			const tags = [{ name: TAGS.keys.bootloaderInit, value: AO.src.zone }];
 			if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 			const zoneId = await aoCreateProcess(
 				deps,
-				{ tags: tags },
+				{ data: args.data, tags: tags },
 				callback ? (status: any) => callback(status) : undefined,
 			);
 

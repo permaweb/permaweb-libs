@@ -1,9 +1,5 @@
-import fs from 'fs/promises';
-import os from 'os';
-import path from 'path';
-
 import Arweave from 'arweave';
-import { connect, createDataItemSigner } from '@permaweb/aoconnect';
+import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 
 const CREATOR = 'creator';
@@ -84,7 +80,7 @@ function logError(message) {
 }
 
 (async function () {
-	const ao = connect();
+	const ao = connect({ MODE: 'legacy' });
 	const arweave = Arweave.init();
 
 	logTest('Generating wallet...');
@@ -94,7 +90,7 @@ function logError(message) {
 	const permaweb = Permaweb.init({
 		ao: ao,
 		arweave: arweave,
-		signer: createDataItemSigner(wallet),
+		signer: createSigner(wallet),
 	});
 
 	async function testZones() {

@@ -2,13 +2,13 @@
 import { ReadableStream } from 'web-streams-polyfill';
 /* Used for build - Do not remove ! */
 import Arweave from 'arweave';
-import { ArconnectSigner, TurboFactory } from '@ardrive/turbo-sdk/web';
 
+// import { ArconnectSigner, TurboFactory } from '@ardrive/turbo-sdk/web';
 import { TAGS, UPLOAD } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType, globalLog } from '../helpers/utils.ts';
 
-TurboFactory.setLogLevel('debug')
+// TurboFactory.setLogLevel('debug')
 
 export function resolveTransactionWith(deps: DependencyType) {
 	return async (data: any) => {
@@ -69,28 +69,29 @@ export async function createTransaction(
 				throw new Error(e.message ?? 'Error dispatching transaction');
 			}
 		} else {
-			try {
-				const signer = new ArconnectSigner(window.arweaveWallet);
-				const turbo = TurboFactory.authenticated({ signer });
+			throw new Error('Paid uploads are not yet supported');
+			// try {
+			// 	const signer = new ArconnectSigner(window.arweaveWallet);
+			// 	const turbo = TurboFactory.authenticated({ signer });
 				
-				const response = await turbo.uploadFile({
-					fileStreamFactory: () =>
-						new ReadableStream({
-							start(controller) {
-								controller.enqueue(content);
-								controller.close();
-							},
-						}),
-					fileSizeFactory: () => contentSize,
-					dataItemOpts: {
-						tags: [{ name: TAGS.keys.contentType, value: contentType }]
-					},
-				});
-				return response.id;
-			}
-			catch (e: any) {
-				throw new Error(e.message ?? 'Error bundling transaction');
-			}
+			// 	const response = await turbo.uploadFile({
+			// 		fileStreamFactory: () =>
+			// 			new ReadableStream({
+			// 				start(controller) {
+			// 					controller.enqueue(content);
+			// 					controller.close();
+			// 				},
+			// 			}),
+			// 		fileSizeFactory: () => contentSize,
+			// 		dataItemOpts: {
+			// 			tags: [{ name: TAGS.keys.contentType, value: contentType }]
+			// 		},
+			// 	});
+			// 	return response.id;
+			// }
+			// catch (e: any) {
+			// 	throw new Error(e.message ?? 'Error bundling transaction');
+			// }
 		}
 	} else {
 		throw new Error('Error preparing transaction data');
