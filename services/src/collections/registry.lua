@@ -10,10 +10,10 @@ InitialSync = InitialSync or 'INCOMPLETE'
 if InitialSync == 'INCOMPLETE' then
 	Send({
 		device = 'patch@1.0',
-		cache = {
+		cache = json.encode({
 			Collections = Collections,
 			CollectionsByUser = CollectionsByUser
-		}
+		})
 	})
 	InitialSync = 'COMPLETE'
 end
@@ -81,10 +81,10 @@ Handlers.add('Add-Collection', Handlers.utils.hasMatchingTag('Action', 'Add-Coll
 
 	Send({
 		device = 'patch@1.0',
-		cache = {
+		cache = json.encode({
 			Collections = Collections,
 			CollectionsByUser = CollectionsByUser
-		}
+		})
 	})
 
 	ao.send({
@@ -213,10 +213,10 @@ Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remov
 
 	Send({
 		device = 'patch@1.0',
-		cache = {
+		cache = json.encode({
 			Collections = Collections,
 			CollectionsByUser = CollectionsByUser
-		}
+		})
 	})
 
 	ao.send({

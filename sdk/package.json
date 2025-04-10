@@ -43,6 +43,8 @@
 	},
 	"dependencies": {
 		"@ardrive/turbo-sdk": "^1.23.1",
+		"@arx/sdk": "file:../../arx",
+		"@permaweb/arx": "^1.0.0",
 		"arweave": "^1.15.5",
 		"buffer": "^6.0.3",
 		"crypto-browserify": "^3.12.1",

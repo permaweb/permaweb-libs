@@ -21,8 +21,6 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 	const tags = [{ name: 'Authority', value: AO.mu }];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
-	console.log(args.data)
-
 	try {
 		const processId = await deps.ao.spawn({
 			module: args.module,

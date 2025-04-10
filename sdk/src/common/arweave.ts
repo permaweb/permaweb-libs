@@ -3,6 +3,7 @@ import { ReadableStream } from 'web-streams-polyfill';
 /* Used for build - Do not remove ! */
 import Arweave from 'arweave';
 
+// import { ArweaveWebARx } from '@permaweb/arx/web/tokens/arweave';
 // import { ArconnectSigner, TurboFactory } from '@ardrive/turbo-sdk/web';
 import { TAGS, UPLOAD } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
@@ -70,10 +71,42 @@ export async function createTransaction(
 			}
 		} else {
 			throw new Error('Paid uploads are not yet supported');
+			
+			// const arx = new ArweaveWebARx({ url: UPLOAD.node1, wallet: { provider: window.arweaveWallet } });
+
+			// await arx.ready();
+
+			// console.log(arx)
+
+			// let uploader = arx.uploader.chunkedUploader;
+
+			// console.log(uploader)
+
+			// uploader.setBatchSize(UPLOAD.batchSize);
+			// uploader.setChunkSize(UPLOAD.chunkSize);
+
+			// console.log(uploader)
+
+			// uploader.on('chunkUpload', (chunkInfo) => {
+			// 	// setUploadPercentage(Math.floor((chunkInfo.totalUploaded / uploadReducer.data.content.size) * 100));
+			// 	console.log('---')
+			// });
+
+			// uploader.on('chunkError', (e) => {
+			// 	console.error(e);
+			// });
+
+			// console.log(uploader)
+
+			// const buffer = await fileToBuffer(uploadReducer.data.content);
+			// const txResponse = await uploader.uploadData(content, { tags: [{ name: TAGS.keys.contentType, value: contentType }] });
+
+			// console.log(txResponse)
+
 			// try {
 			// 	const signer = new ArconnectSigner(window.arweaveWallet);
 			// 	const turbo = TurboFactory.authenticated({ signer });
-				
+
 			// 	const response = await turbo.uploadFile({
 			// 		fileStreamFactory: () =>
 			// 			new ReadableStream({

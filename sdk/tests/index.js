@@ -1,6 +1,7 @@
 import Arweave from 'arweave';
 import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
+import { readFileSync } from 'fs';
 
 const CREATOR = 'creator';
 
@@ -72,7 +73,7 @@ function expect(actual) {
 }
 
 function logTest(message) {
-	console.log('\x1b[33m%s\x1b[0m', `\n${message}`);
+	console.log('\x1b[90m%s\x1b[0m', `\n${message}`);
 }
 
 function logError(message) {
@@ -83,8 +84,11 @@ function logError(message) {
 	const ao = connect({ MODE: 'legacy' });
 	const arweave = Arweave.init();
 
-	logTest('Generating wallet...');
-	const wallet = await arweave.wallets.generate();
+	// logTest('Generating wallet...');
+	// const wallet = await arweave.wallets.generate();
+
+	const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET, 'utf-8'));
+
 	console.log(`Wallet address: ${await arweave.wallets.jwkToAddress(wallet)}`);
 
 	const permaweb = Permaweb.init({
@@ -302,7 +306,8 @@ function logError(message) {
 			const collectionId = await permaweb.createCollection({
 				title: 'Sample collection title',
 				description: 'Sample collection description',
-				creator: profileId
+				creator: profileId,
+				skipRegistry: true
 			});
 
 			expect(collectionId).toBeDefined();
