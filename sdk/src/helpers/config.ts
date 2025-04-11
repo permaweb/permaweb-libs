@@ -9,7 +9,7 @@ export const AO = {
 		profile: 'WBhJpPafkykqZZgTr7TAsz48RKG4vbOEAH4rZ3JxIQ8',
 		zone: 'M9G2B9Uvk8VK1pxloESeT4XScguRKSzLyd4as1HFOJ8',
 	},
-	collectionRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg',
+	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
 	profileRegistry: 'SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY'
 };
 
