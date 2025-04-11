@@ -1,4 +1,4 @@
-import { AO, GATEWAYS } from '../helpers/config.ts';
+import { AO, GATEWAYS, HB } from '../helpers/config.ts';
 import { getTxEndpoint } from '../helpers/endpoints.ts';
 import {
 	DependencyType,
@@ -62,6 +62,32 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 		return txId;
 	} catch (e: any) {
 		throw new Error(e);
+	}
+}
+
+export async function readProcess(deps: DependencyType, args: { processId: string, path: string, node?: string, fallbackAction?: string }) {
+	const node = args.node ?? HB.node;
+	const mode = 'now';
+	try {
+		console.log('Getting state from HyperBEAM...');
+		const response = await fetch(`${node}/${args.processId}~process@1.0/${mode}/${args.path}`);
+		return await response.json();
+	}
+	catch (e: any) {
+		if (args.fallbackAction) {
+			console.error(e.message ?? 'Error reading process from HyperBEAM');
+
+			console.log('State not found, dryrunning...');
+			const response = await aoDryRun(deps, {
+				processId: args.processId,
+				action: args.fallbackAction,
+			});
+
+			return response;
+		}
+		else {
+			throw new Error(e.message ?? 'Error reading process from HyperBEAM');
+		}
 	}
 }
 
@@ -361,30 +387,6 @@ export async function aoCreateProcess(
 	}
 }
 
-export async function waitForProcess(processId: string, _setStatus?: (status: any) => void) {
-	let retries = 0;
-
-	while (retries < GATEWAY_RETRY_COUNT) {
-		await new Promise((r) => setTimeout(r, 2000));
-
-		const gqlResponse = await getGQLData({
-			gateway: GATEWAY,
-			ids: [processId],
-		});
-
-		if (gqlResponse?.data?.length) {
-			const foundProcess = gqlResponse.data[0].node.id;
-			globalLog(`Process found: ${foundProcess} (Try ${retries + 1})`);
-			return foundProcess;
-		} else {
-			globalLog(`Process not found: ${processId} (Try ${retries + 1})`);
-			retries++;
-		}
-	}
-
-	throw new Error(`Process not found, please try again`);
-}
-
 export async function fetchProcessSrc(txId: string): Promise<string> {
 	try {
 		const srcFetch = await fetch(getTxEndpoint(txId));
@@ -393,3 +395,30 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 		throw new Error(e);
 	}
 }
+
+export async function waitForProcess(args: { processId: string, noRetryLimit?: boolean }) {
+	let retries = 0;
+	const retryLimit = args.noRetryLimit ? Infinity : GATEWAY_RETRY_COUNT;
+  
+	while (retries < retryLimit) {
+	  await new Promise((resolve) => setTimeout(resolve, 2000));
+  
+	  const gqlResponse = await getGQLData({
+		gateway: GATEWAY,
+		ids: [args.processId],
+	  });
+  
+	  if (gqlResponse?.data?.length) {
+		const foundProcess = gqlResponse.data[0].node.id;
+		globalLog(`Process found: ${foundProcess} (Try ${retries + 1})`);
+		return foundProcess;
+	  } else {
+		globalLog(`Process not found: ${args.processId} (Try ${retries + 1})`);
+		retries++;
+	  }
+	}
+  
+	if (retryLimit !== Infinity) {
+	  throw new Error(`Process not found, please try again`);
+	}
+  }

@@ -1,4 +1,4 @@
-import { aoCreateProcess, aoDryRun, aoSend } from '../common/ao.ts';
+import { aoCreateProcess, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
 import { mapFromProcessCase } from '../helpers/utils.ts';
@@ -60,14 +60,15 @@ export function addToZoneWith(deps: DependencyType) {
 export function getZoneWith(deps: DependencyType) {
 	return async (zoneId: string): Promise<any | null> => {
 		try {
-			const processInfo = await aoDryRun(deps, {
+			const processInfo = await readProcess(deps, {
 				processId: zoneId,
-				action: 'Info',
+				path: 'zone',
+				fallbackAction: 'Info'
 			});
 
 			return mapFromProcessCase(processInfo);
 		} catch (e: any) {
-			throw new Error(e);
+			throw new Error(e.message ?? 'Error getting zone');
 		}
 	};
 }

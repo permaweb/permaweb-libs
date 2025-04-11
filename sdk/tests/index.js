@@ -1,19 +1,21 @@
 import Arweave from 'arweave';
 import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
-import { readFileSync } from 'fs';
+import fs from 'fs';
 
 const CREATOR = 'creator';
 
 function expect(actual) {
 	return {
 		toBeDefined: () => {
+			console.log('\x1b[90m%s\x1b[0m', `Checking if value is defined: ${JSON.stringify(actual)}`);
 			if (actual === undefined) {
 				throw new Error(`Expected value to be defined, but it was undefined`);
 			}
 			console.log('\x1b[32m%s\x1b[0m', 'Success: Value is defined');
 		},
 		toHaveProperty: (prop) => {
+			console.log('\x1b[90m%s\x1b[0m', `Checking if object ${JSON.stringify(actual)} has property '${prop}'`);
 			if (!(prop in actual)) {
 				throw new Error(`Expected object to have property '${prop}', but it was not found`);
 			}
@@ -22,30 +24,30 @@ function expect(actual) {
 		toEqualType: (expected) => {
 			const actualType = typeof actual;
 			const expectedType = typeof expected;
-
+			console.log('\x1b[90m%s\x1b[0m', `Checking type, actual: ${actualType}, expected: ${expectedType}`);
 			if (actualType !== expectedType) {
 				throw new Error(`Type mismatch: expected ${expectedType}, but got ${actualType}`);
 			}
-
 			if (actualType === 'object' && actual !== null && expected !== null) {
 				if (Array.isArray(actual) !== Array.isArray(expected)) {
 					throw new Error(
-						`Type mismatch: expected ${Array.isArray(expected) ? 'array' : 'object'}, but got ${Array.isArray(actual) ? 'array' : 'object'}`,
+						`Type mismatch: expected ${Array.isArray(expected) ? 'array' : 'object'}, but got ${Array.isArray(actual) ? 'array' : 'object'}`
 					);
 				}
 			}
 			console.log('\x1b[32m%s\x1b[0m', `Success: Types match (${actualType})`);
 		},
 		toEqualLength: (expected) => {
+			console.log('\x1b[90m%s\x1b[0m', `Checking length, actual: ${actual.length}, expected: ${expected}`);
 			if (actual.length !== expected) {
 				throw new Error(`Array length mismatch: expected length ${expected}, but got ${actual.length}`);
 			}
 			console.log('\x1b[32m%s\x1b[0m', `Success: Array length is equal (${actual.length})`);
 		},
 		toEqual: (expected) => {
+			console.log('\x1b[90m%s\x1b[0m', `Checking equality, actual: ${JSON.stringify(actual)}, expected: ${JSON.stringify(expected)}`);
 			const actualType = typeof actual;
 			const expectedType = typeof expected;
-
 			if (actualType !== expectedType) {
 				throw new Error(`Type mismatch: expected ${expectedType}, but got ${actualType}`);
 			}
@@ -53,7 +55,7 @@ function expect(actual) {
 			if (actualType === 'object' && actual !== null && expected !== null) {
 				const actualKeys = Object.keys(actual);
 				const expectedKeys = Object.keys(expected);
-
+				console.log('\x1b[90m%s\x1b[0m', `Checking object keys, actual keys: ${JSON.stringify(actualKeys)}, expected keys: ${JSON.stringify(expectedKeys)}`);
 				if (actualKeys.length !== expectedKeys.length) {
 					throw new Error(`Object key count mismatch: expected ${expectedKeys.length}, but got ${actualKeys.length}`);
 				}
@@ -62,6 +64,7 @@ function expect(actual) {
 					if (!(key in expected)) {
 						throw new Error(`Expected object is missing key: ${key}`);
 					}
+					// Recursive equality check on the property value
 					expect(actual[key]).toEqual(expected[key]);
 				}
 			} else if (actual !== expected) {
@@ -84,10 +87,14 @@ function logError(message) {
 	const ao = connect({ MODE: 'legacy' });
 	const arweave = Arweave.init();
 
-	// logTest('Generating wallet...');
-	// const wallet = await arweave.wallets.generate();
+	let wallet;
 
-	const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET, 'utf-8'));
+	if (!fs.existsSync(process.env.PATH_TO_WALLET)) {
+		console.log('Generating wallet...');
+		wallet = await arweave.wallets.generate();
+	} else {
+		wallet = JSON.parse(fs.readFileSync(process.env.PATH_TO_WALLET, 'utf-8'));
+	}
 
 	console.log(`Wallet address: ${await arweave.wallets.jwkToAddress(wallet)}`);
 

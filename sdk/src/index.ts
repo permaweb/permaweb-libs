@@ -39,6 +39,7 @@ function init(deps: Helpers.DependencyType) {
 		createProcess: Common.aoCreateProcessWith(deps),
 		readProcess: Common.aoDryRunWith(deps),
 		sendMessage: Common.aoSendWith(deps),
+		waitForProcess: Common.waitForProcess,
 		/* Utils */
 		mapFromProcessCase: Helpers.mapFromProcessCase,
 		mapToProcessCase: Helpers.mapToProcessCase,

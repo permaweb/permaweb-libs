@@ -1,4 +1,4 @@
-import { aoCreateProcess, aoDryRun } from '../common/ao.ts';
+import { aoCreateProcess, aoDryRun, readProcess } from '../common/ao.ts';
 import { getGQLData } from '../common/gql.ts';
 import { AO, CONTENT_TYPES, GATEWAYS, TAGS } from '../helpers/config.ts';
 import {
@@ -39,9 +39,10 @@ export async function getAtomicAsset(
 	args?: { useGateway?: boolean }
 ): Promise<AssetDetailType | null> {
 	try {
-		const processInfo = mapFromProcessCase(await aoDryRun(deps, {
+		const processInfo = mapFromProcessCase(await readProcess(deps, {
 			processId: id,
-			action: 'Info',
+			path: 'asset',
+			fallbackAction: 'Info',
 		}));
 
 		if (args?.useGateway) {
