@@ -32,7 +32,6 @@ export function createCollectionWith(deps: DependencyType) {
 				name: TAGS.keys.ans110.description,
 				value: cleanTagValue(args.description),
 			},
-			{ name: TAGS.keys.ans110.type, value: TAGS.values.document },
 			{ name: TAGS.keys.dateCreated, value: dateTime },
 			{
 				name: TAGS.keys.name,

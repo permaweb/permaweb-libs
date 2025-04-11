@@ -41,6 +41,24 @@ local function decodeMessageData(data)
     return true, decodedData
 end
 
+local function getState()
+    return {
+        Name = Token.Name,
+        Ticker = Token.Ticker,
+        Denomination = tostring(Token.Denomination),
+        Balances = Token.Balances,
+        Transferable = Token.Transferable,
+        Creator = Token.Creator,
+        Metadata = Metadata,
+        DateCreated = tostring(DateCreated),
+        LastUpdate = tostring(LastUpdate)
+    }
+end
+
+local function syncState()
+    Send({ device = 'patch@1.0', asset = json.encode(getState()) })
+end
+
 -- Read process state
 Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
     msg.reply({
@@ -48,17 +66,7 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
         Ticker = Token.Ticker,
         Denomination = tostring(Token.Denomination),
         Transferable = tostring(Token.Transferable),
-        Data = {
-            Name = Token.Name,
-            Ticker = Token.Ticker,
-            Denomination = tostring(Token.Denomination),
-            Balances = Token.Balances,
-            Transferable = Token.Transferable,
-            Creator = Token.Creator,
-            Metadata = Metadata,
-            DateCreated = tostring(DateCreated),
-            LastUpdate = tostring(LastUpdate)
-        }
+        Data = getState()
     })
 end)
 
@@ -137,6 +145,8 @@ Handlers.add('Transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
                 Quantity = tostring(data.Quantity)
             })
         })
+
+        syncState()
     end
 end)
 
@@ -170,6 +180,8 @@ Handlers.add('Mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(m
         Token.Balances[Owner] = tostring(bint(Token.Balances[Owner]) + bint(data.Quantity))
 
         msg.reply({ Action = 'Mint-Success', Tags = { Status = 'Success', Message = 'Tokens minted' } })
+
+        syncState()
     else
         msg.reply({
             Action = 'Input-Error',
@@ -300,6 +312,8 @@ Handlers.add('Update-Asset', 'Update-Asset', function(msg)
             Action = 'Update-Asset-Notice',
             Tags = { Status = 'Success', Message = 'Asset updated!' }
         })
+
+        syncState()
     end
 end)
 
@@ -501,5 +515,7 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
                 Quantity = tostring(Token.TotalSupply)
             })
         })
+
+        syncState()
     end
 end

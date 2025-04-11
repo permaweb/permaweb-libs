@@ -85,46 +85,34 @@ function AssetManager:update(args)
         return
     end
 
-    print('Reading balance...')
-    Send({ Target = args.AssetId, Action = 'Balance', Recipient = ao.id, Data = json.encode({ Target = ao.id }) })
-
-    print('Balance requested...')
-    local balance_result = Receive({ From = args.AssetId })
-
-    if not balance_result then
-        print(balance_result)
-        print('No balance result found')
-        return
-    end
-
-    print('Balance received')
-    print('Balance: ' .. balance_result.Data)
-
     local asset_index = get_asset_index(self, args.AssetId)
 
     if asset_index > -1 then
         print('Updating existing asset...')
         if args.Type == 'Add' then
-            self.Assets[asset_index].Quantity = utils.add(self.Assets[asset_index].Quantity, balance_result.Data)
+            self.Assets[asset_index].Quantity = utils.add(self.Assets[asset_index].Quantity, args.Quantity)
         end
         if args.Type == 'Remove' then
-            self.Assets[asset_index].Quantity = utils.subtract(self.Assets[asset_index].Quantity, balance_result.Data)
+            self.Assets[asset_index].Quantity = utils.subtract(self.Assets[asset_index].Quantity, args.Quantity)
         end
         self.Assets[asset_index].LastUpdate = args.Timestamp
+
+        args.SyncState()
         print('Asset updated')
     else
-        if args.Type == 'Add' and utils.to_number(balance_result.Data) > 0 then
+        if args.Type == 'Add' and utils.to_number(args.Quantity) > 0 then
             print('Adding new asset...')
 
             table.insert(self.Assets, {
                 Id = args.AssetId,
-                Quantity = utils.to_balance_value(balance_result.Data),
+                Quantity = utils.to_balance_value(args.Quantity),
                 DateCreated = args.Timestamp,
                 LastUpdate = args.Timestamp,
                 Type = args.AssetType,
                 ContentType = args.ContentType
             })
 
+            args.SyncState()
             print('Asset added')
         else
             print('No asset found to update...')

@@ -20,7 +20,7 @@ FILES=(
     "../../packages/kv/base/src/kv.lua"
     "../../packages/kv/batchplugin/src/batch.lua"
     "../../packages/asset-manager/asset-manager.lua"
-    "../src/zones/zone.lua"
+    "../src/zones/zone-v2.lua"
 )
 
 # Array of corresponding package names
