@@ -149,8 +149,8 @@ export function createProfileWith(deps: DependencyType) {
 		let profileId: string | null = null;
 
 		const tags: { name: string; value: string }[] = [
-			{ name: TAGS.keys.dataProtocol, value: 'Zone' },
-			{ name: TAGS.keys.zoneType, value: 'User' },
+			{ name: TAGS.keys.dataProtocol, value: TAGS.values.zone },
+			{ name: TAGS.keys.zoneType, value: TAGS.values.user },
 		];
 
 		const addImageTag = async (imageKey: 'Thumbnail' | 'Banner') => {
@@ -166,9 +166,9 @@ export function createProfileWith(deps: DependencyType) {
 			}
 		};
 
-		tags.push(getBootTag('Username', args.username));
-		tags.push(getBootTag('DisplayName', args.displayName));
-		tags.push(getBootTag('Description', args.description));
+		if (args.username) tags.push(getBootTag('Username', args.username));
+		if (args.displayName) tags.push(getBootTag('DisplayName', args.displayName));
+		if (args.description) tags.push(getBootTag('Description', args.description));
 
 		await Promise.all([addImageTag('Thumbnail'), addImageTag('Banner')]);
 
@@ -241,8 +241,8 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 			const gqlResponse = await getGQLData({
 				gateway: GATEWAYS.goldsky,
 				tags: [
-					{ name: TAGS.keys.dataProtocol, values: ['Zone'] },
-					{ name: TAGS.keys.zoneType, values: ['User'] },
+					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.zone] },
+					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] },
 				],
 				owners: [walletAddress],
 			});
