@@ -82,6 +82,8 @@ export const TAGS = {
 	},
 	values: {
 		document: 'Document',
+		user: 'User',
+		zone: 'Permaweb-Zone'
 	},
 };
 

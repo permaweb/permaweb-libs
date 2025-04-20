@@ -60,11 +60,7 @@ export function addToZoneWith(deps: DependencyType) {
 export function getZoneWith(deps: DependencyType) {
 	return async (zoneId: string): Promise<any | null> => {
 		try {
-			const processInfo = await readProcess(deps, {
-				processId: zoneId,
-				path: 'zone',
-				fallbackAction: 'Info'
-			});
+			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', fallbackAction: 'Info' });
 
 			return mapFromProcessCase(processInfo);
 		} catch (e: any) {
