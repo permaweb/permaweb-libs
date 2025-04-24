@@ -134,7 +134,7 @@ end)
 
 -- Remove collection by ID
 Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remove-Collection'), function(msg)
-	if msg.From ~= Owner and msg.From ~= ao.id then
+	if msg.From ~= Owner and msg.From ~= ao.id and msg.From ~= collectionOwner then
 		ao.send({
 			Target = msg.From,
 			Action = 'Authorization-Error',
@@ -145,7 +145,7 @@ Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remov
 		})
 		return
 	end
-
+	
 	local collectionId = msg.Tags.CollectionId
 
 	if not collectionId or collectionId == '' then
