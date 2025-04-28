@@ -37,7 +37,8 @@ Zone.Constants = Zone.Constants or {
 Zone.ROLE_NAMES = Zone.ROLE_NAMES or {
     ADMIN = 'Admin',
     CONTRIBUTOR = 'Contributor',
-    MODERATOR = 'Moderator'
+    MODERATOR = 'Moderator',
+    GUEST_CONTRIBUTOR = 'Guest_Contributor',
 }
 
 Zone.Data = Zone.Data or {
@@ -58,12 +59,12 @@ HandlerSpecialRoles = HandlerSpecialRoles or {
 }
 
 -- Roles: { <Id>: string = {...roles} } :. Roles[<id>] = {...}
-if not Roles then
-    Roles = {}
+if not Zone.Roles then
+    Zone.Roles = {}
 end
 
 function GetState()
-    return { Store = Zone.Data.KV:dump(), Assets = Zone.Data.AssetManager.Assets }
+    return { Store = Zone.Data.KV:dump(), Assets = Zone.Data.AssetManager.Assets, Roles = Zone.Roles }
 end
 
 function SyncState()
@@ -88,7 +89,7 @@ function Zone.Functions.rolesHasValue(roles, role)
 end
 
 function Zone.Functions.getActorRoles(actor)
-    for id, roles in pairs(Roles) do
+    for id, roles in pairs(Zone.Roles) do
         if id == actor then
             return roles
         end
@@ -134,7 +135,7 @@ function Zone.Functions.authRunAction(msg)
 end
 
 function Zone.Functions.isAuthorized(msg)
-    if msg.From ~= Owner and msg.From ~= ao.id and Zone.Functions.tableLength(Roles) == 0 then
+    if msg.From ~= Owner and msg.From ~= ao.id and Zone.Functions.tableLength(Zone.Roles) == 0 then
         return false, 'Not Authorized'
     end
 
@@ -270,7 +271,7 @@ function Zone.Functions.getRoles(msg)
     else
         msg.reply({
             Action = Zone.Constants.H_ZONE_SUCCESS,
-            Data = Roles
+            Data = Zone.Roles
         })
     end
 end
@@ -367,7 +368,7 @@ function Zone.Functions.zoneRoleSet(msg)
             return
         end
 
-        Roles[actorId] = roles
+        Zone.Roles[actorId] = roles
 
         SyncState()
         ao.send({

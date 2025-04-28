@@ -267,7 +267,7 @@ export function mapFromProcessCase(obj: any): any {
 		return obj.map(mapFromProcessCase);
 	} else if (obj && typeof obj === 'object') {
 		return Object.entries(obj).reduce((acc: any, [key, value]) => {
-			const fromKey = fromProcessCase(key);
+			const fromKey = checkValidAddress(key as any) ? key : fromProcessCase(key);
 			acc[fromKey] = checkValidAddress(value as any) ? value : mapFromProcessCase(value);
 			return acc;
 		}, {});
