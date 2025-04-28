@@ -3,7 +3,7 @@ import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 import fs from 'fs';
 
-const CREATOR = 'creator';
+const CREATOR = 'RhguwWmQJ-wWCXhRH_NtTDHRRgfCqNDZckXtJK52zKs';
 
 function expect(actual) {
 	return {
@@ -250,7 +250,9 @@ function logError(message) {
 			});
 
 			logTest('Testing updated asset fetch...');
-			const updatedAsset = await permaweb.getAtomicAsset(assetId1, { useGateway: true });
+			const updatedAsset = await permaweb.getAtomicAsset(assetId1);
+
+			console.log(updatedAsset);
 
 			expect(updatedAsset).toBeDefined();
 			expect(updatedAsset.name).toEqual('Updated Name');
