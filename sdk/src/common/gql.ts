@@ -55,7 +55,7 @@ export async function getGQLData(args: GQLArgsType): Promise<DefaultGQLResponseT
 	}
 }
 
-export async function getAggregatedGQLData(args: GQLArgsType, callback?: (message: string) => void) { // , processElementCallback: (element: GQLNodeResponseType) => void
+export async function getAggregatedGQLData(args: GQLArgsType, callback?: (message: string) => void) {
 	let index = 1;
 	let fetchResult = await getGQLData(args);
 
@@ -158,12 +158,24 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 	const owners = args.owners ? JSON.stringify(args.owners) : null;
 	const recipients = args.recipients ? JSON.stringify(args.recipients) : null;
 	const cursor = args.cursor && args.cursor !== CURSORS.end ? `"${args.cursor}"` : null;
+	
+	let sort: string = '';
+	if (args.sort) {
+		sort += 'sort: '
+		switch (args.sort) {
+			case 'ascending':
+				sort += 'HEIGHT_ASC';
+				break;
+			case 'descending':
+				sort += 'HEIGHT_DESC';
+				break;
+		}
+	}
 
 	let fetchCount: string = `first: ${paginator}`;
 	let txCount: string = '';
 	let nodeFields: string = `data { size type } owner { address } block { height timestamp }`;
-	let order: string = '';
-	let recipientsfield: string = ''
+	let recipientsfield: string = '';
 
 	const gateway = args.gateway ?? GATEWAYS.goldsky;
 	switch (gateway) {
@@ -185,7 +197,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 				${recipientsfield},
 				block: ${blockFilterStr},
 				after: ${cursor},
-				${order}
+				${sort}
 			){
 			${txCount}
 				pageInfo {
