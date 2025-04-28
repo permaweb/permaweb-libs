@@ -14,6 +14,7 @@ function init(deps: Helpers.DependencyType) {
 		updateZone: Services.updateZoneWith(deps),
 		addToZone: Services.addToZoneWith(deps),
 		getZone: Services.getZoneWith(deps),
+		setZoneRoles: Services.setZoneRolesWith(deps),
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),
 		updateProfile: Services.updateProfileWith(deps),

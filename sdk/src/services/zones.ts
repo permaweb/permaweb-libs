@@ -1,7 +1,7 @@
 import { aoCreateProcess, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
-import { mapFromProcessCase } from '../helpers/utils.ts';
+import {checkValidAddress, mapFromProcessCase} from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
 	return async (args: { data?: any; tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
@@ -69,6 +69,28 @@ export function getZoneWith(deps: DependencyType) {
 			return mapFromProcessCase(processInfo);
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error getting zone');
+		}
+	};
+}
+
+export function setZoneRolesWith(deps: DependencyType) {
+	return async (args: { roles: string[]; granteeId: string; }, zoneId: string): Promise<string | null> => {
+		const granteeValid = checkValidAddress(args.granteeId);
+		const zoneValid = checkValidAddress(zoneId);
+
+		if (!granteeValid) throw new Error('Invalid granteeId address')
+		if (!zoneValid) throw new Error('Invalid zone address')
+		try {
+			const zoneUpdateId = await aoSend(deps, {
+				processId: zoneId,
+				action: 'Role-Set',
+				tags: [],
+				data: { id: args.granteeId, roles: args.roles },
+			});
+
+			return zoneUpdateId;
+		} catch (e: any) {
+			throw new Error(e);
 		}
 	};
 }

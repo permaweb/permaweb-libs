@@ -226,6 +226,9 @@ export function getProfileByIdWith(deps: DependencyType) {
 	return async (profileId: string): Promise<ProfileType | null> => {
 		try {
 			const zone = await getZone(profileId);
+			if (!zone) {
+				throw new Error('Error fetching profile - Not found');
+			}
 			return { id: profileId, ...zone.store, assets: zone.assets };
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error fetching profile');
