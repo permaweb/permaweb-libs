@@ -160,6 +160,7 @@ export type BaseGQLArgsType = {
 	paginator?: number;
 	minBlock?: number;
 	maxBlock?: number;
+	sort?: GQLSortType;
 };
 
 export type GQLArgsType = { gateway: string } & BaseGQLArgsType;
@@ -206,3 +207,5 @@ export type BatchAGQLResponseType = { [queryKey: string]: DefaultGQLResponseType
 export type TagType = { name: string; value: string };
 
 export type TagFilterType = { name: string; values: string[]; match?: string };
+
+export type GQLSortType = 'ascending' | 'descending';
