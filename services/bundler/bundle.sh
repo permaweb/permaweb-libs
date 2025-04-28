@@ -3,7 +3,7 @@
 set -e
 
 # Define the target file
-TARGET_FILE="./dist/bundle.lua"
+TARGET_FILE="./dist/zone-bundle.lua"
 
 # Create the target directory if it doesn't exist
 mkdir -p "dist"
@@ -15,8 +15,6 @@ fi
 
 # Array of files to bundle
 FILES=(
-    "./external-libs/apm_client.lua"
-    "./external-libs/subscribable.lua"
     "../../packages/kv/base/src/kv.lua"
     "../../packages/kv/batchplugin/src/batch.lua"
     "../../packages/asset-manager/asset-manager.lua"
@@ -25,27 +23,15 @@ FILES=(
 
 # Array of corresponding package names
 PACKAGE_NAMES=(
-    ""
-    ""
     "@permaweb/kv-base"
     "@permaweb/kv-batch"
     "@permaweb/asset-manager"
     "@permaweb/zone"
 )
 
-# Function to print headers
 print_header() {
     HEADER="$1"
-    WIDTH=80
-    BORDER=$(printf '%*s' "$WIDTH" '' | tr ' ' '=')
-
-    echo ""
-    echo ""
-    echo "-- $BORDER"
-    echo "-- $BORDER"
     echo "-- $HEADER"
-    echo "-- $BORDER"
-    echo "-- $BORDER"
 }
 
 # Function to indent lines, skipping empty lines
@@ -59,6 +45,8 @@ indent_lines() {
     done
 }
 
+echo "local json = require('json')" >> "$TARGET_FILE"
+
 # Append each file's content to the target file
 for i in "${!FILES[@]}"; do
     echo "Processing file: ${FILES[$i]}"
@@ -66,16 +54,9 @@ for i in "${!FILES[@]}"; do
     FILE="${FILES[$i]}"
     PACKAGE_NAME="${PACKAGE_NAMES[$i]}"
 
-    if [[ "$FILE" == *"apm"* ]] || [[ "$FILE" == *"trusted"* ]] || [[ "$FILE" == *"subscribable"* ]]; then
-        cat "$FILE" >> "$TARGET_FILE"
-        echo "" >> "$TARGET_FILE"
-        echo "-- ENDFILE" >> "$TARGET_FILE"
-        echo "" >> "$TARGET_FILE"   # Add a newline for separation
-
-        continue
-    fi
-
     if [ -f "$FILE" ]; then
+        echo "" >> "$TARGET_FILE"   # Add a newline for separation
+        
         FILE_NAME=$(basename "$FILE" .lua)
         FUNCTION_NAME="load_${FILE_NAME//-/_}"
 
@@ -88,7 +69,6 @@ for i in "${!FILES[@]}"; do
         indent_lines < "$FILE" >> "$TARGET_FILE"
         echo "end" >> "$TARGET_FILE"
         echo "package.loaded['$PACKAGE_NAME'] = $FUNCTION_NAME()" >> "$TARGET_FILE"
-        echo "" >> "$TARGET_FILE"  # Add a newline for separation
     else
         echo "File '$FILE' does not exist."
     fi

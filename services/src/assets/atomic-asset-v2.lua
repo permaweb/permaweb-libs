@@ -66,7 +66,7 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
         Ticker = Token.Ticker,
         Denomination = tostring(Token.Denomination),
         Transferable = tostring(Token.Transferable),
-        Data = getState()
+        Data = json.encode(getState())
     })
 end)
 
@@ -342,8 +342,8 @@ Handlers.add('Send-Index', 'Send-Index', function(msg)
                     Action = 'Index-Notice',
                     Recipient = recipient,
                     Data = getIndexData({
-                        AssetType = msg.AssetType,
-                        ContentType = msg.ContentType
+                        AssetType = msg.Tags.AssetType,
+                        ContentType = msg.Tags.ContentType
                     }),
                 })
             end
@@ -510,10 +510,7 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
             Target = Token.Creator,
             Action = 'Add-Uploaded-Asset',
             AssetId = ao.id,
-            Data = json.encode({
-                Id = ao.id,
-                Quantity = tostring(Token.TotalSupply)
-            })
+            Quantity = tostring(Token.TotalSupply)
         })
 
         syncState()
