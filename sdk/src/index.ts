@@ -1,11 +1,8 @@
-import { Buffer } from 'buffer';
-
 import * as Common from './common/index.ts';
 import * as Helpers from './helpers/index.ts';
 import * as Services from './services/index.ts';
 
-/* Used for build - Do not remove ! */
-if (!globalThis.Buffer) globalThis.Buffer = Buffer;
+export * as Types from './helpers/types.ts';
 
 function init(deps: Helpers.DependencyType) {
 	return {
@@ -15,24 +12,30 @@ function init(deps: Helpers.DependencyType) {
 		addToZone: Services.addToZoneWith(deps),
 		getZone: Services.getZoneWith(deps),
 		setZoneRoles: Services.setZoneRolesWith(deps),
+		joinZone: Services.joinZoneWith(deps),
+		
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),
 		updateProfile: Services.updateProfileWith(deps),
 		getProfileById: Services.getProfileByIdWith(deps),
 		getProfileByWalletAddress: Services.getProfileByWalletAddressWith(deps),
+		
 		/* Assets */
 		createAtomicAsset: Services.createAtomicAssetWith(deps),
 		getAtomicAsset: Services.getAtomicAssetWith(deps),
 		getAtomicAssets: Services.getAtomicAssets,
+		
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
 		getComment: Services.getCommentWith(deps),
 		getComments: Services.getCommentsWith(deps),
+		
 		/* Collections */
 		createCollection: Services.createCollectionWith(deps),
 		updateCollectionAssets: Services.updateCollectionAssetsWith(deps),
 		getCollection: Services.getCollectionWith(deps),
 		getCollections: Services.getCollectionsWith(deps),
+		
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),
 		getGQLData: Common.getGQLData,
@@ -41,6 +44,7 @@ function init(deps: Helpers.DependencyType) {
 		readProcess: Common.aoDryRunWith(deps),
 		sendMessage: Common.aoSendWith(deps),
 		waitForProcess: Common.waitForProcess,
+		
 		/* Utils */
 		mapFromProcessCase: Helpers.mapFromProcessCase,
 		mapToProcessCase: Helpers.mapToProcessCase,
@@ -48,5 +52,3 @@ function init(deps: Helpers.DependencyType) {
 }
 
 export default { init };
-
-export * from './helpers/types.ts';

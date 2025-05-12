@@ -13,6 +13,7 @@ Token = Token or {
     Balances = Balances or {},
 }
 
+AuthUsers = AuthUsers or {}
 Metadata = Metadata or {}
 IndexRecipients = IndexRecipients or {}
 
@@ -41,6 +42,20 @@ local function decodeMessageData(data)
     return true, decodedData
 end
 
+local function hasUpdatePermissions(from)
+    if from == Creator or from == Owner or from == ao.id then
+        return true
+    end
+
+    for _, user in ipairs(AuthUsers) do
+        if from == user then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function getState()
     return {
         Name = Token.Name,
@@ -50,8 +65,9 @@ local function getState()
         Transferable = Token.Transferable,
         Creator = Token.Creator,
         Metadata = Metadata,
+        AuthUsers = AuthUsers,
         DateCreated = tostring(DateCreated),
-        LastUpdate = tostring(LastUpdate)
+        LastUpdate = tostring(LastUpdate),
     }
 end
 
@@ -284,7 +300,7 @@ end
 
 -- Update asset token / metadata
 Handlers.add('Update-Asset', 'Update-Asset', function(msg)
-    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
+    if not hasUpdatePermissions(msg.From) then return end
 
     local decodeCheck, data = decodeMessageData(msg.Data)
 
@@ -319,7 +335,8 @@ end)
 
 -- Initialize a request to index this asset data in another process
 Handlers.add('Send-Index', 'Send-Index', function(msg)
-    if msg.From ~= Creator and msg.From ~= Owner and msg.From ~= ao.id then return end
+    if not hasUpdatePermissions(msg.From) then return end
+
     local decodeCheck, data = decodeMessageData(msg.Data)
 
     if decodeCheck and data then
@@ -484,10 +501,16 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
             DateCreated = tostring(tag.value)
         end
 
-        local prefix = 'Bootloader-'
-        if string.sub(tag.name, 1, string.len(prefix)) == prefix then
-            local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
-            if Token[keyWithoutPrefix] == nil then
+        if tag.name == 'Auth-User' then
+            if not AuthUsers[tag.value] and checkValidAddress(tag.value) then
+                table.insert(AuthUsers, tag.value)
+            end
+        end
+
+        local bootLoaderPrefix = 'Bootloader-'
+        if string.sub(tag.name, 1, string.len(bootLoaderPrefix)) == bootLoaderPrefix then
+            local keyWithoutPrefix = string.sub(tag.name, string.len(bootLoaderPrefix) + 1)
+            if not Token[keyWithoutPrefix] then
                 setStoreValue(keyWithoutPrefix, tag.value)
             end
 
@@ -512,7 +535,7 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
             AssetId = ao.id,
             Quantity = tostring(Token.TotalSupply)
         })
-
-        syncState()
     end
+
+    syncState()
 end

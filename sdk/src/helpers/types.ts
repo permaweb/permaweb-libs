@@ -80,6 +80,7 @@ export type AssetCreateArgsType = {
 	metadata?: object;	
 	tags?: TagType[];
 	src?: string;
+	users?: string[];
 };
 
 export type AssetHeaderType = {

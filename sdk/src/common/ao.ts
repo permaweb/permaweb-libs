@@ -65,30 +65,43 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 	}
 }
 
+// TODO
 export async function readProcess(deps: DependencyType, args: { processId: string, path: string, node?: string, fallbackAction?: string }) {
-	const node = args.node ?? HB.node;
-	const mode = 'now';
 	try {
-		console.log('Getting state from HyperBEAM...');
-		const response = await fetch(`${node}/${args.processId}~process@1.0/${mode}/${args.path}`);
-		return await response.json();
+		console.log('State not found, dryrunning...');
+		const response = await aoDryRun(deps, {
+			processId: args.processId,
+			action: args.fallbackAction!,
+		});
+
+		return response;
 	}
 	catch (e: any) {
-		if (args.fallbackAction) {
-			console.error(e.message ?? 'Error reading process from HyperBEAM');
-
-			console.log('State not found, dryrunning...');
-			const response = await aoDryRun(deps, {
-				processId: args.processId,
-				action: args.fallbackAction,
-			});
-
-			return response;
-		}
-		else {
-			throw new Error(e.message ?? 'Error reading process from HyperBEAM');
-		}
+		throw new Error(e.message ?? 'Error reading process from HyperBEAM');
 	}
+	// const node = args.node ?? HB.node;
+	// const mode = 'now';
+	// try {
+	// 	console.log('Getting state from HyperBEAM...');
+	// 	const response = await fetch(`${node}/${args.processId}~process@1.0/${mode}/${args.path}`);
+	// 	return await response.json();
+	// }
+	// catch (e: any) {
+	// 	if (args.fallbackAction) {
+	// 		console.error(e.message ?? 'Error reading process from HyperBEAM');
+
+	// 		console.log('State not found, dryrunning...');
+	// 		const response = await aoDryRun(deps, {
+	// 			processId: args.processId,
+	// 			action: args.fallbackAction,
+	// 		});
+
+	// 		return response;
+	// 	}
+	// 	else {
+	// 		throw new Error(e.message ?? 'Error reading process from HyperBEAM');
+	// 	}
+	// }
 }
 
 export function aoDryRunWith(deps: DependencyType) {
@@ -320,7 +333,7 @@ export function aoCreateProcessWith(deps: DependencyType) {
 
 			statusCB && statusCB(`Spawning process...`);
 			const processId = await aoSpawn(deps, spawnArgs);
-			
+
 			if (args.evalTxId || args.evalSrc) {
 				statusCB && statusCB(`Process retrieved!`);
 				statusCB && statusCB('Sending eval...');
@@ -399,26 +412,26 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 export async function waitForProcess(args: { processId: string, noRetryLimit?: boolean }) {
 	let retries = 0;
 	const retryLimit = args.noRetryLimit ? Infinity : GATEWAY_RETRY_COUNT;
-  
+
 	while (retries < retryLimit) {
-	  await new Promise((resolve) => setTimeout(resolve, 2000));
-  
-	  const gqlResponse = await getGQLData({
-		gateway: GATEWAY,
-		ids: [args.processId],
-	  });
-  
-	  if (gqlResponse?.data?.length) {
-		const foundProcess = gqlResponse.data[0].node.id;
-		globalLog(`Process found: ${foundProcess} (Try ${retries + 1})`);
-		return foundProcess;
-	  } else {
-		globalLog(`Process not found: ${args.processId} (Try ${retries + 1})`);
-		retries++;
-	  }
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
+		const gqlResponse = await getGQLData({
+			gateway: GATEWAY,
+			ids: [args.processId],
+		});
+
+		if (gqlResponse?.data?.length) {
+			const foundProcess = gqlResponse.data[0].node.id;
+			globalLog(`Process found: ${foundProcess} (Try ${retries + 1})`);
+			return foundProcess;
+		} else {
+			globalLog(`Process not found: ${args.processId} (Try ${retries + 1})`);
+			retries++;
+		}
 	}
-  
+
 	if (retryLimit !== Infinity) {
-	  throw new Error(`Process not found, please try again`);
+		throw new Error(`Process not found, please try again`);
 	}
-  }
+}
