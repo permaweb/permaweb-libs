@@ -133,7 +133,7 @@ export function buildAsset(element: GQLNodeResponseType): any {
 
 function buildAssetCreateTags(args: AssetCreateArgsType): { name: string; value: string }[] {
 	const tags = [
-		{ name: TAGS.keys.bootloaderInit, value: args.src ?? AO.src.asset },
+		{ name: TAGS.keys.onBoot, value: args.src ?? AO.src.asset },
 		{ name: TAGS.keys.creator, value: args.creator },
 		{ name: TAGS.keys.assetType, value: args.assetType },
 		{ name: TAGS.keys.contentType, value: args.contentType },
@@ -152,6 +152,12 @@ function buildAssetCreateTags(args: AssetCreateArgsType): { name: string; value:
 	if (args.metadata) {
 		for (const entry in args.metadata) {
 			tags.push(getBootTag(mapToProcessCase(entry), (args.metadata as any)[entry].toString()));
+		}
+	}
+	
+	if (args.users) {
+		for (const user of args.users) {
+			tags.push({ name: 'Auth-User', value: user });
 		}
 	}
 

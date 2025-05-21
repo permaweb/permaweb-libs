@@ -40,19 +40,27 @@ local function checkValidAddress(address)
 	return string.match(address, "^[%w%-_]+$") ~= nil and #address == 43
 end
 
+local function getState()
+    return {
+		Name = Name,
+		Description = Description,
+		Creator = Creator,
+		Banner = Banner,
+		Thumbnail = Thumbnail,
+		DateCreated = DateCreated,
+		Assets = Assets,
+		ActivityProcess = ActivityProcess
+	}
+end
+
+local function syncState()
+    Send({ device = 'patch@1.0', asset = json.encode(getState()) })
+end
+
 Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
 	ao.send({
 		Target = msg.From,
-		Data = json.encode({
-			Name = Name,
-			Description = Description,
-			Creator = Creator,
-			Banner = Banner,
-			Thumbnail = Thumbnail,
-			DateCreated = DateCreated,
-			Assets = Assets,
-			ActivityProcess = ActivityProcess
-		})
+		Data = json.encode(getState())
 	})
 end)
 
@@ -126,6 +134,8 @@ Handlers.add('Update-Assets', Handlers.utils.hasMatchingTag('Action', 'Update-As
 				Message = 'Assets updated successfully'
 			}
 		})
+
+		syncState()
 	else
 		ao.send({
 			Target = msg.From,
@@ -179,6 +189,8 @@ Handlers.add('Update-Collection-Activity', Handlers.utils.hasMatchingTag('Action
 					end
 				end
 			end
+
+			syncState()
 		end
 	end)
 

@@ -154,6 +154,19 @@ end)
 
 -- Remove collection by ID
 Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remove-Collection'), function(msg)
+	local collectionId = msg.Tags.CollectionId
+
+	local collectionIndex = nil
+	local collectionOwner = nil
+
+	for index, collection in ipairs(Collections) do
+		if collection.Id == collectionId then
+			collectionIndex = index
+			collectionOwner = collection.Creator
+			break
+		end
+	end
+
 	if msg.From ~= Owner and msg.From ~= ao.id and msg.From ~= collectionOwner then
 		ao.send({
 			Target = msg.From,
@@ -165,8 +178,6 @@ Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remov
 		})
 		return
 	end
-	
-	local collectionId = msg.Tags.CollectionId
 
 	if not collectionId or collectionId == '' then
 		ao.send({
@@ -178,17 +189,6 @@ Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remov
 			}
 		})
 		return
-	end
-
-	local collectionIndex = nil
-	local collectionOwner = nil
-
-	for index, collection in ipairs(Collections) do
-		if collection.Id == collectionId then
-			collectionIndex = index
-			collectionOwner = collection.Creator
-			break
-		end
 	end
 
 	if not collectionIndex then

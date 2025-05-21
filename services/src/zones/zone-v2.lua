@@ -14,13 +14,14 @@ if not AssetManager then
 end
 
 Zone = Zone or {}
+
 Zone.Functions = Zone.Functions or {}
-Zone.Constants = Zone.Constants or {
+
+Zone.Constants = {
     H_ZONE_ERROR = 'Zone-Error',
     H_ZONE_SUCCESS = 'Zone-Success',
     H_ZONE_KEYS = 'Zone-Keys',
     H_ZONE_GET = 'Info',
-    H_ZONE_ROLES_GET = 'Get-Roles',
     H_ZONE_CREDIT_NOTICE = 'Credit-Notice',
     H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
     H_ZONE_RUN_ACTION = 'Run-Action',
@@ -29,16 +30,26 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_UPDATE = 'Zone-Update',
     H_ZONE_ROLE_SET = 'Role-Set',
     H_ZONE_SET = 'Zone-Set',
+    H_ZONE_JOIN = 'Zone-Join',
+    H_ZONE_ADD_INVITE = 'Zone-Add-Invite',
     H_ZONE_APPEND = 'Zone-Append',
     H_ZONE_REMOVE = 'Zone-Remove',
     H_ZONE_ADD_UPLOAD = 'Add-Uploaded-Asset'
 }
 
-Zone.ROLE_NAMES = Zone.ROLE_NAMES or {
-    ADMIN = 'Admin',
-    CONTRIBUTOR = 'Contributor',
-    MODERATOR = 'Moderator',
-    GUEST_CONTRIBUTOR = 'Guest_Contributor',
+Zone.RoleOptions = {
+    Admin = 'Admin',
+    Contributor = 'Contributor',
+    ExternalContributor = 'ExternalContributor',
+    Moderator = 'Moderator',
+}
+
+HandlerRoles = {
+    [Zone.Constants.H_ZONE_ROLE_SET] = { Zone.RoleOptions.Admin },
+    [Zone.Constants.H_ZONE_UPDATE] = { Zone.RoleOptions.Admin },
+    [Zone.Constants.H_ZONE_ADD_INDEX_ID] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
+    [Zone.Constants.H_ZONE_ADD_UPLOAD] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
+    [Zone.Constants.H_ZONE_RUN_ACTION] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
 }
 
 Zone.Data = Zone.Data or {
@@ -46,25 +57,25 @@ Zone.Data = Zone.Data or {
     AssetManager = AssetManager.new()
 }
 
-ZoneInitCompleted = ZoneInitCompleted or false
+-- Roles: { <Id>: string = { Roles = roles, Type = 'wallet' | 'process' } } :. Roles[<id>] = {...}
+Zone.Roles = Zone.Roles or {}
 
-HandlerRoles = HandlerRoles or {
-    [Zone.Constants.H_ZONE_ROLE_SET] = { 'Admin' },
-    [Zone.Constants.H_ZONE_UPDATE] = { 'Admin' },
-    [Zone.Constants.H_ZONE_ADD_UPLOAD] = { 'Admin', 'Contributor' },
-}
+-- Invites: { <Id>, <Name>, <Logo> }
+Zone.Invites = Zone.Invites or {}
 
-HandlerSpecialRoles = HandlerSpecialRoles or {
-    [Zone.Constants.H_ZONE_RUN_ACTION] = Zone.Functions.authRunAction
-}
-
--- Roles: { <Id>: string = {...roles} } :. Roles[<id>] = {...}
-if not Zone.Roles then
-    Zone.Roles = {}
-end
+Zone.Version = '0.0.1'
 
 function GetState()
-    return { Store = Zone.Data.KV:dump(), Assets = Zone.Data.AssetManager.Assets, Roles = Zone.Roles }
+    return {
+        Owner = Owner,
+        Store = Zone.Data.KV:dump(),
+        Assets = Zone.Data.AssetManager.Assets,
+        Roles = Zone.Roles,
+        RoleOptions = Zone.RoleOptions,
+        Permissions = HandlerRoles,
+        Invites = Zone.Invites,
+        Version = Zone.Version
+    }
 end
 
 function SyncState()
@@ -89,9 +100,9 @@ function Zone.Functions.rolesHasValue(roles, role)
 end
 
 function Zone.Functions.getActorRoles(actor)
-    for id, roles in pairs(Zone.Roles) do
+    for id, entry in pairs(Zone.Roles) do
         if id == actor then
-            return roles
+            return entry.Roles
         end
     end
     return nil
@@ -139,15 +150,12 @@ function Zone.Functions.isAuthorized(msg)
         return false, 'Not Authorized'
     end
 
-    if msg.From == Owner then
+    if msg.From == Owner or msg.From == ao.id then
         return true
     end
 
-    if HandlerSpecialRoles[msg.Action] then
-        return HandlerSpecialRoles[msg.Action](msg)
-    end
-
     local rolesForHandler = HandlerRoles[msg.Action]
+
     if not rolesForHandler then
         return msg.From == Owner or false,
             'AuthRoles: Sender ' .. msg.From .. ' not Authorized. Only Owner can access the handler ' .. msg.Action
@@ -222,14 +230,20 @@ function Zone.Functions.runAction(msg)
 
     local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
 
-    if decodeResult.success and decodeResult.data then
-        ao.send({
-            Target = msg.ForwardTo,
-            Action = msg.ForwardAction,
-            Data = decodeResult.data.Input,
-            Tags = msg.Tags
-        })
+    -- Clear out Run-Action
+    msg.Tags.Action = nil
+
+    local messageToSend = {
+        Target = msg.ForwardTo,
+        Action = msg.ForwardAction,
+        Tags = msg.Tags
+    }
+
+    if decodeResult.data and decodeResult.data.Input then
+        messageToSend.Data = json.encode(decodeResult.data.Input)
     end
+
+    ao.send(messageToSend)
 end
 
 function Zone.Functions.zoneGet(msg)
@@ -253,27 +267,6 @@ function Zone.Functions.keysHandler(msg)
         Action = Zone.Constants.H_ZONE_SUCCESS,
         Data = { Keys = keys }
     })
-end
-
-function Zone.Functions.getRoles(msg)
-    local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
-
-    if decodeResult.success and decodeResult.data and decodeResult.data.Actors then
-        local actors = decodeResult.data.Actors
-        local actorRoles = {}
-        for _, actor in ipairs(actors) do
-            actorRoles[actor] = Zone.Functions.getActorRoles(actor)
-        end
-        msg.reply({
-            Action = Zone.Constants.H_ZONE_SUCCESS,
-            Data = actorRoles
-        })
-    else
-        msg.reply({
-            Action = Zone.Constants.H_ZONE_SUCCESS,
-            Data = Zone.Roles
-        })
-    end
 end
 
 function Zone.Functions.zoneUpdate(msg)
@@ -309,7 +302,7 @@ function Zone.Functions.zoneUpdate(msg)
 end
 
 function Zone.Functions.zoneRoleSet(msg)
-    -- data: { id=<id>, roles=<{ <role>, <role> }> or {} or nil}
+    -- Data: { Id=<id>, Roles=<{ <role>, <role>, Type=<wallet> | <process> }> }[]
     local function check_valid_address(address)
         if not address or type(address) ~= 'string' then
             return false
@@ -331,6 +324,7 @@ function Zone.Functions.zoneRoleSet(msg)
                 return false
             end
         end
+
         return true
     end
 
@@ -344,45 +338,127 @@ function Zone.Functions.zoneRoleSet(msg)
     local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
 
     if decodeResult.success and decodeResult.data then
-        local actorId = decodeResult.data.id
-        local roles = decodeResult.data.roles
-        if not actorId then
-            ao.send({
-                Target = msg.From,
-                Action = 'Input-Error',
-                Tags = {
-                    Status = 'Error',
-                    Message = 'Invalid arguments, required { id=<id>, roles=<{ <role>, <role> }> or {} or nil} in data'
-                }
-            })
-            return
+        for _, entry in ipairs(decodeResult.data) do
+            local actorId = entry.Id
+            local roles = entry.Roles
+            local type = entry.Type
+            local sendInvite = entry.SendInvite
+
+            if not actorId then
+                ao.send({
+                    Target = msg.From,
+                    Action = 'Input-Error',
+                    Tags = {
+                        Status = 'Error',
+                        Message =
+                        'Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data'
+                    }
+                })
+                return
+            end
+
+            if not check_valid_address(actorId) then
+                Zone.Functions.sendError(msg.From, 'Id must be a valid address')
+                return
+            end
+
+            if not check_valid_roles(roles) then
+                Zone.Functions.sendError(msg.From, 'Role must be a table of strings')
+                return
+            end
+
+            Zone.Roles[actorId] = {
+                Roles = roles,
+                Type = type
+            }
+
+            if sendInvite then
+                ao.send({
+                    Target = actorId,
+                    Action = Zone.Constants.H_ZONE_ADD_INVITE,
+                    Tags = {
+                        Name = Zone.Data.KV.Store.Name,
+                        Logo = Zone.Data.KV.Store.Logo
+                    }
+                })
+            end
         end
 
-        if not check_valid_address(actorId) then
-            Zone.Functions.sendError(msg.From, 'Id must be a valid address')
-            return
-        end
-
-        if not check_valid_roles(roles) then
-            Zone.Functions.sendError(msg.From, 'Role must be a table of strings')
-            return
-        end
-
-        Zone.Roles[actorId] = roles
-
-        SyncState()
         ao.send({
             Target = msg.From,
             Action = Zone.Constants.H_ZONE_SUCCESS,
             Tags = {
                 Status = 'Success',
-                Message = 'Role updated'
+                Message = 'Roles updated'
             }
         })
+
+        SyncState()
     else
         Zone.Functions.sendError(msg.From, string.format(
             'Failed to parse role update data, received: %s. %s.', msg.Data,
-            'Data must be an object - { Id, Op, Role }'))
+            'Data must be an object - { Id, Roles, Type }'))
+    end
+end
+
+function Zone.Functions.addZoneInvite(msg)
+    for _, invite in ipairs(Zone.Invites) do
+        if invite.Id == msg.From then
+            print('Invite from this zone is already set')
+            return
+        end
+    end
+
+    table.insert(Zone.Invites, {
+        Id = msg.From,
+        Name = msg.Tags.Name,
+        Logo = msg.Tags.Logo
+    })
+
+    ao.send({
+        Target = msg.From,
+        Action = 'Invite-Acknowledged'
+    })
+
+    SyncState()
+end
+
+function Zone.Functions.joinZone(msg)
+    local index = -1
+    for i, invite in ipairs(Zone.Invites) do
+        if invite.Id == msg.Tags.ZoneId then
+            index = i
+        end
+    end
+
+
+    if index > -1 then
+        local store = Zone.Data.KV.Store
+        local path = nil
+
+        if msg.Tags.Path then
+            if not store[msg.Tags.Path] then
+                store[msg.Tags.Path] = {}
+            end
+
+            path = store[msg.Tags.Path]
+        else
+            if not store.JoinedZones then
+                store.JoinedZones = {}
+            end
+
+            path = store.JoinedZones
+        end
+
+        table.insert(path, Zone.Invites[index])
+        table.remove(Zone.Invites, index)
+
+        ao.send({
+            Target = msg.From,
+            Action = 'Joined-Zone'
+        })
+
+        SyncState()
     end
 end
 
@@ -543,7 +619,6 @@ end
 
 Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
 Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functions.keysHandler)
-Handlers.add(Zone.Constants.H_ZONE_ROLES_GET, Zone.Constants.H_ZONE_ROLES_GET, Zone.Functions.getRoles)
 Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
 Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
 Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
@@ -555,6 +630,8 @@ Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Function
 Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
 Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
 Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zone.Functions.zoneRoleSet)
+Handlers.add(Zone.Constants.H_ZONE_JOIN, Zone.Constants.H_ZONE_JOIN, Zone.Functions.joinZone)
+Handlers.add(Zone.Constants.H_ZONE_ADD_INVITE, Zone.Constants.H_ZONE_ADD_INVITE, Zone.Functions.addZoneInvite)
 
 --------------------------------------------------------------------------------
 -- Helper function: setStoreValue
@@ -658,6 +735,8 @@ local function setStoreValue(keyString, value)
         end
     end
 end
+
+ZoneInitCompleted = ZoneInitCompleted or false
 
 if not ZoneInitCompleted then
     if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then

@@ -1,7 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import esbuild from 'esbuild';
-import alias from 'esbuild-plugin-alias';
 import dtsPlugin from 'esbuild-plugin-d.ts';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 import path from 'path';
@@ -39,11 +38,6 @@ const buildConfigs = [
 		format: 'esm',
 		external: ['fs', 'crypto', 'os', 'stream', 'util', 'node:buffer', 'node:stream', 'zlib', 'http', 'https', 'path'],
 		plugins: [
-			alias({
-				crypto: require.resolve('crypto-browserify'),
-				stream: require.resolve('stream-browserify'),
-				os: require.resolve('os-browserify/browser')
-			}),
 			polyfillNode(),
 			dtsPlugin({ outDir: 'dist/types' })
 		],

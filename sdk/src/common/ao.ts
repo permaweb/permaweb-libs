@@ -66,11 +66,17 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 }
 
 export async function readProcess(deps: DependencyType, args: { processId: string, path: string, node?: string, fallbackAction?: string }) {
-	const node = args.node ?? HB.node;
+	const node = args.node ?? HB.defaultRouter;
 	const mode = 'now';
 	try {
 		console.log('Getting state from HyperBEAM...');
-		const response = await fetch(`${node}/${args.processId}~process@1.0/${mode}/${args.path}`);
+
+		const url = `${node}/${args.processId}~process@1.0/${mode}/${args.path}`;
+
+		console.log(`URL: ${url}`);
+		const response = await fetch(url);
+
+		console.log('Returning state from HyperBEAM.');
 		return await response.json();
 	}
 	catch (e: any) {
@@ -82,6 +88,7 @@ export async function readProcess(deps: DependencyType, args: { processId: strin
 				processId: args.processId,
 				action: args.fallbackAction,
 			});
+			console.log('Returning state from dryrun.');
 
 			return response;
 		}
@@ -270,8 +277,8 @@ export async function handleProcessEval(
 	deps: DependencyType,
 	args: {
 		processId: string;
-		evalTxId: string | null;
-		evalSrc: string | null;
+		evalTxId?: string | null;
+		evalSrc?: string | null;
 		evalTags?: TagType[];
 	},
 ): Promise<string | null> {
@@ -320,7 +327,7 @@ export function aoCreateProcessWith(deps: DependencyType) {
 
 			statusCB && statusCB(`Spawning process...`);
 			const processId = await aoSpawn(deps, spawnArgs);
-			
+
 			if (args.evalTxId || args.evalSrc) {
 				statusCB && statusCB(`Process retrieved!`);
 				statusCB && statusCB('Sending eval...');
@@ -399,26 +406,26 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 export async function waitForProcess(args: { processId: string, noRetryLimit?: boolean }) {
 	let retries = 0;
 	const retryLimit = args.noRetryLimit ? Infinity : GATEWAY_RETRY_COUNT;
-  
+
 	while (retries < retryLimit) {
-	  await new Promise((resolve) => setTimeout(resolve, 2000));
-  
-	  const gqlResponse = await getGQLData({
-		gateway: GATEWAY,
-		ids: [args.processId],
-	  });
-  
-	  if (gqlResponse?.data?.length) {
-		const foundProcess = gqlResponse.data[0].node.id;
-		globalLog(`Process found: ${foundProcess} (Try ${retries + 1})`);
-		return foundProcess;
-	  } else {
-		globalLog(`Process not found: ${args.processId} (Try ${retries + 1})`);
-		retries++;
-	  }
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
+		const gqlResponse = await getGQLData({
+			gateway: GATEWAY,
+			ids: [args.processId],
+		});
+
+		if (gqlResponse?.data?.length) {
+			const foundProcess = gqlResponse.data[0].node.id;
+			globalLog(`Process found: ${foundProcess} (Try ${retries + 1})`);
+			return foundProcess;
+		} else {
+			globalLog(`Process not found: ${args.processId} (Try ${retries + 1})`);
+			retries++;
+		}
 	}
-  
+
 	if (retryLimit !== Infinity) {
-	  throw new Error(`Process not found, please try again`);
+		throw new Error(`Process not found, please try again`);
 	}
-  }
+}

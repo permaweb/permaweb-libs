@@ -1,20 +1,22 @@
 export const AO = {
-	module: 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk',
+	module: 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk', 
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'LCrHATm3utm_H5fj0bbzFX4ToN_sH_W-oHHZXaYDbsY',
-		collection: 'aHN0YxA7Th1OQdtgv0slWv9LMrvYukvNgWdkotJsML0',
+		asset: 'jm8OfYb4PL8-AHvx3k0csQUWDpR24bh6l8uNCoWueHA',
+		collection: 'flkCYx4lJtOtsVFyUZLN-AKpkObNoTMYu4GfUTzNoGE',
 		collectionActivity: 'k8K8WIJb5kXOVvZRFXF5GIZW-7b2NtaTOd6G-E5MF0k',
-		profile: 'WBhJpPafkykqZZgTr7TAsz48RKG4vbOEAH4rZ3JxIQ8',
-		zone: '2nrQVW3u5CCZY9ouSZhEFOtSW0tWb3PZY4gCL_Pn5sw'
+		zone: {
+			id: 'fAmxq5HS8V3ijkgTWHRcXtXzU0RPzKK9fmeVi1UwIs0',
+			version: '0.0.2'
+		}
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
 	profileRegistry: 'SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY'
 };
 
 export const HB = {
-	node: 'https://router-1.forward.computer'
+	defaultRouter: 'https://router-1.forward.computer'
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {
@@ -50,7 +52,6 @@ export const TAGS = {
 		assetType: 'Asset-Type',
 		banner: 'Banner',
 		bootloader: 'Bootloader',
-		bootloaderInit: 'On-Boot',
 		collectionId: 'Collection-Id',
 		collectionName: 'Collection-Name',
 		commericalUse: 'Commercial-Use',
@@ -68,6 +69,7 @@ export const TAGS = {
 		initialOwner: 'Initial-Owner',
 		license: 'License',
 		name: 'Name',
+		onBoot: 'On-Boot',
 		paymentAddress: 'Payment-Address',
 		paymentMode: 'Payment-Mode',
 		profileCreator: 'Profile-Creator',
