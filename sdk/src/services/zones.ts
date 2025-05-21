@@ -1,4 +1,4 @@
-import { aoCreateProcess, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
+import { aoCreateProcess, aoDryRun, aoSend, handleProcessEval, readProcess } from '../common/ao.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, mapFromProcessCase } from '../helpers/utils.ts';
@@ -6,7 +6,7 @@ import { checkValidAddress, mapFromProcessCase } from '../helpers/utils.ts';
 export function createZoneWith(deps: DependencyType) {
 	return async (args: { data?: any; tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
 		try {
-			const tags = [{ name: TAGS.keys.onBoot, value: AO.src.zone }];
+			const tags = [{ name: TAGS.keys.onBoot, value: AO.src.zone.id }];
 			if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 			const zoneId = await aoCreateProcess(
@@ -53,18 +53,6 @@ export function addToZoneWith(deps: DependencyType) {
 			return zoneUpdateId;
 		} catch (e: any) {
 			throw new Error(e);
-		}
-	};
-}
-
-export function getZoneWith(deps: DependencyType) {
-	return async (zoneId: string): Promise<any | null> => {
-		try {
-			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', fallbackAction: 'Info' });
-
-			return mapFromProcessCase(processInfo);
-		} catch (e: any) {
-			throw new Error(e.message ?? 'Error getting zone');
 		}
 	};
 }
@@ -123,6 +111,39 @@ export function joinZoneWith(deps: DependencyType) {
 			return zoneUpdateId;
 		} catch (e: any) {
 			throw new Error(e);
+		}
+	};
+}
+
+export function updateZoneVersionWith(deps: DependencyType) {
+	return async (args: { zoneId: string }): Promise<string | null> => {
+		try {
+			await handleProcessEval(deps, {
+				processId: args.zoneId,
+				evalTxId: AO.src.zone.id
+			});
+
+			const versionUpdate = await handleProcessEval(deps, {
+				processId: args.zoneId,
+				evalSrc: `Zone.Version = '${AO.src.zone.version}'; SyncState()`
+			});
+
+			return versionUpdate;
+		}
+		catch (e: any) {
+			throw new Error(e);
+		}
+	}
+}
+
+export function getZoneWith(deps: DependencyType) {
+	return async (zoneId: string): Promise<any | null> => {
+		try {
+			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', fallbackAction: 'Info' });
+
+			return mapFromProcessCase(processInfo);
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error getting zone');
 		}
 	};
 }

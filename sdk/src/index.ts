@@ -4,6 +4,9 @@ import * as Services from './services/index.ts';
 
 export * as Types from './helpers/types.ts';
 
+/* For clients to be able to detect new zone versions */
+export const CurrentZoneVersion = Helpers.AO.src.zone.version;
+
 function init(deps: Helpers.DependencyType) {
 	return {
 		/* Zones */
@@ -13,10 +16,12 @@ function init(deps: Helpers.DependencyType) {
 		getZone: Services.getZoneWith(deps),
 		setZoneRoles: Services.setZoneRolesWith(deps),
 		joinZone: Services.joinZoneWith(deps),
+		updateZoneVersion: Services.updateZoneVersionWith(deps),
 		
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),
 		updateProfile: Services.updateProfileWith(deps),
+		updateProfileVersion: Services.updateProfileVersionWith(deps),
 		getProfileById: Services.getProfileByIdWith(deps),
 		getProfileByWalletAddress: Services.getProfileByWalletAddressWith(deps),
 		
@@ -43,7 +48,6 @@ function init(deps: Helpers.DependencyType) {
 		createProcess: Common.aoCreateProcessWith(deps),
 		readProcess: Common.aoDryRunWith(deps),
 		sendMessage: Common.aoSendWith(deps),
-		waitForProcess: Common.waitForProcess,
 		
 		/* Utils */
 		mapFromProcessCase: Helpers.mapFromProcessCase,

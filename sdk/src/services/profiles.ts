@@ -5,7 +5,7 @@ import { getGQLData } from '../common/gql.ts';
 import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
 import { getBootTag } from '../helpers/utils.ts';
 
-import { createZoneWith, getZoneWith, updateZoneWith } from './zones.ts';
+import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
 
 export function createProfileWith(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
@@ -83,6 +83,19 @@ export function updateProfileWith(deps: DependencyType) {
 			throw new Error('No profile provided');
 		}
 	};
+}
+
+export function updateProfileVersionWith(deps: DependencyType) {
+	const updateZoneVersion = updateZoneVersionWith(deps);
+
+	return async (args: { profileId: string }): Promise<string | null> => {
+		try {
+			return await updateZoneVersion({ zoneId: args.profileId });
+		}
+		catch (e: any) {
+			throw new Error(e);
+		}
+	}
 }
 
 export function getProfileByIdWith(deps: DependencyType) {

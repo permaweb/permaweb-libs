@@ -65,43 +65,37 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 	}
 }
 
-// TODO
 export async function readProcess(deps: DependencyType, args: { processId: string, path: string, node?: string, fallbackAction?: string }) {
+	const node = args.node ?? HB.defaultRouter;
+	const mode = 'now';
 	try {
-		console.log('State not found, dryrunning...');
-		const response = await aoDryRun(deps, {
-			processId: args.processId,
-			action: args.fallbackAction!,
-		});
+		console.log('Getting state from HyperBEAM...');
 
-		return response;
+		const url = `${node}/${args.processId}~process@1.0/${mode}/${args.path}`;
+
+		console.log(`URL: ${url}`);
+		const response = await fetch(url);
+
+		console.log('Returning state from HyperBEAM.');
+		return await response.json();
 	}
 	catch (e: any) {
-		throw new Error(e.message ?? 'Error reading process from HyperBEAM');
+		if (args.fallbackAction) {
+			console.error(e.message ?? 'Error reading process from HyperBEAM');
+
+			console.log('State not found, dryrunning...');
+			const response = await aoDryRun(deps, {
+				processId: args.processId,
+				action: args.fallbackAction,
+			});
+			console.log('Returning state from dryrun.');
+
+			return response;
+		}
+		else {
+			throw new Error(e.message ?? 'Error reading process from HyperBEAM');
+		}
 	}
-	// const node = args.node ?? HB.node;
-	// const mode = 'now';
-	// try {
-	// 	console.log('Getting state from HyperBEAM...');
-	// 	const response = await fetch(`${node}/${args.processId}~process@1.0/${mode}/${args.path}`);
-	// 	return await response.json();
-	// }
-	// catch (e: any) {
-	// 	if (args.fallbackAction) {
-	// 		console.error(e.message ?? 'Error reading process from HyperBEAM');
-
-	// 		console.log('State not found, dryrunning...');
-	// 		const response = await aoDryRun(deps, {
-	// 			processId: args.processId,
-	// 			action: args.fallbackAction,
-	// 		});
-
-	// 		return response;
-	// 	}
-	// 	else {
-	// 		throw new Error(e.message ?? 'Error reading process from HyperBEAM');
-	// 	}
-	// }
 }
 
 export function aoDryRunWith(deps: DependencyType) {
@@ -283,8 +277,8 @@ export async function handleProcessEval(
 	deps: DependencyType,
 	args: {
 		processId: string;
-		evalTxId: string | null;
-		evalSrc: string | null;
+		evalTxId?: string | null;
+		evalSrc?: string | null;
 		evalTags?: TagType[];
 	},
 ): Promise<string | null> {

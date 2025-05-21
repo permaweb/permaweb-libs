@@ -14,8 +14,10 @@ if not AssetManager then
 end
 
 Zone = Zone or {}
+
 Zone.Functions = Zone.Functions or {}
-Zone.Constants = Zone.Constants or {
+
+Zone.Constants = {
     H_ZONE_ERROR = 'Zone-Error',
     H_ZONE_SUCCESS = 'Zone-Success',
     H_ZONE_KEYS = 'Zone-Keys',
@@ -35,26 +37,24 @@ Zone.Constants = Zone.Constants or {
     H_ZONE_ADD_UPLOAD = 'Add-Uploaded-Asset'
 }
 
-Zone.ROLE_NAMES = Zone.ROLE_NAMES or {
-    ADMIN = 'Admin',
-    CONTRIBUTOR = 'Contributor',
-    MODERATOR = 'Moderator',
-    GUEST_CONTRIBUTOR = 'Guest_Contributor',
+Zone.RoleOptions = {
+    Admin = 'Admin',
+    Contributor = 'Contributor',
+    ExternalContributor = 'ExternalContributor',
+    Moderator = 'Moderator',
+}
+
+HandlerRoles = {
+    [Zone.Constants.H_ZONE_ROLE_SET] = { Zone.RoleOptions.Admin },
+    [Zone.Constants.H_ZONE_UPDATE] = { Zone.RoleOptions.Admin },
+    [Zone.Constants.H_ZONE_ADD_INDEX_ID] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
+    [Zone.Constants.H_ZONE_ADD_UPLOAD] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
+    [Zone.Constants.H_ZONE_RUN_ACTION] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
 }
 
 Zone.Data = Zone.Data or {
     KV = KV.new({ BatchPlugin }),
     AssetManager = AssetManager.new()
-}
-
-ZoneInitCompleted = ZoneInitCompleted or false
-
-HandlerRoles = HandlerRoles or {
-    [Zone.Constants.H_ZONE_ROLE_SET] = { 'Admin' },
-    [Zone.Constants.H_ZONE_UPDATE] = { 'Admin' },
-    [Zone.Constants.H_ZONE_ADD_INDEX_ID] = { 'Admin', 'Contributor' },
-    [Zone.Constants.H_ZONE_ADD_UPLOAD] = { 'Admin', 'Contributor' },
-    [Zone.Constants.H_ZONE_RUN_ACTION] = { 'Admin', 'Contributor' },
 }
 
 -- Roles: { <Id>: string = { Roles = roles, Type = 'wallet' | 'process' } } :. Roles[<id>] = {...}
@@ -63,7 +63,7 @@ Zone.Roles = Zone.Roles or {}
 -- Invites: { <Id>, <Name>, <Logo> }
 Zone.Invites = Zone.Invites or {}
 
-Zone.Version = Zone.Version or '0.0.1'
+Zone.Version = '0.0.1'
 
 function GetState()
     return {
@@ -71,6 +71,7 @@ function GetState()
         Store = Zone.Data.KV:dump(),
         Assets = Zone.Data.AssetManager.Assets,
         Roles = Zone.Roles,
+        RoleOptions = Zone.RoleOptions,
         Permissions = HandlerRoles,
         Invites = Zone.Invites,
         Version = Zone.Version
@@ -734,6 +735,8 @@ local function setStoreValue(keyString, value)
         end
     end
 end
+
+ZoneInitCompleted = ZoneInitCompleted or false
 
 if not ZoneInitCompleted then
     if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
