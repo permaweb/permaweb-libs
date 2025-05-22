@@ -1,16 +1,16 @@
-local json = require('json')
+local json      = require('json')
 
-if Name ~= '<NAME>' then Name = '<NAME>' end
-if Description ~= '<DESCRIPTION>' then Description = '<DESCRIPTION>' end
-if Creator ~= '<CREATOR>' then Creator = '<CREATOR>' end
-if Banner ~= '<BANNER>' then Banner = '<BANNER>' end
-if Thumbnail ~= '<THUMBNAIL>' then Thumbnail = '<THUMBNAIL>' end
+Name            = Name or '<NAME>'
+Description     = Description or '<DESCRIPTION>'
+Creator         = Creator or '<CREATOR>'
+Banner          = Banner or '<BANNER>'
+Thumbnail       = Thumbnail or '<THUMBNAIL>'
 
-if DateCreated ~= '<DATECREATED>' then DateCreated = '<DATECREATED>' end
-if LastUpdate ~= '<LASTUPDATE>' then LastUpdate = '<LASTUPDATE>' end
+DateCreated     = DateCreated or '<DATECREATED>'
+LastUpdate      = LastUpdate or '<LASTUPDATE>'
 
-Assets = Assets or {}
-ActivityIds = ActivityIds or {}
+Assets          = Assets or {}
+ActivityIds     = ActivityIds or {}
 ActivityProcess = ActivityProcess or '<ACTIVITY_ID>'
 
 local function decodeMessageData(data)
@@ -41,7 +41,7 @@ local function checkValidAddress(address)
 end
 
 local function getState()
-    return {
+	return {
 		Name = Name,
 		Description = Description,
 		Creator = Creator,
@@ -54,7 +54,7 @@ local function getState()
 end
 
 local function syncState()
-    Send({ device = 'patch@1.0', asset = json.encode(getState()) })
+	Send({ device = 'patch@1.0', collection = json.encode(getState()) })
 end
 
 Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
