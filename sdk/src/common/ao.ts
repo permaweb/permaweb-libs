@@ -6,6 +6,7 @@ import {
 	MessageResultType,
 	MessageSendType,
 	ProcessCreateType,
+	ProcessReadType,
 	ProcessSpawnType,
 	TagType,
 } from '../helpers/types.ts';
@@ -65,21 +66,18 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 	}
 }
 
+export function readProcessWith(deps: DependencyType) {
+	return async (args: ProcessReadType) => {
+		return await readProcess(deps, args)
+	}
+}
+
 export async function readProcess(
 	deps: DependencyType,
-	{
-		processId,
-		path,
-		node = HB.defaultRouter,
-		fallbackAction,
-	}: {
-		processId: string;
-		path: string;
-		node?: string;
-		fallbackAction?: string;
-	}
+	args: ProcessReadType
 ) {
-	const url = `${node}/${processId}~process@1.0/now/${path}`;
+	const node = args.node ?? HB.defaultRouter
+	const url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	console.log('Fetching state from HyperBEAM:', url);
 
 	try {
@@ -91,9 +89,9 @@ export async function readProcess(
 		throw new Error(`Unexpected status ${res.status}`);
 	} catch (err: any) {
 		console.error(err.message);
-		if (fallbackAction) {
+		if (args.fallbackAction) {
 			console.log('State not found, dryrunning...');
-			const result = await aoDryRun(deps, { processId, action: fallbackAction });
+			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });
 			console.log('Returning state from dryrun.');
 			return result;
 		}

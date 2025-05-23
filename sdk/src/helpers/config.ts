@@ -3,16 +3,15 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'jm8OfYb4PL8-AHvx3k0csQUWDpR24bh6l8uNCoWueHA',
+		asset: 'dvlU-5HfAPWcukvnRHwSzMSEsoCqkZAEQsykMQgQ-wE',
 		collection: 'ssAijCOysZ33xGj1MwpZXMcMMN1eKfJrfeFeDe32-dg',
-		collectionActivity: 'wiu_YbzNyMwVwCdamC6cZlNM_bVhFZh5GrAg88uImOc',
+		collectionActivity: 'ZoObVeEjstNEgnQl33C0w1CRH_7mn7u4HZ2BsyfsRIQ',
 		zone: {
 			id: 'fAmxq5HS8V3ijkgTWHRcXtXzU0RPzKK9fmeVi1UwIs0',
 			version: '0.0.2'
 		}
 	},
-	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
-	profileRegistry: 'SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY'
+	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4'
 };
 
 export const HB = {
