@@ -89,8 +89,7 @@ export const TAGS = {
 };
 
 export const UPLOAD = {
-	node1: 'https://up.arweave.net',
-	node2: 'https://turbo.ardrive.io',
+	node1: 'https://turbo.ardrive.io',
 	batchSize: 1,
 	chunkSize: 7500000,
 	dispatchUploadSize: 100 * 1024,
