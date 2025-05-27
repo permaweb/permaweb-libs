@@ -154,6 +154,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 				.replace(/"(values)":/g, '$1:')
 				.replace(/"match"/g, 'match')
 				.replace(/"FUZZY_OR"/g, 'FUZZY_OR')
+				.replace(/"WILDCARD"/g, 'WILDCARD')
 		: null;
 	const owners = args.owners ? JSON.stringify(args.owners) : null;
 	const recipients = args.recipients ? JSON.stringify(args.recipients) : null;

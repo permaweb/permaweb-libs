@@ -2,8 +2,6 @@ import Arweave from 'arweave';
 import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 import fs from 'fs';
-import { File } from 'node:buffer';
-import path from 'path';
 
 const CREATOR = 'RhguwWmQJ-wWCXhRH_NtTDHRRgfCqNDZckXtJK52zKs';
 
@@ -366,37 +364,12 @@ function logError(message) {
 		}
 	}
 
-	// async function testTransactions() {
-	// 	try {
-	// 		logTest('Testing transaction upload…');
-
-	// 		const filePath = process.env.PATH_TO_UPLOAD_FILE;
-	// 		const data = fs.readFileSync(filePath);
-
-	// 		const file = new File(
-	// 			[data],
-	// 			path.basename(filePath),
-	// 			{
-	// 				type: 'application/octet-stream',
-	// 				lastModified: Date.now()
-	// 			}
-	// 		);
-
-	// 		const response = await permaweb.resolveTransaction(file);
-	// 		console.log(response);
-	// 	}
-	// 	catch (e) {
-	// 		logError(e.message ?? 'Transaction tests failed');
-	// 	}
-	// }
-
 	const testMap = {
 		zones: { key: 'zones', fn: testZones },
 		profiles: { key: 'profiles', fn: testProfiles },
 		assets: { key: 'assets', fn: testAssets },
 		comments: { key: 'comments', fn: testComments },
-		collections: { key: 'assets', fn: testCollections },
-		// transactions: { key: 'transactions', fn: testTransactions },
+		collections: { key: 'assets', fn: testCollections }
 	};
 
 	(async function () {

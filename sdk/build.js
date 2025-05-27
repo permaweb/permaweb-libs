@@ -2,6 +2,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import esbuild from 'esbuild';
 import alias from 'esbuild-plugin-alias';
+import dtsPlugin from 'esbuild-plugin-d.ts';
 import { nodeModulesPolyfillPlugin } from 'esbuild-plugins-node-modules-polyfill';
 import path from 'path';
 
@@ -37,7 +38,7 @@ const buildConfigs = [
 		platform: 'browser',
 		format: 'esm',
 		external: [
-			'fs', 'os', 'path', 'http', 'https', 'zlib', 'node:buffer'
+			'fs', 'os', 'path', 'http', 'https', 'zlib'
 		],
 		plugins: [
 			alias({
@@ -50,6 +51,7 @@ const buildConfigs = [
 					stream: true,
 					events: true,
 					util: true,
+					buffer: true
 				},
 			}),
 			dtsPlugin({ outDir: 'dist/types' })

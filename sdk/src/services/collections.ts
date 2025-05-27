@@ -1,5 +1,5 @@
 import { aoCreateProcess, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
-import { resolveTransaction } from '../common/arweave.ts';
+import { resolveTransactionWith } from '../common/arweave.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { getTxEndpoint } from '../helpers/endpoints.ts';
 import { CollectionDetailType, CollectionType, DependencyType, TagType } from '../helpers/types.ts';
@@ -19,6 +19,8 @@ export function createCollectionWith(deps: DependencyType) {
 		skipActivity?: boolean;
 	}, callback?: (status: any) => void) => {
 		if (!deps.signer) throw new Error(`No signer provided`);
+
+		const resolveTransaction = resolveTransactionWith(deps);
 
 		const dateTime = new Date().getTime().toString();
 		const tags: TagType[] = [
@@ -41,8 +43,8 @@ export function createCollectionWith(deps: DependencyType) {
 		let bannerTx = null;
 
 		try {
-			thumbnailTx = args.banner ? await resolveTransaction(deps, args.thumbnail) : DEFAULT_COLLECTION_THUMBNAIL;
-			bannerTx = args.banner ? await resolveTransaction(deps, args.banner) : DEFAULT_COLLECTION_BANNER;
+			thumbnailTx = args.banner ? await resolveTransaction(args.thumbnail) : DEFAULT_COLLECTION_THUMBNAIL;
+			bannerTx = args.banner ? await resolveTransaction(args.banner) : DEFAULT_COLLECTION_BANNER;
 
 			if (args.thumbnail)
 				tags.push({

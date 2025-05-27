@@ -1,6 +1,6 @@
 import { GATEWAYS, TAGS } from 'helpers/config.ts';
 
-import { resolveTransaction } from '../common/arweave.ts';
+import { resolveTransactionWith } from '../common/arweave.ts';
 import { getGQLData } from '../common/gql.ts';
 import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
 import { getBootTag } from '../helpers/utils.ts';
@@ -9,6 +9,7 @@ import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } fr
 
 export function createProfileWith(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
+	const resolveTransaction = resolveTransactionWith(deps);
 
 	return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
 		let profileId: string | null = null;
@@ -22,7 +23,7 @@ export function createProfileWith(deps: DependencyType) {
 			const key: any = imageKey.toLowerCase();
 			if ((args as any)[key]) {
 				try {
-					const resolvedImage = await resolveTransaction(deps, (args as any)[key]);
+					const resolvedImage = await resolveTransaction((args as any)[key]);
 					tags.push(getBootTag(imageKey, resolvedImage));
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve ${imageKey}: ${e.message}`);
@@ -49,6 +50,7 @@ export function createProfileWith(deps: DependencyType) {
 
 export function updateProfileWith(deps: DependencyType) {
 	const updateZone = updateZoneWith(deps);
+	const resolveTransaction = resolveTransactionWith(deps);
 
 	return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
 		if (profileId) {
@@ -60,7 +62,7 @@ export function updateProfileWith(deps: DependencyType) {
 
 			if (args.thumbnail) {
 				try {
-					data.Thumbnail = await resolveTransaction(deps, args.thumbnail);
+					data.Thumbnail = await resolveTransaction(args.thumbnail);
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
 				}
@@ -68,7 +70,7 @@ export function updateProfileWith(deps: DependencyType) {
 
 			if (args.banner) {
 				try {
-					data.Banner = await resolveTransaction(deps, args.banner);
+					data.Banner = await resolveTransaction(args.banner);
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve banner: ${e.message}`);
 				}

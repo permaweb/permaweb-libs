@@ -1,9 +1,8 @@
 import { ArconnectSigner, createData } from '@dha-team/arbundles/web';
-import retry from 'async-retry';
 
 import { TAGS, UPLOAD } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
-import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType, globalLog } from '../helpers/utils.ts';
+import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType } from '../helpers/utils.ts';
 
 export function resolveTransactionWith(deps: DependencyType) {
 	return async (data: any) => {
@@ -15,16 +14,6 @@ export function resolveTransactionWith(deps: DependencyType) {
 			throw new Error(e.message ?? 'Error resolving transaction');
 		}
 	};
-}
-
-export async function resolveTransaction(deps: DependencyType, data: any) {
-	if (checkValidAddress(data)) return data;
-	if (!deps.arweave) throw new Error(`Must initialize with Arweave in order to create transactions`);
-	try {
-		return await createTransaction(deps, { data: data });
-	} catch (e: any) {
-		throw new Error(e.message ?? 'Error resolving transaction');
-	}
 }
 
 export async function createTransaction(
@@ -175,44 +164,42 @@ export async function runUpload(
 	const headerOffset = !present.has(0) ? [0] : [];
 	const toUpload = dataOffsets.concat(headerOffset);
 
+	const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 	for (let i = 0; i < toUpload.length; i += batchSize) {
 		const batch = toUpload.slice(i, i + batchSize);
-		await Promise.all(
-			batch.map(async (off) => {
-				const slice = fullBlob.slice(off, off + chunkSize);
-				const body = await slice.arrayBuffer();
+		await Promise.all(batch.map(async off => {
+			const slice = fullBlob.slice(off, off + chunkSize);
+			const body = await slice.arrayBuffer();
 
-				await retry(
-					async (bail) => {
-						const up = await fetch(
-							`${apiUrl}/chunks/${token}/${uploadId}/${off}`,
-							{
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/octet-stream',
-									...commonHeaders,
-								},
-								body,
-							}
-						);
-						if (!up.ok) {
-							const text = await up.text();
-							if (up.status === 402) {
-								bail(new Error(`402 payment required: ${text}`));
-							}
-							throw new Error(`Chunk upload error ${up.status}: ${text}`);
+			let lastError: any = null;
+			for (let attempt = 1; attempt <= 3; attempt++) {
+				try {
+					const up = await fetch(`${apiUrl}/chunks/${token}/${uploadId}/${off}`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/octet-stream', ...commonHeaders },
+						body
+					});
+					if (!up.ok) {
+						const text = await up.text();
+						if (up.status === 402) {
+							throw new Error(`402 payment required: ${text}`);
 						}
-					},
-					{
-						retries: 3,
-						minTimeout: 1_000,
-						maxTimeout: 10_000,
+						throw new Error(`Chunk upload error ${up.status}: ${text}`);
 					}
-				);
-			})
-		);
+					return;
+				} catch (err: any) {
+					lastError = err;
+					if (attempt < 3) {
+						await sleep(1000 * attempt);
+						continue;
+					}
+				}
+			}
+			throw lastError;
+		}));
 	}
-	
+
 	const finalHeaders: Record<string, string> = {
 		'Content-Type': 'application/octet-stream',
 		...commonHeaders,
