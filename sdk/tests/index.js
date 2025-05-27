@@ -369,7 +369,7 @@ function logError(message) {
 		profiles: { key: 'profiles', fn: testProfiles },
 		assets: { key: 'assets', fn: testAssets },
 		comments: { key: 'comments', fn: testComments },
-		collections: { key: 'assets', fn: testCollections },
+		collections: { key: 'assets', fn: testCollections }
 	};
 
 	(async function () {

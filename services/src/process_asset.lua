@@ -7,10 +7,10 @@ Token = Token or {
     Name = Name or unsetPlaceholder,
     Ticker = Ticker or unsetPlaceholder,
     Denomination = Denomination or unsetPlaceholder,
+    Balances = Balances or {},
     TotalSupply = TotalSupply or unsetPlaceholder,
     Transferable = true,
     Creator = Creator or unsetPlaceholder,
-    Balances = Balances or {},
 }
 
 AuthUsers = AuthUsers or {}
@@ -62,10 +62,12 @@ local function getState()
         Ticker = Token.Ticker,
         Denomination = tostring(Token.Denomination),
         Balances = Token.Balances,
+        TotalSupply = Token.TotalSupply,
         Transferable = Token.Transferable,
         Creator = Token.Creator,
         Metadata = Metadata,
         AuthUsers = AuthUsers,
+        IndexRecipients = IndexRecipients,
         DateCreated = tostring(DateCreated),
         LastUpdate = tostring(LastUpdate),
     }

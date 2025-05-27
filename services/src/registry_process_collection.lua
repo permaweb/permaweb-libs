@@ -3,17 +3,11 @@ local json = require('json')
 -- Collections { Id, Name, Description, Creator, DateCreated, Banner, Thumbnail }[]
 if not Collections then Collections = {} end
 
--- CollectionsByUser: { Creator: { CollectionIds } }
-if not CollectionsByUser then CollectionsByUser = {} end
-
 InitialSync = InitialSync or 'INCOMPLETE'
 if InitialSync == 'INCOMPLETE' then
 	Send({
 		device = 'patch@1.0',
-		cache = json.encode({
-			Collections = Collections,
-			CollectionsByUser = CollectionsByUser
-		})
+		cache = json.encode({ Collections = Collections })
 	})
 	InitialSync = 'COMPLETE'
 end
@@ -74,17 +68,9 @@ Handlers.add('Add-Collection', Handlers.utils.hasMatchingTag('Action', 'Add-Coll
 		Thumbnail = data.Thumbnail
 	})
 
-	if not CollectionsByUser[data.Creator] then
-		CollectionsByUser[data.Creator] = {}
-	end
-	table.insert(CollectionsByUser[data.Creator], data.Id)
-
 	Send({
 		device = 'patch@1.0',
-		cache = json.encode({
-			Collections = Collections,
-			CollectionsByUser = CollectionsByUser
-		})
+		cache = json.encode({ Collections = Collections })
 	})
 
 	ao.send({
@@ -97,7 +83,6 @@ Handlers.add('Add-Collection', Handlers.utils.hasMatchingTag('Action', 'Add-Coll
 	})
 end)
 
--- Get collections by user
 Handlers.add('Get-Collections', Handlers.utils.hasMatchingTag('Action', 'Get-Collections'), function(msg)
 	ao.send({
 		Target = msg.From,
@@ -110,49 +95,6 @@ Handlers.add('Get-Collections', Handlers.utils.hasMatchingTag('Action', 'Get-Col
 	})
 end)
 
--- Get collections by user
-Handlers.add('Get-Collections-By-User', Handlers.utils.hasMatchingTag('Action', 'Get-Collections-By-User'), function(msg)
-	local creator = msg.Tags.Creator
-
-	if not creator or creator == '' then
-		ao.send({
-			Target = msg.From,
-			Action = 'Action-Response',
-			Tags = {
-				Status = 'Error',
-				Message = 'Invalid or missing Creator'
-			}
-		})
-		return
-	end
-
-	local collectionIds = CollectionsByUser[creator] or {}
-	local userCollections = {}
-
-	for _, collectionId in ipairs(collectionIds) do
-		for _, collection in ipairs(Collections) do
-			if collection.Id == collectionId then
-				table.insert(userCollections, collection)
-				break
-			end
-		end
-	end
-
-	ao.send({
-		Target = msg.From,
-		Action = 'Action-Response',
-		Tags = {
-			Status = 'Success',
-			Message = 'Collections fetched successfully'
-		},
-		Data = json.encode({
-			Creator = creator,
-			Collections = userCollections
-		})
-	})
-end)
-
--- Remove collection by ID
 Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remove-Collection'), function(msg)
 	local collectionId = msg.Tags.CollectionId
 
@@ -204,19 +146,10 @@ Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remov
 	end
 
 	table.remove(Collections, collectionIndex)
-	for i, id in ipairs(CollectionsByUser[collectionOwner]) do
-		if id == collectionId then
-			table.remove(CollectionsByUser[collectionOwner], i)
-			break
-		end
-	end
 
 	Send({
 		device = 'patch@1.0',
-		cache = json.encode({
-			Collections = Collections,
-			CollectionsByUser = CollectionsByUser
-		})
+		cache = json.encode({ Collections = Collections })
 	})
 
 	ao.send({
@@ -228,3 +161,33 @@ Handlers.add('Remove-Collection', Handlers.utils.hasMatchingTag('Action', 'Remov
 		}
 	})
 end)
+
+Handlers.add('Filter-Inactive-Collections', Handlers.utils.hasMatchingTag('Action', 'Filter-Inactive-Collections'),
+	function(msg)
+		if msg.From ~= ao.id and msg.From ~= Owner then return end
+
+		local stampProcess = 'LaC2VtxqGekpRPuJh-TkI_ByAqCS2_KB3YuhMJ5yBtc'
+
+		local collections = {
+			{ Id = 'fRHIxUYl8Z3v8_j7s9P80XZ1K0iAVqnFTMC1HeTRp18' },
+			{ Id = 'e0pAZzSfBzHiIOVzJsz5qOpGeZM2wPMu4qD-t0z8FEM' },
+			{ Id = 'JAHF1fo4MECRZZFKGcT0B6XM94Lqe-3FtB4Ht_kTEK0' },
+		}
+
+		for _, collection in ipairs(collections) do
+			print('Running stamp lookup on (' .. collection.Id .. ')')
+			ao.send({
+				Target = stampProcess,
+				Action = 'Read-Stamps-By-Asset',
+				['Data-Source'] = collection.Id
+			})
+
+			local result = Receive({ From = stampProcess })
+
+			if result and result.Data and result.Data.stampsByAsset and #result.Data.stampsByAsset > 1 then
+				print('Stamp count on collection (' .. collection.Id .. ') - ' .. #result.Data.stampsByAsset)
+			else
+				print('No stamps on collection (' .. collection.Id .. ') Removing...')
+			end
+		end
+	end)

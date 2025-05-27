@@ -47,6 +47,7 @@ function init(deps: Helpers.DependencyType) {
 		getAggregatedGQLData: Common.getAggregatedGQLData,
 		createProcess: Common.aoCreateProcessWith(deps),
 		readProcess: Common.aoDryRunWith(deps),
+		readState: Common.readProcessWith(deps),
 		sendMessage: Common.aoSendWith(deps),
 		
 		/* Utils */

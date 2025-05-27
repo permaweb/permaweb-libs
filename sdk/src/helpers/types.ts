@@ -4,6 +4,13 @@ export type DependencyType = {
 	arweave?: any;
 };
 
+export type ProcessReadType = {
+	processId: string,
+	path: string,
+	fallbackAction: string,
+	node?: string,
+}
+
 export type ProcessSpawnType = {
 	module: string;
 	scheduler: string;

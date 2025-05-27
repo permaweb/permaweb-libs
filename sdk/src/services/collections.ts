@@ -1,9 +1,9 @@
-import { aoCreateProcess, aoDryRun, aoSend } from '../common/ao.ts';
-import { resolveTransaction } from '../common/arweave.ts';
+import { aoCreateProcess, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
+import { resolveTransactionWith } from '../common/arweave.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { getTxEndpoint } from '../helpers/endpoints.ts';
 import { CollectionDetailType, CollectionType, DependencyType, TagType } from '../helpers/types.ts';
-import { cleanProcessField, cleanTagValue, globalLog } from '../helpers/utils.ts';
+import { cleanProcessField, cleanTagValue, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 const DEFAULT_COLLECTION_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
 const DEFAULT_COLLECTION_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';
@@ -20,32 +20,31 @@ export function createCollectionWith(deps: DependencyType) {
 	}, callback?: (status: any) => void) => {
 		if (!deps.signer) throw new Error(`No signer provided`);
 
+		const resolveTransaction = resolveTransactionWith(deps);
+
 		const dateTime = new Date().getTime().toString();
 		const tags: TagType[] = [
-			{ name: TAGS.keys.contentType, value: 'application/json' },
 			{ name: TAGS.keys.creator, value: args.creator },
 			{
 				name: TAGS.keys.ans110.title,
 				value: cleanTagValue(args.title),
 			},
 			{
-				name: TAGS.keys.ans110.description,
-				value: cleanTagValue(args.description),
-			},
-			{ name: TAGS.keys.dateCreated, value: dateTime },
-			{
 				name: TAGS.keys.name,
 				value: cleanTagValue(args.title),
 			},
-			{ name: 'Action', value: 'Add-Collection' },
+			{
+				name: TAGS.keys.ans110.description,
+				value: cleanTagValue(args.description),
+			}
 		];
 
 		let thumbnailTx = null;
 		let bannerTx = null;
 
 		try {
-			thumbnailTx = args.banner ? await resolveTransaction(deps, args.thumbnail) : DEFAULT_COLLECTION_THUMBNAIL;
-			bannerTx = args.banner ? await resolveTransaction(deps, args.banner) : DEFAULT_COLLECTION_BANNER;
+			thumbnailTx = args.banner ? await resolveTransaction(args.thumbnail) : DEFAULT_COLLECTION_THUMBNAIL;
+			bannerTx = args.banner ? await resolveTransaction(args.banner) : DEFAULT_COLLECTION_BANNER;
 
 			if (args.thumbnail)
 				tags.push({
@@ -103,7 +102,7 @@ export function createCollectionWith(deps: DependencyType) {
 					{ name: 'Creator', value: args.creator },
 					{ name: 'DateCreated', value: dateTime },
 				];
-	
+
 				if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
 				if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
 
@@ -117,20 +116,20 @@ export function createCollectionWith(deps: DependencyType) {
 			if (!args.skipActivity) {
 				globalLog('Creating collection activity process...');
 				if (callback) callback('Creating collection activity process...');
-				
+
 				const activityTags = [
 					{ name: 'CollectionId', value: collectionId },
 					{ name: 'DateCreated', value: dateTime },
 					{ name: 'UCM-Process', value: 'Collection-Activity' },
 					{ name: 'On-Boot', value: AO.src.collectionActivity },
 				];
-				
+
 				const collectionActivityId = await aoCreateProcess(
 					deps,
 					{ tags: activityTags },
 					callback ? (status) => callback(status) : undefined,
 				);
-				
+
 				globalLog('Adding activity to collection process...');
 				if (callback) callback('Adding activity to collection process...');
 				await deps.ao.message({
@@ -161,10 +160,10 @@ export function updateCollectionAssetsWith(deps: DependencyType) {
 			data: {
 				Target: args.collectionId,
 				Action: 'Update-Assets',
-				Input: JSON.stringify({
+				Input: {
 					AssetIds: args.assetIds,
 					UpdateType: args.updateType,
-				}),
+				},
 			},
 		});
 	};
@@ -172,25 +171,17 @@ export function updateCollectionAssetsWith(deps: DependencyType) {
 
 export function getCollectionWith(deps: DependencyType) {
 	return async (collectionId: string): Promise<CollectionDetailType | null> => {
-		const response = await aoDryRun(deps, {
+		const response = await readProcess(deps, {
 			processId: collectionId,
-			action: 'Info',
+			path: 'collection',
+			fallbackAction: 'Info',
 		});
 
-		const collection = {
-			id: collectionId,
-			title: response.Name,
-			description: response.Description,
-			creator: response.Creator,
-			dateCreated: response.DateCreated,
-			thumbnail: response.Thumbnail ?? DEFAULT_COLLECTION_THUMBNAIL,
-			banner: response.Banner ?? DEFAULT_COLLECTION_THUMBNAIL,
-		};
+		if (response) {
+			return mapFromProcessCase(response)
+		}
 
-		return {
-			...collection,
-			assetIds: response.Assets,
-		};
+		return null
 	};
 }
 

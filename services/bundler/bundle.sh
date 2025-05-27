@@ -15,13 +15,13 @@ fi
 
 # Array of files to bundle
 FILES=(
-    "../../packages/kv/base/src/kv.lua"
-    "../../packages/kv/batchplugin/src/batch.lua"
-    "../../packages/asset-manager/asset-manager.lua"
-    "../src/zones/zone-v2.lua"
+    "../src/package_kv.lua"
+    "../src/package_kv_batch.lua"
+    "../src/package_asset_manager.lua"
+    "../src/process_zone.lua"
 )
 
-# Array of corresponding package names
+# Array of corresponding package names, must match length of FILES
 PACKAGE_NAMES=(
     "@permaweb/kv-base"
     "@permaweb/kv-batch"
@@ -45,6 +45,7 @@ indent_lines() {
     done
 }
 
+# Add dependencies
 echo "local json = require('json')" >> "$TARGET_FILE"
 
 # Append each file's content to the target file

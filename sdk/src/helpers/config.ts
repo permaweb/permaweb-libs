@@ -3,16 +3,15 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'jm8OfYb4PL8-AHvx3k0csQUWDpR24bh6l8uNCoWueHA',
-		collection: 'flkCYx4lJtOtsVFyUZLN-AKpkObNoTMYu4GfUTzNoGE',
-		collectionActivity: 'k8K8WIJb5kXOVvZRFXF5GIZW-7b2NtaTOd6G-E5MF0k',
+		asset: 'dvlU-5HfAPWcukvnRHwSzMSEsoCqkZAEQsykMQgQ-wE',
+		collection: 'ssAijCOysZ33xGj1MwpZXMcMMN1eKfJrfeFeDe32-dg',
+		collectionActivity: 'ZoObVeEjstNEgnQl33C0w1CRH_7mn7u4HZ2BsyfsRIQ',
 		zone: {
 			id: 'fAmxq5HS8V3ijkgTWHRcXtXzU0RPzKK9fmeVi1UwIs0',
 			version: '0.0.2'
 		}
 	},
-	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
-	profileRegistry: 'SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY'
+	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4'
 };
 
 export const HB = {
@@ -90,8 +89,7 @@ export const TAGS = {
 };
 
 export const UPLOAD = {
-	node1: 'https://up.arweave.net',
-	node2: 'https://turbo.ardrive.io',
+	node1: 'https://turbo.ardrive.io',
 	batchSize: 1,
 	chunkSize: 7500000,
 	dispatchUploadSize: 100 * 1024,
