@@ -233,3 +233,10 @@ Handlers.add('Add-Collection-To-Profile', Handlers.utils.hasMatchingTag('Action'
 			})
 		end
 	end)
+
+Initialized = Initialized or false
+
+if not Initialized then
+	syncState()
+	Initialized = true
+end

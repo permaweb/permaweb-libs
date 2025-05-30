@@ -4,8 +4,8 @@ export const AO = {
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
 		asset: 'dvlU-5HfAPWcukvnRHwSzMSEsoCqkZAEQsykMQgQ-wE',
-		collection: 'ssAijCOysZ33xGj1MwpZXMcMMN1eKfJrfeFeDe32-dg',
-		collectionActivity: 'ZoObVeEjstNEgnQl33C0w1CRH_7mn7u4HZ2BsyfsRIQ',
+		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
+		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
 		zone: {
 			id: 'fAmxq5HS8V3ijkgTWHRcXtXzU0RPzKK9fmeVi1UwIs0',
 			version: '0.0.2'
@@ -15,7 +15,7 @@ export const AO = {
 };
 
 export const HB = {
-	defaultRouter: 'https://router-1.forward.computer'
+	defaultNode: 'https://tee-4.forward.computer'
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {

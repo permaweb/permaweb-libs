@@ -3,7 +3,7 @@
 set -e
 
 # Define the target file
-TARGET_FILE="./dist/zone-bundle.lua"
+TARGET_FILE="./dist/bundle_zone.lua"
 
 # Create the target directory if it doesn't exist
 mkdir -p "dist"

@@ -26,6 +26,7 @@ Zone.Constants = {
     H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
     H_ZONE_RUN_ACTION = 'Run-Action',
     H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
+    H_ZONE_ADD_INDEX_REQUEST = 'Add-Index-Request',
     H_ZONE_INDEX_NOTICE = 'Index-Notice',
     H_ZONE_UPDATE = 'Zone-Update',
     H_ZONE_ROLE_SET = 'Role-Set',
@@ -45,11 +46,27 @@ Zone.RoleOptions = {
 }
 
 HandlerRoles = {
-    [Zone.Constants.H_ZONE_ROLE_SET] = { Zone.RoleOptions.Admin },
-    [Zone.Constants.H_ZONE_UPDATE] = { Zone.RoleOptions.Admin },
-    [Zone.Constants.H_ZONE_ADD_INDEX_ID] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
-    [Zone.Constants.H_ZONE_ADD_UPLOAD] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
-    [Zone.Constants.H_ZONE_RUN_ACTION] = { Zone.RoleOptions.Admin, Zone.RoleOptions.Contributor },
+    [Zone.Constants.H_ZONE_ROLE_SET] = {
+        Zone.RoleOptions.Admin
+    },
+    [Zone.Constants.H_ZONE_UPDATE] = {
+        Zone.RoleOptions.Admin
+    },
+    [Zone.Constants.H_ZONE_ADD_INDEX_ID] = {
+        Zone.RoleOptions.Admin,
+        Zone.RoleOptions.Moderator
+    },
+    [Zone.Constants.H_ZONE_ADD_INDEX_REQUEST] = {
+        Zone.RoleOptions.Admin,
+        Zone.RoleOptions.Contributor,
+        Zone.RoleOptions.ExternalContributor
+    },
+    [Zone.Constants.H_ZONE_ADD_UPLOAD] = {
+        Zone.RoleOptions.Admin
+    },
+    [Zone.Constants.H_ZONE_RUN_ACTION] = {
+        Zone.RoleOptions.Admin
+    },
 }
 
 Zone.Data = Zone.Data or {
@@ -522,8 +539,38 @@ function Zone.Functions.addIndexId(msg)
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
+function Zone.Functions.addIndexRequest(msg)
+    if not Zone.Functions.isAuthorized(msg) then
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    if not msg.IndexId then
+        Zone.Functions.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    if not Zone.Data.KV.Store.IndexRequests then
+        Zone.Data.KV.Store.IndexRequests = {}
+    end
+
+    for _, index in ipairs(Zone.Data.KV.Store.IndexRequests) do
+        if index.Id == msg.IndexId then
+            Zone.Functions.sendError(msg.From, 'Id already exists')
+            return
+        end
+    end
+
+    table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg.IndexId })
+
+    SyncState()
+    msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+end
+
+-- TODO: Add original sender (asset owner) to asset Send-Index and verify role
 function Zone.Functions.indexNotice(msg)
     local entryIndex = -1
+
     for i, entry in ipairs(Zone.Data.KV.Store.Index) do
         if entry.Id == msg.From then
             entryIndex = i
@@ -531,15 +578,24 @@ function Zone.Functions.indexNotice(msg)
         end
     end
 
+    if entryIndex == -1 then
+        for reqIndex, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
+            if reqEntry.Id == msg.From then
+                table.remove(Zone.Data.KV.Store.IndexRequests, reqIndex)
+                table.insert(Zone.Data.KV.Store.Index, reqEntry)
+                entryIndex = #Zone.Data.KV.Store.Index
+                break
+            end
+        end
+    end
+
     if entryIndex > -1 then
-        -- Decode the message data
         local decodedData = Zone.Functions.decodeMessageData(msg.Data)
         if not decodedData.success or not decodedData.data then
             Zone.Functions.sendError(msg.From, 'Invalid Data')
             return
         end
 
-        -- Get the existing entry and the new data
         local existingEntry = Zone.Data.KV.Store.Index[entryIndex]
         local newData = decodedData.data or {}
 
@@ -625,6 +681,8 @@ Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Fu
 Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
 Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
 Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Functions.addIndexId)
+Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_REQUEST, Zone.Constants.H_ZONE_ADD_INDEX_REQUEST,
+    Zone.Functions.addIndexRequest)
 Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
 Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
 Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)

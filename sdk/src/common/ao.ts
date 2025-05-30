@@ -32,6 +32,13 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 		});
 
 		globalLog(`Process ID: ${processId}`);
+		
+		globalLog('Sending initial message...');
+		await aoSend(deps, {
+			processId: processId,
+			action: 'Init'
+		})
+
 
 		return processId;
 	} catch (e: any) {
@@ -76,7 +83,7 @@ export async function readProcess(
 	deps: DependencyType,
 	args: ProcessReadType
 ) {
-	const node = args.node ?? HB.defaultRouter
+	const node = args.node ?? HB.defaultNode
 	const url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	console.log('Fetching state from HyperBEAM:', url);
 
