@@ -27,6 +27,7 @@ Zone.Constants = {
     H_ZONE_RUN_ACTION = 'Run-Action',
     H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
     H_ZONE_ADD_INDEX_REQUEST = 'Add-Index-Request',
+    H_ZONE_UPDATE_INDEX_REQUEST = 'Update-Index-Request',
     H_ZONE_INDEX_NOTICE = 'Index-Notice',
     H_ZONE_UPDATE = 'Zone-Update',
     H_ZONE_ROLE_SET = 'Role-Set',
@@ -60,6 +61,10 @@ HandlerRoles = {
         Zone.RoleOptions.Admin,
         Zone.RoleOptions.Contributor,
         Zone.RoleOptions.ExternalContributor
+    },
+    [Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST] = {
+        Zone.RoleOptions.Admin,
+        Zone.RoleOptions.Moderator
     },
     [Zone.Constants.H_ZONE_ADD_UPLOAD] = {
         Zone.RoleOptions.Admin
@@ -567,7 +572,46 @@ function Zone.Functions.addIndexRequest(msg)
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
--- TODO: Add original sender (asset owner) to asset Send-Index and verify role
+function Zone.Functions.updateIndexRequest(msg)
+    if not Zone.Functions.isAuthorized(msg) then
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    if not msg.IndexId or not msg.UpdateType then
+        Zone.Functions.sendError(msg.From, 'Invalid Data')
+        return
+    end
+
+    local entry = nil
+    local entryIndex = -1
+
+    for reqIndex, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
+        if reqEntry.Id == msg.IndexId then
+            entry = reqEntry
+            entryIndex = reqIndex
+            break
+        end
+    end
+
+    if entryIndex > -1 then
+        if msg.UpdateType == 'Approve' then
+            table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
+            table.insert(Zone.Data.KV.Store.Index, entry)
+        elseif msg.UpdateType == 'Reject' then
+            table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
+        else
+            Zone.Functions.sendError(msg.From, 'Invalid UpdateType')
+            return
+        end
+
+        SyncState()
+        msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+    else
+        Zone.Functions.sendError(msg.From, 'Entry not found')
+    end
+end
+
 function Zone.Functions.indexNotice(msg)
     local entryIndex = -1
 
@@ -575,17 +619,6 @@ function Zone.Functions.indexNotice(msg)
         if entry.Id == msg.From then
             entryIndex = i
             break
-        end
-    end
-
-    if entryIndex == -1 then
-        for reqIndex, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
-            if reqEntry.Id == msg.From then
-                table.remove(Zone.Data.KV.Store.IndexRequests, reqIndex)
-                table.insert(Zone.Data.KV.Store.Index, reqEntry)
-                entryIndex = #Zone.Data.KV.Store.Index
-                break
-            end
         end
     end
 
@@ -683,6 +716,8 @@ Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION,
 Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Functions.addIndexId)
 Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_REQUEST, Zone.Constants.H_ZONE_ADD_INDEX_REQUEST,
     Zone.Functions.addIndexRequest)
+Handlers.add(Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST, Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST,
+    Zone.Functions.updateIndexRequest)
 Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
 Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
 Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)

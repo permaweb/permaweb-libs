@@ -1,7 +1,7 @@
 import { aoCreateProcess, aoDryRun, aoSend, handleProcessEval, readProcess } from '../common/ao.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
-import { checkValidAddress, mapFromProcessCase } from '../helpers/utils.ts';
+import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
 	return async (args: { data?: any; tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
@@ -118,6 +118,8 @@ export function joinZoneWith(deps: DependencyType) {
 export function updateZoneVersionWith(deps: DependencyType) {
 	return async (args: { zoneId: string }): Promise<string | null> => {
 		try {
+			globalLog(`Update zone to version ${AO.src.zone.version} with source ${AO.src.zone.id}`);
+
 			await handleProcessEval(deps, {
 				processId: args.zoneId,
 				evalTxId: AO.src.zone.id
