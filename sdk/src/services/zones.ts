@@ -118,7 +118,7 @@ export function joinZoneWith(deps: DependencyType) {
 export function updateZoneVersionWith(deps: DependencyType) {
 	return async (args: { zoneId: string }): Promise<string | null> => {
 		try {
-			globalLog(`Update zone to version ${AO.src.zone.version} with source ${AO.src.zone.id}`);
+			globalLog(`Updating zone to version ${AO.src.zone.version} with source ${AO.src.zone.id}`);
 
 			await handleProcessEval(deps, {
 				processId: args.zoneId,

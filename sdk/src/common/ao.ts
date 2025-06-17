@@ -32,7 +32,7 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 		});
 
 		globalLog(`Process ID: ${processId}`);
-		
+
 		globalLog('Sending initial message...');
 		await aoSend(deps, {
 			processId: processId,
@@ -84,8 +84,10 @@ export async function readProcess(
 	args: ProcessReadType
 ) {
 	const node = args.node ?? HB.defaultNode
-	const url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
-	console.log('Fetching state from HyperBEAM:', url);
+	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
+	if (args.serialize) url += '/serialize~json@1.0';
+
+	console.log('Getting state from HyperBEAM:', url);
 
 	try {
 		const res = await fetch(url);
@@ -93,16 +95,17 @@ export async function readProcess(
 			console.log('Returning state from HyperBEAM.');
 			return res.json();
 		}
-		throw new Error(`Unexpected status ${res.status}`);
-	} catch (err: any) {
-		console.error(err.message);
+
+		throw new Error('Error getting state from HyperBEAM.')
+
+	} catch (e: any) {
 		if (args.fallbackAction) {
 			console.log('State not found, dryrunning...');
 			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });
 			console.log('Returning state from dryrun.');
 			return result;
 		}
-		throw err;
+		throw e;
 	}
 }
 

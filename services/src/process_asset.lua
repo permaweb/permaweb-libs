@@ -13,8 +13,12 @@ Token = Token or {
     Creator = Creator or unsetPlaceholder,
 }
 
-AuthUsers = AuthUsers or {}
 Metadata = Metadata or {}
+
+-- Users with permission to update process token data and metadata
+AuthUsers = AuthUsers or {}
+
+-- Processes who receive updates on asset updates
 IndexRecipients = IndexRecipients or {}
 
 DateCreated = DateCreated or nil

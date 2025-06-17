@@ -8,6 +8,7 @@ export type ProcessReadType = {
 	processId: string,
 	path: string,
 	fallbackAction: string,
+	serialize?: boolean;
 	node?: string,
 }
 

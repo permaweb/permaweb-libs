@@ -40,22 +40,27 @@ Zone.Constants = {
 }
 
 Zone.RoleOptions = {
-    Admin = 'Admin',
-    Contributor = 'Contributor',
-    ExternalContributor = 'ExternalContributor',
-    Moderator = 'Moderator',
+    ['Admin'] = 'Admin',
+    ['Moderator'] = 'Moderator',
+    ['Contributor'] = 'Contributor',
+    ['ExternalContributor'] = 'ExternalContributor'
 }
 
-HandlerRoles = {
-    [Zone.Constants.H_ZONE_ROLE_SET] = {
-        Zone.RoleOptions.Admin
-    },
+Permissions = {
     [Zone.Constants.H_ZONE_UPDATE] = {
         Zone.RoleOptions.Admin
     },
+    [Zone.Constants.H_ZONE_ROLE_SET] = {
+        Zone.RoleOptions.Admin
+    },
+    [Zone.Constants.H_ZONE_ADD_UPLOAD] = {
+        Zone.RoleOptions.Admin
+    },
+    [Zone.Constants.H_ZONE_RUN_ACTION] = {
+        Zone.RoleOptions.Admin
+    },
     [Zone.Constants.H_ZONE_ADD_INDEX_ID] = {
-        Zone.RoleOptions.Admin,
-        Zone.RoleOptions.Moderator
+        Zone.RoleOptions.Admin
     },
     [Zone.Constants.H_ZONE_ADD_INDEX_REQUEST] = {
         Zone.RoleOptions.Admin,
@@ -65,12 +70,6 @@ HandlerRoles = {
     [Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST] = {
         Zone.RoleOptions.Admin,
         Zone.RoleOptions.Moderator
-    },
-    [Zone.Constants.H_ZONE_ADD_UPLOAD] = {
-        Zone.RoleOptions.Admin
-    },
-    [Zone.Constants.H_ZONE_RUN_ACTION] = {
-        Zone.RoleOptions.Admin
     },
 }
 
@@ -94,7 +93,7 @@ function GetState()
         Assets = Zone.Data.AssetManager.Assets,
         Roles = Zone.Roles,
         RoleOptions = Zone.RoleOptions,
-        Permissions = HandlerRoles,
+        Permissions = Permissions,
         Invites = Zone.Invites,
         Version = Zone.Version
     }
@@ -102,6 +101,15 @@ end
 
 function SyncState()
     Send({ device = 'patch@1.0', zone = json.encode(GetState()) })
+end
+
+function SyncDynamicState(key, value, opts)
+    opts = opts or {}
+
+    local data = value
+    if opts.jsonEncode then data = json.encode(value) end
+
+    Send({ device = 'patch@1.0', [key] = data })
 end
 
 function Zone.Functions.tableLength(t)
@@ -176,7 +184,7 @@ function Zone.Functions.isAuthorized(msg)
         return true
     end
 
-    local rolesForHandler = HandlerRoles[msg.Action]
+    local rolesForHandler = Permissions[msg.Action]
 
     if not rolesForHandler then
         return msg.From == Owner or false,
@@ -416,6 +424,7 @@ function Zone.Functions.zoneRoleSet(msg)
         })
 
         SyncState()
+        SyncDynamicState('roles', Zone.Roles)
     else
         Zone.Functions.sendError(msg.From, string.format(
             'Failed to parse role update data, received: %s. %s.', msg.Data,
@@ -843,6 +852,7 @@ if not ZoneInitCompleted then
     end
 
     SyncState()
+    SyncDynamicState('roles', Zone.Roles)
     ZoneInitCompleted = true
 end
 
