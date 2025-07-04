@@ -37,9 +37,7 @@ const buildConfigs = [
 		outfile: 'dist/index.esm.js',
 		platform: 'browser',
 		format: 'esm',
-		external: [
-			'fs', 'os', 'path', 'http', 'https', 'zlib'
-		],
+		external: ['fs', 'os', 'path', 'http', 'https', 'zlib'],
 		plugins: [
 			alias({
 				'node:process': require.resolve('process/browser'),
@@ -51,12 +49,11 @@ const buildConfigs = [
 					stream: true,
 					events: true,
 					util: true,
-					buffer: true
+					buffer: true,
 				},
 			}),
-			dtsPlugin({ outDir: 'dist/types' })
+			dtsPlugin({ outDir: 'dist/types' }),
 		],
-
 	},
 ];
 

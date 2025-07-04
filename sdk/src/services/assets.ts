@@ -7,7 +7,7 @@ import {
 	AssetHeaderType,
 	DependencyType,
 	GQLNodeResponseType,
-	TagType
+	TagType,
 } from '../helpers/types.ts';
 import { getBootTag, mapFromProcessCase, mapToProcessCase } from '../helpers/utils.ts';
 
@@ -36,14 +36,16 @@ export function createAtomicAssetWith(deps: DependencyType) {
 export async function getAtomicAsset(
 	deps: DependencyType,
 	id: string,
-	args?: { useGateway?: boolean }
+	args?: { useGateway?: boolean },
 ): Promise<AssetDetailType | null> {
 	try {
-		const processInfo = mapFromProcessCase(await readProcess(deps, {
-			processId: id,
-			path: 'asset',
-			fallbackAction: 'Info',
-		}));
+		const processInfo = mapFromProcessCase(
+			await readProcess(deps, {
+				processId: id,
+				path: 'asset',
+				fallbackAction: 'Info',
+			}),
+		);
 
 		if (args?.useGateway) {
 			const gqlResponse = await getGQLData({
@@ -54,10 +56,8 @@ export async function getAtomicAsset(
 				cursor: null,
 			});
 
-			const gatewayAsset = gqlResponse?.data?.[0]
-				? buildAsset(gqlResponse.data[0])
-				: {};
-			
+			const gatewayAsset = gqlResponse?.data?.[0] ? buildAsset(gqlResponse.data[0]) : {};
+
 			return {
 				...gatewayAsset,
 				...processInfo,
@@ -66,8 +66,8 @@ export async function getAtomicAsset(
 
 		return {
 			id: id,
-			...processInfo
-		}
+			...processInfo,
+		};
 	} catch (e: any) {
 		throw new Error(e.message || 'Error fetching atomic asset');
 	}
@@ -112,9 +112,7 @@ export function buildAsset(element: GQLNodeResponseType): any {
 		const formattedKey = keyWithoutPrefix
 			.split('-')
 			.map((part, index) =>
-				index === 0
-					? part.toLowerCase()
-					: part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+				index === 0 ? part.toLowerCase() : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase(),
 			)
 			.join('');
 
@@ -154,7 +152,7 @@ function buildAssetCreateTags(args: AssetCreateArgsType): { name: string; value:
 			tags.push(getBootTag(mapToProcessCase(entry), (args.metadata as any)[entry].toString()));
 		}
 	}
-	
+
 	if (args.users) {
 		for (const user of args.users) {
 			tags.push({ name: 'Auth-User', value: user });

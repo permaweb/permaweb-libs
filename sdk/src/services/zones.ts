@@ -58,7 +58,10 @@ export function addToZoneWith(deps: DependencyType) {
 }
 
 export function setZoneRolesWith(deps: DependencyType) {
-	return async (args: { granteeId: string, roles: string[], type: 'wallet' | 'process', sendInvite: boolean }[], zoneId: string): Promise<string | null> => {
+	return async (
+		args: { granteeId: string; roles: string[]; type: 'wallet' | 'process'; sendInvite: boolean }[],
+		zoneId: string,
+	): Promise<string | null> => {
 		const zoneValid = checkValidAddress(zoneId);
 		if (!zoneValid) throw new Error('Invalid zone address');
 
@@ -73,8 +76,8 @@ export function setZoneRolesWith(deps: DependencyType) {
 				Id: entry.granteeId,
 				Roles: entry.roles,
 				Type: entry.type,
-				SendInvite: entry.sendInvite
-			})
+				SendInvite: entry.sendInvite,
+			});
 		}
 
 		try {
@@ -93,7 +96,7 @@ export function setZoneRolesWith(deps: DependencyType) {
 }
 
 export function joinZoneWith(deps: DependencyType) {
-	return async (args: { zoneToJoinId: string, path?: string }, zoneId: string): Promise<string | null> => {
+	return async (args: { zoneToJoinId: string; path?: string }, zoneId: string): Promise<string | null> => {
 		const zoneValid = checkValidAddress(zoneId) && checkValidAddress(args.zoneToJoinId);
 
 		if (!zoneValid) throw new Error('Invalid zone address');
@@ -122,20 +125,19 @@ export function updateZoneVersionWith(deps: DependencyType) {
 
 			await handleProcessEval(deps, {
 				processId: args.zoneId,
-				evalTxId: AO.src.zone.id
+				evalTxId: AO.src.zone.id,
 			});
 
 			const versionUpdate = await handleProcessEval(deps, {
 				processId: args.zoneId,
-				evalSrc: `Zone.Version = '${AO.src.zone.version}'; SyncState()`
+				evalSrc: `Zone.Version = '${AO.src.zone.version}'; SyncState()`,
 			});
 
 			return versionUpdate;
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			throw new Error(e);
 		}
-	}
+	};
 }
 
 export function getZoneWith(deps: DependencyType) {

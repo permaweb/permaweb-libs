@@ -40,8 +40,8 @@ export function getCommentWith(deps: DependencyType) {
 		try {
 			const asset: any = await getAtomicAsset(deps, id, { useGateway: true });
 
-			const dataSource = asset?.dataSource
-			const rootSource = asset?.rootSource
+			const dataSource = asset?.dataSource;
+			const rootSource = asset?.rootSource;
 
 			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
 
@@ -50,8 +50,7 @@ export function getCommentWith(deps: DependencyType) {
 				parentId: dataSource,
 				rootId: rootSource,
 			};
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			throw new Error(e.message ?? 'Error getting comment');
 		}
 	};
@@ -103,7 +102,7 @@ export function getCommentsWith(_deps: DependencyType) {
 				content: await getCommentData(asset.id),
 				parentId: dataSource,
 				rootId: rootSource,
-			})
+			});
 		}
 
 		return comments;
@@ -113,8 +112,7 @@ export function getCommentsWith(_deps: DependencyType) {
 async function getCommentData(id: string) {
 	try {
 		return await (await fetch(getTxEndpoint(id))).text();
-	}
-	catch (e: any) {
-		throw new Error(e.message ?? 'Error getting comment data')
+	} catch (e: any) {
+		throw new Error(e.message ?? 'Error getting comment data');
 	}
 }

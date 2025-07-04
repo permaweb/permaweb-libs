@@ -36,13 +36,12 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 		globalLog('Sending initial message...');
 		await aoSend(deps, {
 			processId: processId,
-			action: 'Init'
-		})
-
+			action: 'Init',
+		});
 
 		return processId;
 	} catch (e: any) {
-		console.log(e)
+		console.log(e);
 		throw new Error(e.message ?? 'Error spawning process');
 	}
 }
@@ -50,7 +49,7 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 export function aoSendWith(deps: DependencyType) {
 	return async (args: MessageSendType) => {
 		return await aoSend(deps, args);
-	}
+	};
 }
 
 export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
@@ -75,14 +74,11 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 
 export function readProcessWith(deps: DependencyType) {
 	return async (args: ProcessReadType) => {
-		return await readProcess(deps, args)
-	}
+		return await readProcess(deps, args);
+	};
 }
 
-export async function readProcess(
-	deps: DependencyType,
-	args: ProcessReadType
-) {
+export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 	const node = args.node ?? HB.defaultNode
 	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	if (args.serialize) url += '/serialize~json@1.0';
@@ -112,7 +108,7 @@ export async function readProcess(
 export function aoDryRunWith(deps: DependencyType) {
 	return async (args: MessageSendType) => {
 		return await aoDryRun(deps, args);
-	}
+	};
 }
 
 export async function aoDryRun(deps: DependencyType, args: MessageDryRunType): Promise<any> {
@@ -414,7 +410,7 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 	}
 }
 
-export async function waitForProcess(args: { processId: string, noRetryLimit?: boolean }) {
+export async function waitForProcess(args: { processId: string; noRetryLimit?: boolean }) {
 	let retries = 0;
 	const retryLimit = args.noRetryLimit ? Infinity : GATEWAY_RETRY_COUNT;
 

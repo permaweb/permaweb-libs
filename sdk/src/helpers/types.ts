@@ -5,12 +5,12 @@ export type DependencyType = {
 };
 
 export type ProcessReadType = {
-	processId: string,
-	path: string,
-	fallbackAction: string,
+	processId: string;
+	path: string;
+	fallbackAction: string;
 	serialize?: boolean;
-	node?: string,
-}
+	node?: string;
+};
 
 export type ProcessSpawnType = {
 	module: string;
@@ -85,7 +85,7 @@ export type AssetCreateArgsType = {
 	supply?: number;
 	denomination?: number;
 	transferable?: boolean;
-	metadata?: object;	
+	metadata?: object;
 	tags?: TagType[];
 	src?: string;
 	users?: string[];
@@ -93,7 +93,7 @@ export type AssetCreateArgsType = {
 
 export type AssetHeaderType = {
 	id: string;
-	owner: string | null
+	owner: string | null;
 };
 
 export type AssetDetailType = {
@@ -108,22 +108,28 @@ export type AssetDetailType = {
 	metadata: any;
 	dateCreated: string;
 	lastUpdate: string;
-}
+};
 
 export type CommentHeaderType = {
-	id: string; 
+	id: string;
 	content: string;
-	parentId: string; 
-	rootId: string
+	parentId: string;
+	rootId: string;
 };
 
 export type CommentDetailType = {
 	content: string;
 	parentId: string;
 	rootId: string;
-}
+};
 
-export type CommentCreateArgType = { content: string; creator: string;  parentId: string; rootId?: string, tags?: TagType[] };
+export type CommentCreateArgType = {
+	content: string;
+	creator: string;
+	parentId: string;
+	rootId?: string;
+	tags?: TagType[];
+};
 
 export type CollectionManifestType = {
 	type: string;

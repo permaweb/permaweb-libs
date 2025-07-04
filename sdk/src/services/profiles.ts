@@ -93,11 +93,10 @@ export function updateProfileVersionWith(deps: DependencyType) {
 	return async (args: { profileId: string }): Promise<string | null> => {
 		try {
 			return await updateZoneVersion({ zoneId: args.profileId });
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			throw new Error(e);
 		}
-	}
+	};
 }
 
 export function getProfileByIdWith(deps: DependencyType) {

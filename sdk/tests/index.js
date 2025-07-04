@@ -31,7 +31,7 @@ function expect(actual) {
 			if (actualType === 'object' && actual !== null && expected !== null) {
 				if (Array.isArray(actual) !== Array.isArray(expected)) {
 					throw new Error(
-						`Type mismatch: expected ${Array.isArray(expected) ? 'array' : 'object'}, but got ${Array.isArray(actual) ? 'array' : 'object'}`
+						`Type mismatch: expected ${Array.isArray(expected) ? 'array' : 'object'}, but got ${Array.isArray(actual) ? 'array' : 'object'}`,
 					);
 				}
 			}
@@ -45,7 +45,10 @@ function expect(actual) {
 			console.log('\x1b[32m%s\x1b[0m', `Success: Array length is equal (${actual.length})`);
 		},
 		toEqual: (expected) => {
-			console.log('\x1b[90m%s\x1b[0m', `Checking equality, actual: ${JSON.stringify(actual)}, expected: ${JSON.stringify(expected)}`);
+			console.log(
+				'\x1b[90m%s\x1b[0m',
+				`Checking equality, actual: ${JSON.stringify(actual)}, expected: ${JSON.stringify(expected)}`,
+			);
 			const actualType = typeof actual;
 			const expectedType = typeof expected;
 			if (actualType !== expectedType) {
@@ -55,7 +58,10 @@ function expect(actual) {
 			if (actualType === 'object' && actual !== null && expected !== null) {
 				const actualKeys = Object.keys(actual);
 				const expectedKeys = Object.keys(expected);
-				console.log('\x1b[90m%s\x1b[0m', `Checking object keys, actual keys: ${JSON.stringify(actualKeys)}, expected keys: ${JSON.stringify(expectedKeys)}`);
+				console.log(
+					'\x1b[90m%s\x1b[0m',
+					`Checking object keys, actual keys: ${JSON.stringify(actualKeys)}, expected keys: ${JSON.stringify(expectedKeys)}`,
+				);
 				if (actualKeys.length !== expectedKeys.length) {
 					throw new Error(`Object key count mismatch: expected ${expectedKeys.length}, but got ${actualKeys.length}`);
 				}
@@ -113,13 +119,16 @@ function logError(message) {
 			expect(zoneId).toEqualType('string');
 
 			logTest('Testing zone update...');
-			const zoneUpdateId = await permaweb.updateZone({
-				name: 'Sample Zone',
-				metadata: {
-					description: 'A test zone for unit testing',
-					version: '1.0.0',
+			const zoneUpdateId = await permaweb.updateZone(
+				{
+					name: 'Sample Zone',
+					metadata: {
+						description: 'A test zone for unit testing',
+						version: '1.0.0',
+					},
 				},
-			}, zoneId);
+				zoneId,
+			);
 
 			expect(zoneUpdateId).toBeDefined();
 			expect(zoneUpdateId).toEqualType('string');
@@ -137,8 +146,7 @@ function logError(message) {
 				},
 				assets: [],
 			});
-		}
-		catch (e) {
+		} catch (e) {
 			logError(e.message ?? 'Zone tests failed');
 		}
 	}
@@ -146,11 +154,14 @@ function logError(message) {
 	async function testProfiles() {
 		try {
 			logTest('Testing profile creation...');
-			const profileId = await permaweb.createProfile({
-				username: 'My username',
-				displayName: 'My display name',
-				description: 'My description'
-			}, (status) => console.log(`Callback: ${status}`));
+			const profileId = await permaweb.createProfile(
+				{
+					username: 'My username',
+					displayName: 'My display name',
+					description: 'My description',
+				},
+				(status) => console.log(`Callback: ${status}`),
+			);
 
 			expect(profileId).toBeDefined();
 			expect(profileId).toEqualType('string');
@@ -162,17 +173,23 @@ function logError(message) {
 			expect(profileById.username).toEqual('My username');
 
 			logTest('Testing profile fetch by address...');
-			const profileByWalletAddress = await permaweb.getProfileByWalletAddress(await arweave.wallets.jwkToAddress(wallet));
+			const profileByWalletAddress = await permaweb.getProfileByWalletAddress(
+				await arweave.wallets.jwkToAddress(wallet),
+			);
 
 			expect(profileByWalletAddress).toBeDefined();
 			expect(profileByWalletAddress.username).toEqual('My username');
 
 			logTest('Testing profile update...');
-			const profileUpdateId = await permaweb.updateProfile({
-				username: 'My updated username',
-				displayName: 'My updated display name',
-				description: 'My updated description'
-			}, profileId, (status) => console.log(`Callback: ${status}`));
+			const profileUpdateId = await permaweb.updateProfile(
+				{
+					username: 'My updated username',
+					displayName: 'My updated display name',
+					description: 'My updated description',
+				},
+				profileId,
+				(status) => console.log(`Callback: ${status}`),
+			);
 
 			expect(profileUpdateId).toBeDefined();
 			expect(profileUpdateId).toEqualType('string');
@@ -182,9 +199,7 @@ function logError(message) {
 
 			expect(updatedProfileById).toBeDefined();
 			expect(updatedProfileById.username).toEqual('My updated username');
-
-		}
-		catch (e) {
+		} catch (e) {
 			logError(e.message ?? 'Profile tests failed');
 		}
 	}
@@ -201,14 +216,14 @@ function logError(message) {
 				contentType: 'text/plain',
 				assetType: 'Example Atomic Asset Type',
 				metadata: {
-					status: 'Initial Status'
-				}
+					status: 'Initial Status',
+				},
 			});
 
 			expect(assetId1).toBeDefined();
 			expect(assetId1).toEqualType('string');
 
-			logTest('Testing asset fetch...')
+			logTest('Testing asset fetch...');
 			const asset1 = await permaweb.getAtomicAsset(assetId1);
 
 			expect(asset1).toBeDefined();
@@ -224,8 +239,8 @@ function logError(message) {
 				contentType: 'text/plain',
 				assetType: 'Example Atomic Asset Type',
 				metadata: {
-					status: 'Initial Status'
-				}
+					status: 'Initial Status',
+				},
 			});
 
 			expect(assetId2).toBeDefined();
@@ -239,7 +254,7 @@ function logError(message) {
 			logTest('Testing asset update...');
 			const data = permaweb.mapToProcessCase({
 				name: 'Updated Name',
-				description: 'Updated Description'
+				description: 'Updated Description',
 			});
 
 			await permaweb.sendMessage({
@@ -256,22 +271,24 @@ function logError(message) {
 
 			expect(updatedAsset).toBeDefined();
 			expect(updatedAsset.name).toEqual('Updated Name');
-		}
-		catch (e) {
+		} catch (e) {
 			logError(e.message ?? 'Asset tests failed');
 		}
 	}
 
 	async function testComments() {
-		const PARENT_ID = (new Date().getTime()).toString();
+		const PARENT_ID = new Date().getTime().toString();
 
 		try {
 			logTest('Testing comment creation...');
-			const commentId1 = await permaweb.createComment({
-				creator: CREATOR,
-				content: 'My first comment',
-				parentId: PARENT_ID
-			}, (status) => console.log(`Callback: ${status}`));
+			const commentId1 = await permaweb.createComment(
+				{
+					creator: CREATOR,
+					content: 'My first comment',
+					parentId: PARENT_ID,
+				},
+				(status) => console.log(`Callback: ${status}`),
+			);
 
 			expect(commentId1).toBeDefined();
 			expect(commentId1).toEqualType('string');
@@ -283,11 +300,14 @@ function logError(message) {
 			expect(comment.parentId).toEqual(Number(PARENT_ID));
 
 			logTest('Creating comment for batch query...');
-			const commentId2 = await permaweb.createComment({
-				creator: CREATOR,
-				content: 'My second comment',
-				parentId: PARENT_ID
-			}, (status) => console.log(`Callback: ${status}`));
+			const commentId2 = await permaweb.createComment(
+				{
+					creator: CREATOR,
+					content: 'My second comment',
+					parentId: PARENT_ID,
+				},
+				(status) => console.log(`Callback: ${status}`),
+			);
 
 			expect(commentId2).toBeDefined();
 			expect(commentId2).toEqualType('string');
@@ -296,27 +316,29 @@ function logError(message) {
 			const comments = await permaweb.getComments({ parentId: PARENT_ID });
 
 			expect(comments).toEqualLength(2);
-		}
-		catch (e) {
+		} catch (e) {
 			logError(e.message ?? 'Comment tests failed');
 		}
 	}
 
 	async function testCollections() {
 		try {
-			logTest('Creating profile to own collection...')
-			const profileId = await permaweb.createProfile({
-				username: 'My username',
-				displayName: 'My display name',
-				description: 'My description'
-			}, (status) => console.log(`Callback: ${status}`));
+			logTest('Creating profile to own collection...');
+			const profileId = await permaweb.createProfile(
+				{
+					username: 'My username',
+					displayName: 'My display name',
+					description: 'My description',
+				},
+				(status) => console.log(`Callback: ${status}`),
+			);
 
 			logTest('Testing collection creation...');
 			const collectionId = await permaweb.createCollection({
 				title: 'Sample collection title',
 				description: 'Sample collection description',
 				creator: profileId,
-				skipRegistry: true
+				skipRegistry: true,
 			});
 
 			expect(collectionId).toBeDefined();
@@ -331,10 +353,7 @@ function logError(message) {
 			logTest('Testing collection assets update...');
 			const collectionUpdateId = await permaweb.updateCollectionAssets({
 				collectionId: collectionId,
-				assetIds: [
-					'BvKq3F8psspbAvIDBAlgiG3E_XwiszSfJIYSg3kl0BU',
-					'Loe-SwVioq8_xqbbzM-0TxMC4Lq8IobHNLyHQWgxaGk',
-				],
+				assetIds: ['BvKq3F8psspbAvIDBAlgiG3E_XwiszSfJIYSg3kl0BU', 'Loe-SwVioq8_xqbbzM-0TxMC4Lq8IobHNLyHQWgxaGk'],
 				creator: profileId,
 				updateType: 'Add',
 			});
@@ -358,8 +377,7 @@ function logError(message) {
 			const actualAssets = updatedCollection.assetIds.sort();
 
 			expect(actualAssets).toEqual(expectedAssets);
-		}
-		catch (e) {
+		} catch (e) {
 			logError(e.message ?? 'Collection tests failed');
 		}
 	}
@@ -369,7 +387,7 @@ function logError(message) {
 		profiles: { key: 'profiles', fn: testProfiles },
 		assets: { key: 'assets', fn: testAssets },
 		comments: { key: 'comments', fn: testComments },
-		collections: { key: 'assets', fn: testCollections }
+		collections: { key: 'assets', fn: testCollections },
 	};
 
 	(async function () {
