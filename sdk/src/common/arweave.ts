@@ -118,7 +118,7 @@ export async function runUpload(
 
 	const rawBytes = dataItem.getRaw();
 
-	const fullBlob = new Blob([rawBytes], {
+	const fullBlob = new Blob([new Uint8Array(rawBytes)], {
 		type: 'application/octet-stream',
 	});
 
