@@ -32,17 +32,16 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 		});
 
 		globalLog(`Process ID: ${processId}`);
-		
+
 		globalLog('Sending initial message...');
 		await aoSend(deps, {
 			processId: processId,
-			action: 'Init'
-		})
-
+			action: 'Init',
+		});
 
 		return processId;
 	} catch (e: any) {
-		console.log(e)
+		console.log(e);
 		throw new Error(e.message ?? 'Error spawning process');
 	}
 }
@@ -50,7 +49,7 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 export function aoSendWith(deps: DependencyType) {
 	return async (args: MessageSendType) => {
 		return await aoSend(deps, args);
-	}
+	};
 }
 
 export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
@@ -75,17 +74,16 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 
 export function readProcessWith(deps: DependencyType) {
 	return async (args: ProcessReadType) => {
-		return await readProcess(deps, args)
-	}
+		return await readProcess(deps, args);
+	};
 }
 
-export async function readProcess(
-	deps: DependencyType,
-	args: ProcessReadType
-) {
+export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 	const node = args.node ?? HB.defaultNode
-	const url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
-	console.log('Fetching state from HyperBEAM:', url);
+	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
+	if (args.serialize) url += '/serialize~json@1.0';
+
+	console.log('Getting state from HyperBEAM:', url);
 
 	try {
 		const res = await fetch(url);
@@ -93,23 +91,24 @@ export async function readProcess(
 			console.log('Returning state from HyperBEAM.');
 			return res.json();
 		}
-		throw new Error(`Unexpected status ${res.status}`);
-	} catch (err: any) {
-		console.error(err.message);
+
+		throw new Error('Error getting state from HyperBEAM.')
+
+	} catch (e: any) {
 		if (args.fallbackAction) {
 			console.log('State not found, dryrunning...');
 			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });
 			console.log('Returning state from dryrun.');
 			return result;
 		}
-		throw err;
+		throw e;
 	}
 }
 
 export function aoDryRunWith(deps: DependencyType) {
 	return async (args: MessageSendType) => {
 		return await aoDryRun(deps, args);
-	}
+	};
 }
 
 export async function aoDryRun(deps: DependencyType, args: MessageDryRunType): Promise<any> {
@@ -411,7 +410,7 @@ export async function fetchProcessSrc(txId: string): Promise<string> {
 	}
 }
 
-export async function waitForProcess(args: { processId: string, noRetryLimit?: boolean }) {
+export async function waitForProcess(args: { processId: string; noRetryLimit?: boolean }) {
 	let retries = 0;
 	const retryLimit = args.noRetryLimit ? Infinity : GATEWAY_RETRY_COUNT;
 

@@ -9,15 +9,18 @@ const DEFAULT_COLLECTION_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
 const DEFAULT_COLLECTION_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';
 
 export function createCollectionWith(deps: DependencyType) {
-	return async (args: {
-		title: string;
-		description: string;
-		creator: string;
-		thumbnail: any;
-		banner: any;
-		skipRegistry?: boolean;
-		skipActivity?: boolean;
-	}, callback?: (status: any) => void) => {
+	return async (
+		args: {
+			title: string;
+			description: string;
+			creator: string;
+			thumbnail: any;
+			banner: any;
+			skipRegistry?: boolean;
+			skipActivity?: boolean;
+		},
+		callback?: (status: any) => void,
+	) => {
 		if (!deps.signer) throw new Error(`No signer provided`);
 
 		const resolveTransaction = resolveTransactionWith(deps);
@@ -36,7 +39,7 @@ export function createCollectionWith(deps: DependencyType) {
 			{
 				name: TAGS.keys.ans110.description,
 				value: cleanTagValue(args.description),
-			}
+			},
 		];
 
 		let thumbnailTx = null;
@@ -57,8 +60,7 @@ export function createCollectionWith(deps: DependencyType) {
 					name: TAGS.keys.banner,
 					value: bannerTx,
 				});
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			console.error(e);
 		}
 
@@ -141,21 +143,25 @@ export function createCollectionWith(deps: DependencyType) {
 			}
 
 			return collectionId;
-		}
-		catch (e: any) {
-			throw new Error(e.message ?? 'Error creating collection')
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error creating collection');
 		}
 	};
 }
 
 export function updateCollectionAssetsWith(deps: DependencyType) {
-	return async (args: { collectionId: string; assetIds: string[]; creator: string; updateType: 'Add' | 'Remove' }): Promise<string> => {
+	return async (args: {
+		collectionId: string;
+		assetIds: string[];
+		creator: string;
+		updateType: 'Add' | 'Remove';
+	}): Promise<string> => {
 		return await aoSend(deps, {
 			processId: args.creator,
 			action: 'Run-Action',
 			tags: [
 				{ name: 'ForwardTo', value: args.collectionId },
-				{ name: 'ForwardAction', value: 'Update-Assets' }
+				{ name: 'ForwardAction', value: 'Update-Assets' },
 			],
 			data: {
 				Target: args.collectionId,
@@ -178,10 +184,10 @@ export function getCollectionWith(deps: DependencyType) {
 		});
 
 		if (response) {
-			return mapFromProcessCase(response)
+			return mapFromProcessCase(response);
 		}
 
-		return null
+		return null;
 	};
 }
 

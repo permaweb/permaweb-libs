@@ -1,5 +1,5 @@
 export const AO = {
-	module: 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk', 
+	module: 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk',
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
@@ -7,15 +7,15 @@ export const AO = {
 		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
 		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
 		zone: {
-			id: 'fAmxq5HS8V3ijkgTWHRcXtXzU0RPzKK9fmeVi1UwIs0',
-			version: '0.0.2'
-		}
+			id: 'xuDE3S16-8sPV67FkZdI-7XAPYtupZFOo4ldyz2jzXg',
+			version: '0.0.2',
+		},
 	},
-	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4'
+	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
 };
 
 export const HB = {
-	defaultNode: 'https://tee-4.forward.computer'
+	defaultNode: 'https://forward.computer',
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {
@@ -84,7 +84,7 @@ export const TAGS = {
 	values: {
 		document: 'Document',
 		user: 'User',
-		zone: 'Permaweb-Zone'
+		zone: 'Permaweb-Zone',
 	},
 };
 

@@ -81,8 +81,7 @@ export async function getAggregatedGQLData(args: GQLArgsType, callback?: (messag
 
 		callback && callback(`All pages fetched!`);
 		return aggregatedData;
-	}
-	else {
+	} else {
 		callback && callback('No data found');
 	}
 
@@ -159,10 +158,10 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 	const owners = args.owners ? JSON.stringify(args.owners) : null;
 	const recipients = args.recipients ? JSON.stringify(args.recipients) : null;
 	const cursor = args.cursor && args.cursor !== CURSORS.end ? `"${args.cursor}"` : null;
-	
+
 	let sort: string = '';
 	if (args.sort) {
-		sort += 'sort: '
+		sort += 'sort: ';
 		switch (args.sort) {
 			case 'ascending':
 				sort += 'HEIGHT_ASC';
@@ -185,7 +184,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 		case GATEWAYS.goldsky:
 			if (!cursor) txCount = `count`;
 			if (recipients) recipientsfield = `recipients: ${recipients}`;
-			nodeFields += ` recipient`
+			nodeFields += ` recipient`;
 			break;
 	}
 

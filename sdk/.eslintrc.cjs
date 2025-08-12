@@ -15,7 +15,15 @@ module.exports = {
 					'error',
 					{
 						groups: [
-							['^web-streams-polyfill', '^arweave', '^@ardrive/turbo-sdk', '^@permaweb/arx', '^@permaweb/aoconnect', '^@permaweb/libs', '^@?\\w'],
+							[
+								'^web-streams-polyfill',
+								'^arweave',
+								'^@ardrive/turbo-sdk',
+								'^@permaweb/arx',
+								'^@permaweb/aoconnect',
+								'^@permaweb/libs',
+								'^@?\\w',
+							],
 							[
 								'^(@|app)(/.*|$)',
 								'^(@|assets)(/.*|$)',

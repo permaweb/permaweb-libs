@@ -1,7 +1,7 @@
 import { aoCreateProcess, aoDryRun, aoSend, handleProcessEval, readProcess } from '../common/ao.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
-import { checkValidAddress, mapFromProcessCase } from '../helpers/utils.ts';
+import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
 	return async (args: { data?: any; tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
@@ -58,7 +58,10 @@ export function addToZoneWith(deps: DependencyType) {
 }
 
 export function setZoneRolesWith(deps: DependencyType) {
-	return async (args: { granteeId: string, roles: string[], type: 'wallet' | 'process', sendInvite: boolean }[], zoneId: string): Promise<string | null> => {
+	return async (
+		args: { granteeId: string; roles: string[]; type: 'wallet' | 'process'; sendInvite: boolean }[],
+		zoneId: string,
+	): Promise<string | null> => {
 		const zoneValid = checkValidAddress(zoneId);
 		if (!zoneValid) throw new Error('Invalid zone address');
 
@@ -73,8 +76,8 @@ export function setZoneRolesWith(deps: DependencyType) {
 				Id: entry.granteeId,
 				Roles: entry.roles,
 				Type: entry.type,
-				SendInvite: entry.sendInvite
-			})
+				SendInvite: entry.sendInvite,
+			});
 		}
 
 		try {
@@ -93,7 +96,7 @@ export function setZoneRolesWith(deps: DependencyType) {
 }
 
 export function joinZoneWith(deps: DependencyType) {
-	return async (args: { zoneToJoinId: string, path?: string }, zoneId: string): Promise<string | null> => {
+	return async (args: { zoneToJoinId: string; path?: string }, zoneId: string): Promise<string | null> => {
 		const zoneValid = checkValidAddress(zoneId) && checkValidAddress(args.zoneToJoinId);
 
 		if (!zoneValid) throw new Error('Invalid zone address');
@@ -118,22 +121,23 @@ export function joinZoneWith(deps: DependencyType) {
 export function updateZoneVersionWith(deps: DependencyType) {
 	return async (args: { zoneId: string }): Promise<string | null> => {
 		try {
+			globalLog(`Updating zone to version ${AO.src.zone.version} with source ${AO.src.zone.id}`);
+
 			await handleProcessEval(deps, {
 				processId: args.zoneId,
-				evalTxId: AO.src.zone.id
+				evalTxId: AO.src.zone.id,
 			});
 
 			const versionUpdate = await handleProcessEval(deps, {
 				processId: args.zoneId,
-				evalSrc: `Zone.Version = '${AO.src.zone.version}'; SyncState()`
+				evalSrc: `Zone.Version = '${AO.src.zone.version}'; SyncState()`,
 			});
 
 			return versionUpdate;
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			throw new Error(e);
 		}
-	}
+	};
 }
 
 export function getZoneWith(deps: DependencyType) {

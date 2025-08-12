@@ -48,8 +48,7 @@ export async function createTransaction(
 
 				const response = await (global.window as any).arweaveWallet.dispatch(tx);
 				return response.id;
-			}
-			catch (e: any) {
+			} catch (e: any) {
 				throw new Error(e.message ?? 'Error dispatching transaction');
 			}
 		} else {
@@ -59,24 +58,23 @@ export async function createTransaction(
 					{
 						tags: [
 							{ name: 'Content-Type', value: contentType },
-							{ name: 'App-Name', value: '@permaweb/libs' }
-						]
+							{ name: 'App-Name', value: '@permaweb/libs' },
+						],
 					},
 					{
 						apiUrl: UPLOAD.node1,
 						token: 'arweave',
 						chunkSize: 5 * 1024 * 1024,
 						batchSize: 3,
-					}
+					},
 				);
 
-				console.log(uploadResponse)
+				console.log(uploadResponse);
 
 				console.log('Uploaded dataItem ID:', uploadResponse.id);
 
 				return uploadResponse.id;
-			}
-			catch (e: any) {
+			} catch (e: any) {
 				throw new Error(e.message ?? 'Error uploading transaction');
 			}
 		}
@@ -93,17 +91,12 @@ export async function runUpload(
 		token: string;
 		chunkSize: number;
 		batchSize?: number;
-	}
+	},
 ): Promise<any> {
-	const {
-		apiUrl,
-		token,
-		chunkSize,
-		batchSize = 3,
-	} = uploadOpts;
+	const { apiUrl, token, chunkSize, batchSize = 3 } = uploadOpts;
 
 	let signer = new ArconnectSigner(window.arweaveWallet);
-	const pubKey = await (signer as any).signer.getActivePublicKey()
+	const pubKey = await (signer as any).signer.getActivePublicKey();
 	signer.publicKey = Buffer.from(pubKey, 'base64');
 
 	const rawFile = new Uint8Array(await fileBlob.arrayBuffer());
@@ -121,25 +114,20 @@ export async function runUpload(
 			})(),
 	});
 
-	await dataItem.sign(signer)
+	await dataItem.sign(signer);
 
 	const rawBytes = dataItem.getRaw();
 
-	const fullBlob = new Blob([rawBytes], {
+	const fullBlob = new Blob([new Uint8Array(rawBytes)], {
 		type: 'application/octet-stream',
 	});
 
 	const commonHeaders = { 'x-chunking-version': '2' };
-	let infoRes = await fetch(
-		`${apiUrl}/chunks/${token}/-1/-1`,
-		{ headers: commonHeaders }
-	);
+	let infoRes = await fetch(`${apiUrl}/chunks/${token}/-1/-1`, { headers: commonHeaders });
 	if (!infoRes.ok) {
-		throw new Error(
-			`Failed to get upload ID: ${infoRes.status} ${await infoRes.text()}`
-		);
+		throw new Error(`Failed to get upload ID: ${infoRes.status} ${await infoRes.text()}`);
 	}
-	const info = await infoRes.json() as {
+	const info = (await infoRes.json()) as {
 		id: string;
 		min: number;
 		max: number;
@@ -147,9 +135,7 @@ export async function runUpload(
 	};
 	const uploadId = info.id;
 	if (chunkSize < info.min || chunkSize > info.max) {
-		throw new Error(
-			`Configured chunkSize ${chunkSize} is out of allowed range ${info.min}-${info.max}`
-		);
+		throw new Error(`Configured chunkSize ${chunkSize} is out of allowed range ${info.min}-${info.max}`);
 	}
 
 	const totalSize = fullBlob.size;
@@ -164,40 +150,42 @@ export async function runUpload(
 	const headerOffset = !present.has(0) ? [0] : [];
 	const toUpload = dataOffsets.concat(headerOffset);
 
-	const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+	const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 	for (let i = 0; i < toUpload.length; i += batchSize) {
 		const batch = toUpload.slice(i, i + batchSize);
-		await Promise.all(batch.map(async off => {
-			const slice = fullBlob.slice(off, off + chunkSize);
-			const body = await slice.arrayBuffer();
+		await Promise.all(
+			batch.map(async (off) => {
+				const slice = fullBlob.slice(off, off + chunkSize);
+				const body = await slice.arrayBuffer();
 
-			let lastError: any = null;
-			for (let attempt = 1; attempt <= 3; attempt++) {
-				try {
-					const up = await fetch(`${apiUrl}/chunks/${token}/${uploadId}/${off}`, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/octet-stream', ...commonHeaders },
-						body
-					});
-					if (!up.ok) {
-						const text = await up.text();
-						if (up.status === 402) {
-							throw new Error(`402 payment required: ${text}`);
+				let lastError: any = null;
+				for (let attempt = 1; attempt <= 3; attempt++) {
+					try {
+						const up = await fetch(`${apiUrl}/chunks/${token}/${uploadId}/${off}`, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/octet-stream', ...commonHeaders },
+							body,
+						});
+						if (!up.ok) {
+							const text = await up.text();
+							if (up.status === 402) {
+								throw new Error(`402 payment required: ${text}`);
+							}
+							throw new Error(`Chunk upload error ${up.status}: ${text}`);
 						}
-						throw new Error(`Chunk upload error ${up.status}: ${text}`);
-					}
-					return;
-				} catch (err: any) {
-					lastError = err;
-					if (attempt < 3) {
-						await sleep(1000 * attempt);
-						continue;
+						return;
+					} catch (err: any) {
+						lastError = err;
+						if (attempt < 3) {
+							await sleep(1000 * attempt);
+							continue;
+						}
 					}
 				}
-			}
-			throw lastError;
-		}));
+				throw lastError;
+			}),
+		);
 	}
 
 	const finalHeaders: Record<string, string> = {
@@ -205,18 +193,13 @@ export async function runUpload(
 		...commonHeaders,
 	};
 
-	const finishRes = await fetch(
-		`${apiUrl}/chunks/${token}/${uploadId}/-1`,
-		{
-			method: 'POST',
-			headers: finalHeaders,
-		}
-	);
+	const finishRes = await fetch(`${apiUrl}/chunks/${token}/${uploadId}/-1`, {
+		method: 'POST',
+		headers: finalHeaders,
+	});
 	if (!finishRes.ok) {
 		const txt = await finishRes.text();
-		throw new Error(
-			`Finalizing upload failed ${finishRes.status}: ${txt}`
-		);
+		throw new Error(`Finalizing upload failed ${finishRes.status}: ${txt}`);
 	}
 
 	return finishRes.json();

@@ -17,30 +17,30 @@ function init(deps: Helpers.DependencyType) {
 		setZoneRoles: Services.setZoneRolesWith(deps),
 		joinZone: Services.joinZoneWith(deps),
 		updateZoneVersion: Services.updateZoneVersionWith(deps),
-		
+
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),
 		updateProfile: Services.updateProfileWith(deps),
 		updateProfileVersion: Services.updateProfileVersionWith(deps),
 		getProfileById: Services.getProfileByIdWith(deps),
 		getProfileByWalletAddress: Services.getProfileByWalletAddressWith(deps),
-		
+
 		/* Assets */
 		createAtomicAsset: Services.createAtomicAssetWith(deps),
 		getAtomicAsset: Services.getAtomicAssetWith(deps),
 		getAtomicAssets: Services.getAtomicAssets,
-		
+
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
 		getComment: Services.getCommentWith(deps),
 		getComments: Services.getCommentsWith(deps),
-		
+
 		/* Collections */
 		createCollection: Services.createCollectionWith(deps),
 		updateCollectionAssets: Services.updateCollectionAssetsWith(deps),
 		getCollection: Services.getCollectionWith(deps),
 		getCollections: Services.getCollectionsWith(deps),
-		
+
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),
 		getGQLData: Common.getGQLData,
@@ -49,7 +49,7 @@ function init(deps: Helpers.DependencyType) {
 		readProcess: Common.aoDryRunWith(deps),
 		readState: Common.readProcessWith(deps),
 		sendMessage: Common.aoSendWith(deps),
-		
+
 		/* Utils */
 		mapFromProcessCase: Helpers.mapFromProcessCase,
 		mapToProcessCase: Helpers.mapToProcessCase,

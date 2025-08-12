@@ -1,6 +1,6 @@
 {
 	"name": "@permaweb/libs",
-	"version": "0.0.42",
+	"version": "0.0.47",
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
@@ -38,6 +38,7 @@
 		"./node": "./dist/index.js"
 	},
 	"scripts": {
+		"clean:install": "rm -rf node_modules package-lock.json || true && npm cache clean --force && npm install",
 		"format": "eslint --fix . && npx prettier --write .",
 		"build": "node build.js"
 	},
