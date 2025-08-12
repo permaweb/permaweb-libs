@@ -8,6 +8,10 @@ This SDK provides a set of libraries designed as foundational building blocks fo
 - [Installation](#installation)
 - [Initialization](#initialization)
 - [Usage](#usage)
+  - [Common](#common)
+    - [AO Functions](#ao-functions)
+    - [Arweave Functions](#arweave-functions)
+    - [GraphQL Functions](#graphql-functions)
   - [Zones](#zones)
     - [createZone](#createzone)
     - [updateZone](#updatezone)
@@ -76,11 +80,108 @@ const permaweb = Permaweb.init({
 
 ## Usage
 
+### Common
+
+The common module provides low-level utility functions for working with AO processes, Arweave transactions, and GraphQL queries. These functions are used internally by the higher-level services but can also be used directly for more advanced use cases.
+
+#### AO Functions
+
+##### `createProcess`
+
+Creates a new AO process with optional evaluation.
+
+```typescript
+const processId = await permaweb.createProcess({
+  module: 'MODULE_ID',
+  scheduler: 'SCHEDULER_ID',
+  evalTxId: 'EVAL_TX_ID', // optional
+  tags: [{ name: 'Custom-Tag', value: 'custom-value' }]
+});
+```
+
+##### `sendMessage`
+
+Sends a message to an AO process.
+
+```typescript
+const messageId = await permaweb.sendMessage({
+  processId: 'PROCESS_ID',
+  action: 'Get-Info',
+  data: { key: 'value' }
+});
+```
+
+##### `readProcess`
+
+Performs a dry run of a message without adding to the process schedule.
+
+```typescript
+const result = await permaweb.readProcess({
+  processId: 'PROCESS_ID',
+  action: 'Info',
+  data: { key: 'value' }
+});
+```
+
+##### `readState`
+
+Reads process state using HyperBEAM with a fallback to dry run.
+
+```typescript
+const state = await permaweb.readState({
+  processId: 'PROCESS_ID',
+  path: 'state',
+  serialize: true,
+  fallbackAction: 'Get-State'
+});
+```
+
+#### Arweave Functions
+
+##### `resolveTransaction`
+
+Resolves transaction IDs from data URIs or creates new transactions.
+
+```typescript
+const txId = await permaweb.resolveTransaction('data:text/plain;base64,SGVsbG8gV29ybGQ=');
+// or
+const txId = await permaweb.resolveTransaction('Hello, Arweave!');
+```
+
+#### GraphQL Functions
+
+##### `getGQLData`
+
+Queries Arweave gateways using GraphQL for transaction data.
+
+```typescript
+const response = await permaweb.getGQLData({
+  gateway: 'arweave.net',
+  ids: ['TX_ID_1', 'TX_ID_2'],
+  tags: [{ name: 'App-Name', values: ['MyApp'] }],
+  owners: ['OWNER_ADDRESS'],
+  cursor: null,
+  paginator: 100
+});
+```
+
+##### `getAggregatedGQLData`
+
+Fetches all pages of GraphQL data automatically.
+
+```typescript
+const allData = await permaweb.getAggregatedGQLData({
+  gateway: 'arweave.net',
+  tags: [{ name: 'App-Name', values: ['MyApp'] }],
+  paginator: 100
+}, (message) => console.log(message)); // Optional progress callback
+```
+
 ### Zones
 
 Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity"s behalf. A profile is an instance of a zone with specific metadata ([Read the spec](./specs/spec-zones.md)).
 
-#### `createZone`
+##### `createZone`
 
 ```typescript
 const zoneId = await permaweb.createZone();
@@ -102,7 +203,7 @@ ZoneProcessId;
 
 </details>
 
-#### `updateZone`
+##### `updateZone`
 
 ```typescript
 const zoneUpdateId = await permaweb.updateZone(
@@ -134,7 +235,7 @@ ZoneUpdateId;
 
 </details>
 
-#### `getZone`
+##### `getZone`
 
 ```typescript
 const zone = await permaweb.getZone(zoneId);
@@ -160,7 +261,7 @@ const zone = await permaweb.getZone(zoneId);
 
 Profiles are a digital representation of entities, such as users, organizations, or channels. They include specific metadata that describes the entity and can be associated with various digital assets and collections. Profiles are created, updated, and fetched using the following functions.
 
-#### `createProfile`
+##### `createProfile`
 
 ```typescript
 const profileId = await permaweb.createProfile({
@@ -189,7 +290,7 @@ ProfileProcessId;
 
 </details>
 
-#### `updateProfile`
+##### `updateProfile`
 
 ```typescript
 const profileId = await permaweb.updateProfile({
@@ -219,7 +320,7 @@ ProfileProcessUpdateId;
 
 </details>
 
-#### `getProfileById`
+##### `getProfileById`
 
 ```typescript
 const profile = await permaweb.getProfileById(profileId);
@@ -254,7 +355,7 @@ const profile = await permaweb.getProfileById(profileId);
 
 </details>
 
-#### `getProfileByWalletAddress`
+##### `getProfileByWalletAddress`
 
 ```typescript
 const profile = await permaweb.getProfileByWalletAddress(walletAddress);
@@ -293,7 +394,7 @@ const profile = await permaweb.getProfileByWalletAddress(walletAddress);
 
 Atomic assets are unique digital item consisting of an AO process and its associated data which are stored together in a single transaction on Arweave ([Read the spec](./specs/spec-atomic-assets.md)).
 
-#### `createAtomicAsset`
+##### `createAtomicAsset`
 
 ```typescript
 const assetId = await permaweb.createAtomicAsset({
@@ -329,7 +430,7 @@ AssetProcessId;
 
 </details>
 
-#### `getAtomicAsset`
+##### `getAtomicAsset`
 
 ```typescript
 const asset = await permaweb.getAtomicAsset(assetId);
@@ -368,7 +469,7 @@ const asset = await permaweb.getAtomicAsset(assetId);
 
 </details>
 
-#### `getAtomicAssets`
+##### `getAtomicAssets`
 
 ```typescript
 const assets = await permaweb.getAtomicAssets(assetIds);
@@ -447,7 +548,7 @@ const assets = await permaweb.getAtomicAssets(assetIds);
 
 Comments are an instantiation of atomic assets created with additional tags to link them with other comments / atomic assets with specific data or root contexts.
 
-#### `createComment`
+##### `createComment`
 
 ```typescript
 const commentId = await permaweb.createComment({
@@ -476,7 +577,7 @@ CommentProcessId;
 
 </details>
 
-#### `getComment`
+##### `getComment`
 
 ```typescript
 const comment = await permaweb.getComment(commentId);
@@ -515,7 +616,7 @@ const comment = await permaweb.getComment(commentId);
 
 </details>
 
-#### `getComments`
+##### `getComments`
 
 ```typescript
 const comments = await permaweb.getComments({
@@ -579,7 +680,7 @@ const comments = await permaweb.getComments({
 
 Collections are structured groups of atomic assets, allowing for cohesive representation, management, and categorization of digital items. Collections extend the concept of atomic assets by introducing an organized layer to group and manage related assets. ([Read the spec](./specs/spec-collections.md)).
 
-#### `createCollection`
+##### `createCollection`
 
 ```typescript
 const collectionId = await permaweb.createCollection({
@@ -607,7 +708,7 @@ CollectionProcessId;
 
 </details>
 
-#### `updateCollectionAssets`
+##### `updateCollectionAssets`
 
 ```typescript
 const collectionUpdateId = await permaweb.updateCollectionAssets({
@@ -636,7 +737,7 @@ CollectionProcessUpdateId;
 
 </details>
 
-#### `getCollection`
+##### `getCollection`
 
 ```typescript
 const collection = await permaweb.getCollection(collectionId);
@@ -667,7 +768,7 @@ const collection = await permaweb.getCollection(collectionId);
 
 </details>
 
-#### `getCollections`
+##### `getCollections`
 
 ```typescript
 const collections = await permaweb.getCollections();
