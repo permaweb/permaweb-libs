@@ -9,7 +9,7 @@ import path from 'path';
 const sharedConfig = {
 	entryPoints: ['src/index.ts'],
 	bundle: true,
-	sourcemap: true,
+	sourcemap: false,
 	minify: true,
 	inject: [path.resolve('node_modules/process/browser.js')],
 	define: {
