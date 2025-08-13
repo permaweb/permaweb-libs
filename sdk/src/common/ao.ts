@@ -79,7 +79,7 @@ export function readProcessWith(deps: DependencyType) {
 }
 
 export async function readProcess(deps: DependencyType, args: ProcessReadType) {
-	const node = args.node ?? HB.defaultNode
+	const node = deps.node ?? HB.defaultNode
 	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	if (args.serialize) url += '/serialize~json@1.0';
 

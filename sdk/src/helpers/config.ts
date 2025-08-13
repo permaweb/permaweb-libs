@@ -15,7 +15,7 @@ export const AO = {
 };
 
 export const HB = {
-	defaultNode: 'https://forward.computer',
+	defaultNode: 'https://forward.computer'
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {

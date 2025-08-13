@@ -130,7 +130,6 @@ local function handle_notified(msg)
 end
 
 -- init a zone from spawn msg using tags
--- TODO implement this when assignments with On-Boot no longer Halts the process.
 --local function handle_boot_zone(msg)
 --
 --    local ZoneId = msg.Id -- create = msg.Id spawn
