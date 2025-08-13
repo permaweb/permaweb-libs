@@ -2,6 +2,7 @@ export type DependencyType = {
 	ao: any;
 	signer?: any;
 	arweave?: any;
+	node?: string;
 };
 
 export type ProcessReadType = {
@@ -9,7 +10,6 @@ export type ProcessReadType = {
 	path: string;
 	fallbackAction: string;
 	serialize?: boolean;
-	node?: string;
 };
 
 export type ProcessSpawnType = {

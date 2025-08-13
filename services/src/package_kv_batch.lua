@@ -22,7 +22,6 @@ do
             function batch:set(keyString, value)
                 table.insert(self.operations, { op = "set", key = keyString, value = value })
             end
-            -- TODO probably implement del?
 
             -- Execute all batched operations
             function batch:execute()
