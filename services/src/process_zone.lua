@@ -606,6 +606,11 @@ function Zone.Functions.updateIndexRequest(msg)
     if entryIndex > -1 then
         if msg.UpdateType == 'Approve' then
             table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
+
+            if not Zone.Data.KV.Store.Index then
+                Zone.Data.KV.Store.Index = {}
+            end
+
             table.insert(Zone.Data.KV.Store.Index, entry)
         elseif msg.UpdateType == 'Reject' then
             table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
