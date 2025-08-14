@@ -7,8 +7,8 @@ export const AO = {
 		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
 		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
 		zone: {
-			id: 'xuDE3S16-8sPV67FkZdI-7XAPYtupZFOo4ldyz2jzXg',
-			version: '0.0.2',
+			id: 'ZrIsJqlBPk6idP_bPcyiCHbZponMrU19twGV1XtF8a4',
+			version: '0.0.1'
 		},
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',

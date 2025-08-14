@@ -3,7 +3,7 @@ import { GATEWAYS, TAGS } from 'helpers/config.ts';
 import { resolveTransactionWith } from '../common/arweave.ts';
 import { getGQLData } from '../common/gql.ts';
 import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
-import { getBootTag } from '../helpers/utils.ts';
+import { checkValidAddress, getBootTag } from '../helpers/utils.ts';
 
 import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
 
@@ -60,21 +60,23 @@ export function updateProfileWith(deps: DependencyType) {
 				Description: args.description,
 			};
 
-			if (args.thumbnail) {
+			if (args.thumbnail && (checkValidAddress(args.thumbnail) || args.thumbnail.startsWith('data'))) {
 				try {
 					data.Thumbnail = await resolveTransaction(args.thumbnail);
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
 				}
 			}
+			else data.Thumbnail = 'None';
 
-			if (args.banner) {
+			if (args.banner && (checkValidAddress(args.thumbnail) || args.banner.startsWith('data'))) {
 				try {
 					data.Banner = await resolveTransaction(args.banner);
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve banner: ${e.message}`);
 				}
 			}
+			else data.Banner = 'None';
 
 			try {
 				return await updateZone(data, profileId);
