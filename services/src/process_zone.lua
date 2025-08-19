@@ -148,8 +148,8 @@ end
 
 function Zone.Functions.authRunAction(msg)
     -- True if caller has role to call ForwardAction
-    if not msg.ForwardTo or not msg.ForwardAction then
-        return false, 'ForwardTo and ForwardAction are required'
+    if not msg['Forward-To'] or not msg['Forward-Action'] then
+        return false, 'Forward-To and Forward-Action are required'
     end
 
     -- A wallet user calling run-action must be an owner or admin
@@ -157,9 +157,9 @@ function Zone.Functions.authRunAction(msg)
         return true
     end
 
-    local rolesForHandler = Zone.Functions.getRolesForAction(msg.ForwardAction)
+    local rolesForHandler = Zone.Functions.getRolesForAction(msg['Forward-Action'])
     if not rolesForHandler then
-        return false, 'AuthRoles: Sender ' .. msg.From .. ' not Authorized to run action ' .. msg.ForwardAction .. '.'
+        return false, 'AuthRoles: Sender ' .. msg.From .. ' not Authorized to run action ' .. msg['Forward-Action'] .. '.'
     end
 
     local actorRoles = Zone.Functions.getActorRoles(msg.From)
@@ -246,7 +246,7 @@ function Zone.Functions.runAction(msg)
         return
     end
 
-    if not msg.ForwardTo or not msg.ForwardAction then
+    if not msg['Forward-To'] or not msg['Forward-Action'] then
         ao.send({
             Target = msg.From,
             Action = 'Input-Error',
@@ -264,8 +264,8 @@ function Zone.Functions.runAction(msg)
     msg.Tags.Action = nil
 
     local messageToSend = {
-        Target = msg.ForwardTo,
-        Action = msg.ForwardAction,
+        Target = msg['Forward-To'],
+        Action = msg['Forward-Action'],
         Tags = msg.Tags
     }
 
@@ -496,7 +496,7 @@ end
 function Zone.Functions.addUpload(msg)
     Zone.Data.AssetManager:update({
         Type = 'Add',
-        AssetId = msg.AssetId,
+        AssetId = msg['Asset-Id'],
         Timestamp = msg.Timestamp,
         AssetType = msg.AssetType,
         ContentType = msg.ContentType,
@@ -531,8 +531,9 @@ function Zone.Functions.addIndexId(msg)
         return
     end
 
-    if not msg.IndexId then
+    if not msg['Index-Id'] then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
+        ao.send({ Target = msg.From, Data = json.encode(msg) }) -- TODO: Remove
         return
     end
 
@@ -541,13 +542,13 @@ function Zone.Functions.addIndexId(msg)
     end
 
     for _, index in ipairs(Zone.Data.KV.Store.Index) do
-        if index.Id == msg.IndexId then
+        if index.Id == msg['Index-Id'] then
             Zone.Functions.sendError(msg.From, 'Id already exists')
             return
         end
     end
 
-    table.insert(Zone.Data.KV.Store.Index, { Id = msg.IndexId })
+    table.insert(Zone.Data.KV.Store.Index, { Id = msg['Index-Id'] })
 
     SyncState()
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
@@ -559,7 +560,7 @@ function Zone.Functions.addIndexRequest(msg)
         return
     end
 
-    if not msg.IndexId then
+    if not msg['Index-Id'] then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
@@ -569,13 +570,13 @@ function Zone.Functions.addIndexRequest(msg)
     end
 
     for _, index in ipairs(Zone.Data.KV.Store.IndexRequests) do
-        if index.Id == msg.IndexId then
+        if index.Id == msg['Index-Id'] then
             Zone.Functions.sendError(msg.From, 'Id already exists')
             return
         end
     end
 
-    table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg.IndexId })
+    table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg['Index-Id'] })
 
     SyncState()
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
@@ -587,7 +588,7 @@ function Zone.Functions.updateIndexRequest(msg)
         return
     end
 
-    if not msg.IndexId or not msg.UpdateType then
+    if not msg['Index-Id'] or not msg.UpdateType then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
@@ -596,7 +597,7 @@ function Zone.Functions.updateIndexRequest(msg)
     local entryIndex = -1
 
     for reqIndex, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
-        if reqEntry.Id == msg.IndexId then
+        if reqEntry.Id == msg['Index-Id'] then
             entry = reqEntry
             entryIndex = reqIndex
             break
@@ -628,6 +629,10 @@ end
 
 function Zone.Functions.indexNotice(msg)
     local entryIndex = -1
+
+    if not Zone.Data.KV.Store.Index then
+        Zone.Data.KV.Store.Index = {}
+    end
 
     for i, entry in ipairs(Zone.Data.KV.Store.Index) do
         if entry.Id == msg.From then

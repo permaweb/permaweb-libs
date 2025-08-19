@@ -3,9 +3,11 @@ import { GATEWAYS, TAGS } from 'helpers/config.ts';
 import { resolveTransactionWith } from '../common/arweave.ts';
 import { getGQLData } from '../common/gql.ts';
 import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
-import { checkValidAddress, getBootTag } from '../helpers/utils.ts';
+import { checkValidAddress, getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
 import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
+
+
 
 export function createProfileWith(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
@@ -21,7 +23,8 @@ export function createProfileWith(deps: DependencyType) {
 
 		const addImageTag = async (imageKey: 'Thumbnail' | 'Banner') => {
 			const key: any = imageKey.toLowerCase();
-			if ((args as any)[key]) {
+			const value = (args as any)[key];
+			if (value && isValidMediaData(value)) {
 				try {
 					const resolvedImage = await resolveTransaction((args as any)[key]);
 					tags.push(getBootTag(imageKey, resolvedImage));
@@ -60,7 +63,7 @@ export function updateProfileWith(deps: DependencyType) {
 				Description: args.description,
 			};
 
-			if (args.thumbnail && (checkValidAddress(args.thumbnail) || args.thumbnail.startsWith('data'))) {
+			if (args.thumbnail && isValidMediaData(args.thumbnail)) {
 				try {
 					data.Thumbnail = await resolveTransaction(args.thumbnail);
 				} catch (e: any) {
@@ -69,7 +72,7 @@ export function updateProfileWith(deps: DependencyType) {
 			}
 			else data.Thumbnail = 'None';
 
-			if (args.banner && (checkValidAddress(args.thumbnail) || args.banner.startsWith('data'))) {
+			if (args.banner && isValidMediaData(args.banner)) {
 				try {
 					data.Banner = await resolveTransaction(args.banner);
 				} catch (e: any) {

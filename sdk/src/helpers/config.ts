@@ -3,11 +3,11 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'dvlU-5HfAPWcukvnRHwSzMSEsoCqkZAEQsykMQgQ-wE',
+		asset: 'AkqkD7kDr3zvg0LyCQ9mLH6kYp7TgabUcLNQb76qiE4',
 		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
 		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
 		zone: {
-			id: 'ZrIsJqlBPk6idP_bPcyiCHbZponMrU19twGV1XtF8a4',
+			id: '3UF9oIeGimz28c8QPqqQi2to--CucuK_-Zkf8athZp0',
 			version: '0.0.1'
 		},
 	},

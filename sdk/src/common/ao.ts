@@ -19,7 +19,8 @@ const GATEWAY = GATEWAYS.goldsky;
 const GATEWAY_RETRY_COUNT = 100;
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
-	const tags = [{ name: 'Authority', value: AO.mu }];
+	// const tags = [{ name: 'Authority', value: AO.mu }]; // TODO
+	const tags = [{ name: 'Authority', value: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc' }]; // TODO
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	try {

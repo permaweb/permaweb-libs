@@ -365,12 +365,24 @@ Handlers.add('Send-Index', 'Send-Index', function(msg)
                     Action = 'Index-Notice',
                     Recipient = recipient,
                     Data = getIndexData({
-                        AssetType = msg.Tags.AssetType,
-                        ContentType = msg.Tags.ContentType
+                        AssetType = msg.Tags['Asset-Type'],
+                        ContentType = msg.Tags['Content-Type']
                     }),
                 })
             end
         end
+    end
+end)
+
+Handlers.add('Init', 'Init', function(msg)
+    if Token.Creator and Token.TotalSupply then
+        -- Notify creator of the asset
+        ao.send({
+            Target = Token.Creator,
+            Action = 'Add-Uploaded-Asset',
+            Quantity = tostring(Token.TotalSupply),
+            ['Asset-Id'] = ao.id,
+        })
     end
 end)
 
@@ -533,14 +545,6 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
     -- Initialize balances if needed
     if Token.Creator and Token.TotalSupply then
         Token.Balances = { [Token.Creator] = tostring(Token.TotalSupply) }
-
-        -- Notify creator of the asset
-        ao.send({
-            Target = Token.Creator,
-            Action = 'Add-Uploaded-Asset',
-            AssetId = ao.id,
-            Quantity = tostring(Token.TotalSupply)
-        })
     end
 
     syncState()

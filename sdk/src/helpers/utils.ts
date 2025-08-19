@@ -279,3 +279,7 @@ export function getBootTag(key: string, value: string) {
 	const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
 	return { name: `${TAGS.keys.bootloader}-${capitalizedKey}`, value };
 }
+
+export function isValidMediaData(data: any) {
+	return checkValidAddress(data) || data.startsWith('data')
+}
