@@ -60,6 +60,85 @@ local function hasUpdatePermissions(from)
     return false
 end
 
+local function deepCopy(original)
+    local copy
+    if type(original) == 'table' then
+        copy = {}
+        for originalKey, originalValue in pairs(original) do
+            copy[originalKey] = deepCopy(originalValue)
+        end
+    else
+        copy = original
+    end
+    return copy
+end
+
+local function splitPath(path)
+    local parts = {}
+    local current = ''
+    for i = 1, #path do
+        local char = string.sub(path, i, i)
+        if char == '.' then
+            if current ~= '' then
+                table.insert(parts, current)
+                current = ''
+            end
+        else
+            current = current .. char
+        end
+    end
+    if current ~= '' then
+        table.insert(parts, current)
+    end
+    return parts
+end
+
+local function excludeField(data, fieldPath)
+    local parts = splitPath(fieldPath)
+
+    local current = data
+    for i = 1, #parts - 1 do
+        if type(current) ~= 'table' or current[parts[i]] == nil then
+            return -- Path doesn't exist, nothing to exclude
+        end
+        current = current[parts[i]]
+    end
+
+    if type(current) == 'table' then
+        current[parts[#parts]] = nil
+    end
+end
+
+local function getIndexData(args) -- AssetType, ContentType, Exclude
+    local indexData = {
+        Name = Token.Name,
+        Ticker = Token.Ticker,
+        Denomination = tostring(Token.Denomination),
+        TotalSupply = Token.TotalSupply,
+        Balances = Token.Balances,
+        Transferable = Token.Transferable,
+        Creator = Token.Creator,
+        Metadata = deepCopy(Metadata),
+        ProcessType = 'atomic-asset',
+        DateCreated = DateCreated,
+        LastUpdate = LastUpdate,
+    }
+
+    if args then
+        if args.AssetType then indexData.AssetType = args.AssetType end;
+        if args.ContentType then indexData.ContentType = args.ContentType end;
+
+        -- Handle exclusions
+        if args.Exclude then
+            for _, excludeKey in ipairs(args.Exclude) do
+                excludeField(indexData, excludeKey)
+            end
+        end
+    end
+
+    return json.encode(indexData)
+end
+
 local function getState()
     return {
         Name = Token.Name,
@@ -80,6 +159,18 @@ end
 local function syncState()
     Send({ device = 'patch@1.0', asset = json.encode(getState()) })
 end
+
+Handlers.add('Init', 'Init', function(msg)
+    if Token.Creator and Token.TotalSupply then
+        -- Notify creator of the asset
+        ao.send({
+            Target = Token.Creator,
+            Action = 'Add-Uploaded-Asset',
+            Quantity = tostring(Token.TotalSupply),
+            ['Asset-Id'] = ao.id,
+        })
+    end
+end)
 
 -- Read process state
 Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
@@ -281,29 +372,6 @@ Handlers.add('Total-Supply', Handlers.utils.hasMatchingTag('Action', 'Total-Supp
     })
 end)
 
-local function getIndexData(args) -- AssetType, ContentType
-    local indexData = {
-        Name = Token.Name,
-        Ticker = Token.Ticker,
-        Denomination = tostring(Token.Denomination),
-        TotalSupply = Token.TotalSupply,
-        Balances = Token.Balances,
-        Transferable = Token.Transferable,
-        Creator = Token.Creator,
-        Metadata = Metadata,
-        ProcessType = 'atomic-asset',
-        DateCreated = DateCreated,
-        LastUpdate = LastUpdate,
-    }
-
-    if args then
-        if args.AssetType then indexData.AssetType = args.AssetType end;
-        if args.ContentType then indexData.ContentType = args.ContentType end;
-    end
-
-    return json.encode(indexData)
-end
-
 -- Update asset token / metadata
 Handlers.add('Update-Asset', 'Update-Asset', function(msg)
     if not hasUpdatePermissions(msg.From) then return end
@@ -321,12 +389,23 @@ Handlers.add('Update-Asset', 'Update-Asset', function(msg)
             end
         end
 
+        -- Parse Exclude tag if present
+        local excludeList = nil
+        if msg.Tags['Exclude-Index'] then
+            local excludeDecodeCheck, excludeData = pcall(json.decode, msg.Tags['Exclude-Index'])
+            if excludeDecodeCheck and type(excludeData) == 'table' then
+                excludeList = excludeData
+            end
+        end
+
         for _, recipient in ipairs(IndexRecipients) do
             ao.send({
                 Target = recipient,
                 Action = 'Index-Notice',
                 Recipient = recipient,
-                Data = getIndexData()
+                Data = getIndexData({
+                    Exclude = excludeList
+                })
             })
         end
 
@@ -347,6 +426,15 @@ Handlers.add('Send-Index', 'Send-Index', function(msg)
 
     if decodeCheck and data then
         if data.Recipients then
+            -- Parse Exclude tag if present
+            local excludeList = nil
+            if msg.Tags['Exclude'] then
+                local excludeDecodeCheck, excludeData = pcall(json.decode, msg.Tags['Exclude'])
+                if excludeDecodeCheck and type(excludeData) == 'table' then
+                    excludeList = excludeData
+                end
+            end
+
             for _, recipient in ipairs(data.Recipients) do
                 local exists = false
                 for _, existingRecipient in ipairs(IndexRecipients) do
@@ -366,23 +454,12 @@ Handlers.add('Send-Index', 'Send-Index', function(msg)
                     Recipient = recipient,
                     Data = getIndexData({
                         AssetType = msg.Tags['Asset-Type'],
-                        ContentType = msg.Tags['Content-Type']
+                        ContentType = msg.Tags['Content-Type'],
+                        Exclude = excludeList
                     }),
                 })
             end
         end
-    end
-end)
-
-Handlers.add('Init', 'Init', function(msg)
-    if Token.Creator and Token.TotalSupply then
-        -- Notify creator of the asset
-        ao.send({
-            Target = Token.Creator,
-            Action = 'Add-Uploaded-Asset',
-            Quantity = tostring(Token.TotalSupply),
-            ['Asset-Id'] = ao.id,
-        })
     end
 end)
 

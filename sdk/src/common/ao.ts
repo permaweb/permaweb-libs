@@ -33,8 +33,8 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 		});
 
 		globalLog(`Process ID: ${processId}`);
-
 		globalLog('Sending initial message...');
+
 		await aoSend(deps, {
 			processId: processId,
 			action: 'Init',
