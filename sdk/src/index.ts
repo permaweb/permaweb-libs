@@ -32,8 +32,9 @@ function init(deps: Helpers.DependencyType) {
 
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
-		getComment: Services.getCommentWith(deps),
 		getComments: Services.getCommentsWith(deps),
+		updateCommentStatus: Services.updateCommentStatusWith(deps),
+		removeComment: Services.removeCommentWith(deps),
 
 		/* Collections */
 		createCollection: Services.createCollectionWith(deps),

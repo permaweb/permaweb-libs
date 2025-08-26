@@ -3,7 +3,7 @@ import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 import fs from 'fs';
 
-const CREATOR = 'RhguwWmQJ-wWCXhRH_NtTDHRRgfCqNDZckXtJK52zKs';
+const CREATOR = 'L0p6ecK4PdgWome2LI0STBNl5_ZK3XwnXCcoUq0tLLY';
 
 function expect(actual) {
 	return {
@@ -90,7 +90,6 @@ function logError(message) {
 }
 
 (async function () {
-	const ao = connect({ MODE: 'legacy' });
 	const arweave = Arweave.init();
 
 	let wallet;
@@ -102,13 +101,29 @@ function logError(message) {
 		wallet = JSON.parse(fs.readFileSync(process.env.PATH_TO_WALLET, 'utf-8'));
 	}
 
-	console.log(`Wallet address: ${await arweave.wallets.jwkToAddress(wallet)}`);
+	const walletAddress = await arweave.wallets.jwkToAddress(wallet);
+	const signer = createSigner(wallet);
 
-	const permaweb = Permaweb.init({
-		ao: ao,
+	console.log(`Wallet address: ${walletAddress}`);
+
+	const AO_NODE = {
+		url: 'http://localhost:8734',
+		scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc'
+	}
+
+	const dependencies = {
+		ao: connect({
+			MODE: 'mainnet',
+			URL: AO_NODE.url,
+			SCHEDULER: AO_NODE.scheduler,
+			signer: signer,
+		}),
 		arweave: arweave,
-		signer: createSigner(wallet),
-	});
+		signer: signer,
+		node: AO_NODE,
+	};
+
+	const permaweb = Permaweb.init(dependencies);
 
 	async function testZones() {
 		try {
@@ -277,46 +292,87 @@ function logError(message) {
 	}
 
 	async function testComments() {
-		const PARENT_ID = new Date().getTime().toString();
-
+		logTest('Creating asset to comment on...');
 		try {
-			logTest('Testing comment creation...');
-			const commentId1 = await permaweb.createComment(
+			const date = new Date().getTime().toString();
+
+			const assetId = await permaweb.createAtomicAsset(
 				{
+					name: date,
+					description: 'Test',
+					topics: ['Test'],
 					creator: CREATOR,
-					content: 'My first comment',
-					parentId: PARENT_ID,
+					data: '1984',
+					contentType: 'text/plain',
+					assetType: 'ANS-110',
+					users: [walletAddress, CREATOR],
+					spawnComments: true
 				},
-				(status) => console.log(`Callback: ${status}`),
+				(status) => console.log(status)
 			);
 
-			expect(commentId1).toBeDefined();
-			expect(commentId1).toEqualType('string');
+			expect(assetId).toBeDefined();
+			expect(assetId).toEqualType('string');
 
-			logTest('Testing comment fetch...');
-			const comment = await permaweb.getComment(commentId1);
+			logTest('Testing asset fetch...');
+			const asset = await permaweb.getAtomicAsset(assetId);
 
-			expect(comment).toBeDefined();
-			expect(comment.parentId).toEqual(Number(PARENT_ID));
+			expect(asset).toBeDefined();
+			expect(asset.name).toEqual(date);
 
-			logTest('Creating comment for batch query...');
-			const commentId2 = await permaweb.createComment(
-				{
+			if (asset.metadata?.comments) {
+				const commentsId = asset.metadata?.comments;
+
+				logTest('Testing comment add...');
+				const commentAdd1 = await permaweb.createComment({
+					commentsId: commentsId,
 					creator: CREATOR,
-					content: 'My second comment',
-					parentId: PARENT_ID,
-				},
-				(status) => console.log(`Callback: ${status}`),
-			);
+					content: 'Test Comment 1'
+				});
 
-			expect(commentId2).toBeDefined();
-			expect(commentId2).toEqualType('string');
+				expect(commentAdd1).toBeDefined();
 
-			logTest('Testing comments fetch...');
-			const comments = await permaweb.getComments({ parentId: PARENT_ID });
+				const commentAdd2 = await permaweb.createComment({
+					commentsId: commentsId,
+					creator: CREATOR,
+					content: 'Test Comment 2'
+				});
 
-			expect(comments).toEqualLength(2);
-		} catch (e) {
+				expect(commentAdd2).toBeDefined();
+
+				logTest('Testing comments fetch...');
+				let comments = await permaweb.getComments({
+					commentsId: commentsId
+				});
+
+				expect(comments).toEqualLength(2);
+
+				logTest('Testing comment status update...');
+				const commentStatusUpdate = await permaweb.updateCommentStatus({
+					commentsId: commentsId,
+					commentId: comments[0].id,
+					status: 'inactive'
+				});
+
+				comments = await permaweb.getComments({ commentsId: commentsId });
+
+				expect(comments[0].status).toEqual('inactive');
+
+				logTest('Testing comment removal...');
+				const commentRemoveUpdate = await permaweb.removeComment({
+					commentsId: commentsId,
+					commentId: comments[0].id
+				});
+
+				comments = await permaweb.getComments({ commentsId: commentsId });
+
+				expect(comments).toEqualLength(1);
+			}
+			else {
+				logError('Comment creation failed');
+			}
+		}
+		catch (e) {
 			logError(e.message ?? 'Comment tests failed');
 		}
 	}
@@ -401,5 +457,6 @@ function logError(message) {
 		} else {
 			console.log(`Invalid test type. Specify one of: ${Object.keys(testMap).join(', ')}, or 'all'.`);
 		}
+		process.exit(0);
 	})();
 })();

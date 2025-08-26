@@ -29,7 +29,7 @@ export async function getGQLData(args: GQLArgsType): Promise<DefaultGQLResponseT
 
 	try {
 		let queryBody: string = getQueryBody(args);
-		const response = await getResponse({ gateway: args.gateway ?? GATEWAYS.goldsky, query: getQuery(queryBody) });
+		const response = await getResponse({ gateway: args.gateway ?? GATEWAYS.ao, query: getQuery(queryBody) });
 
 		if (response?.data?.transactions?.edges?.length) {
 			data = [...response.data.transactions.edges];
@@ -94,11 +94,11 @@ export async function getBatchGQLData(args: BatchGQLArgsType): Promise<BatchAGQL
 
 	for (const [queryKey, baseArgs] of Object.entries(args.entries)) {
 		responseObject[queryKey] = { data: [], count: 0, nextCursor: null, previousCursor: null };
-		queryBody += getQueryBody({ ...baseArgs, gateway: args.gateway ?? GATEWAYS.goldsky, queryKey: queryKey });
+		queryBody += getQueryBody({ ...baseArgs, gateway: args.gateway ?? GATEWAYS.ao, queryKey: queryKey });
 	}
 
 	try {
-		const response = await getResponse({ gateway: args.gateway ?? GATEWAYS.goldsky, query: getQuery(queryBody) });
+		const response = await getResponse({ gateway: args.gateway ?? GATEWAYS.ao, query: getQuery(queryBody) });
 
 		if (response && response.data) {
 			for (const queryKey of Object.keys(response.data)) {
@@ -177,11 +177,11 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 	let nodeFields: string = `data { size type } owner { address } block { height timestamp }`;
 	let recipientsfield: string = '';
 
-	const gateway = args.gateway ?? GATEWAYS.goldsky;
+	const gateway = args.gateway ?? GATEWAYS.ao;
 	switch (gateway) {
 		case GATEWAYS.arweave:
 			break;
-		case GATEWAYS.goldsky:
+		case GATEWAYS.ao:
 			if (!cursor) txCount = `count`;
 			if (recipients) recipientsfield = `recipients: ${recipients}`;
 			nodeFields += ` recipient`;

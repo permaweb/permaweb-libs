@@ -596,9 +596,10 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
             DateCreated = tostring(tag.value)
         end
 
-        if tag.name == 'Auth-User' then
-            if not AuthUsers[tag.value] and checkValidAddress(tag.value) then
-                table.insert(AuthUsers, tag.value)
+        if tag.name == 'Auth-Users' then
+            local authUsers = json.decode(tag.value)
+            for _, authUser in ipairs(authUsers) do
+                table.insert(AuthUsers, authUser)
             end
         end
 

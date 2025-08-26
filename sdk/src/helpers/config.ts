@@ -3,9 +3,10 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'UwwZV1WlX7jdIdopJI6Mley3Jmjwli2XB8NMcfOO03Q',
+		asset: 'LlyF5s11sJIWvfNbkH-tavR-P7IJfTvkHHOdlwtGIJM',
 		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
 		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
+		comments: 'EIDa_qx_PRPZQA5VhbkImJa1rMk6tp5mm9ysBCO7bk8',
 		zone: {
 			id: '3UF9oIeGimz28c8QPqqQi2to--CucuK_-Zkf8athZp0',
 			version: '0.0.1'
@@ -27,7 +28,7 @@ export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: a
 
 export const GATEWAYS = {
 	arweave: 'arweave.net',
-	goldsky: 'arweave-search.goldsky.com',
+	ao: 'ao-search-gateway.goldsky.com'
 };
 
 export const LICENSES = {
@@ -82,9 +83,9 @@ export const TAGS = {
 		zoneType: 'Zone-Type',
 	},
 	values: {
+		dataProtocol: 'ao',
 		document: 'Document',
 		user: 'User',
-		zone: 'Permaweb-Zone',
 	},
 };
 

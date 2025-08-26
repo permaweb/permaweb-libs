@@ -5,13 +5,14 @@
 	"description": "",
 	"main": "tests.ts",
 	"scripts": {
-		"tests": "node index.js"
+		"clean:install": "rm -rf node_modules package-lock.json || true && npm cache clean --force && npm install",
+		"test": "node index.js"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@permaweb/aoconnect": "^0.0.85",
+		"@permaweb/aoconnect": "file:../../../ao/connect",
 		"@permaweb/libs": "file:..",
 		"arweave": "^1.15.5"
 	},

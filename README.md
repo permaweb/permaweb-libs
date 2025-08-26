@@ -27,8 +27,9 @@ This SDK provides a set of libraries designed as foundational building blocks fo
     - [getAtomicAssets](#getatomicassets)
   - [Comments](#comments)
     - [createComment](#createcomment)
-    - [getComment](#getcomment)
     - [getComments](#getcomments)
+    - [updateCommentStatus](#updatecommentstatus)
+    - [removeComment](#removecomment)
   - [Collections](#collections)
     - [createCollection](#createcollection)
     - [updateCollectionAssets](#updatecollectionassets)
@@ -546,23 +547,22 @@ const assets = await permaweb.getAtomicAssets(assetIds);
 
 ### Comments
 
-Comments are an instantiation of atomic assets created with additional tags to link them with other comments / atomic assets with specific data or root contexts.
+Comments are managed through a separate comments process that handles comment operations for atomic assets. When creating an atomic asset, you can optionally spawn a dedicated comments process by setting `spawnComments: true` in the asset creation parameters.
 
 ##### `createComment`
 
 ```typescript
 const commentId = await permaweb.createComment({
-  content: "Sample comment on an atomic asset",
-  creator: profileId,
-  parentId: atomicAssetId,
+  commentsId: commentsProcessId,
+  creator: CREATOR_ADDRESS,
+  content: "Comment Data"
 });
 ```
 
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing `content`, `creator`, `parentId`, and `rootId (optional)`
-- `callback (optional)`: Callback function for status updates.
+- `args`: Object containing `commentsId` (the ID of the comments process), `creator` (wallet or profile address), and `content` (the comment text)
 
 </details>
 
@@ -572,46 +572,7 @@ const commentId = await permaweb.createComment({
   </summary>
 
 ```typescript
-CommentProcessId;
-```
-
-</details>
-
-##### `getComment`
-
-```typescript
-const comment = await permaweb.getComment(commentId);
-```
-
-<details>
-  <summary><strong>Parameters</strong></summary>
-
-- `commentId`: The ID of the comment to fetch.
-
-</details>
-
-<details>
-  <summary>
-    <strong>Response</strong>
-  </summary>
-
-```typescript
-{
-  id: "CommentProcessId",
-  title: "Comment Title",
-  description: "Comment Description",
-  parentId: "ParentProcessId",
-  rootId: "RootProcessId",
-  content: "My Comment",
-  contentType: "text/plain",
-  creator: "Creator Identifier",
-  collectionId: "Collection Identifier",
-  transferable: true,
-  tags: [
-    { name: "Data-Source", value: "Data Source Identifier" },
-    { name: "Root-Source", value: "Root Source Identifier" }
-  ]
-}
+CommentUpdateId; // Message or slot of the comment creation
 ```
 
 </details>
@@ -620,14 +581,14 @@ const comment = await permaweb.getComment(commentId);
 
 ```typescript
 const comments = await permaweb.getComments({
-  parentId: atomicAssetId,
+  commentsId: commentsProcessId
 });
 ```
 
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `args`: Object containing `parentId` or `rootId`
+- `args`: Object containing `commentsId` (the ID of the comments process)
 
 </details>
 
@@ -639,39 +600,75 @@ const comments = await permaweb.getComments({
 ```typescript
 [
   {
-    id: "CommentProcessId1",
-    title: "Comment Title 1",
-    description: "Comment Description 1",
-    parentId: "ParentProcessId",
-    rootId: "RootProcessId",
-    content: "My Comment",
-    contentType: "text/plain",
-    creator: "Creator Identifier",
-    collectionId: "Collection Identifier",
-    transferable: true,
-    tags: [
-      { name: "Data-Source", value: "Data Source Identifier" },
-      { name: "Root-Source", value: "Root Source Identifier" },
-    ],
+    id: "comment-id",
+    creator: "creator-address",
+    content: "Comment content text",
+    dateCreated: 1234567890,
+    status: "active"
   },
   {
-    id: "CommentProcessId2",
-    title: "Comment Title 2",
-    description: "Comment Description 2",
-    parentId: "ParentProcessId",
-    rootId: "RootProcessId",
-    content: "My Comment",
-    contentType: "text/plain",
-    data: "Comment data 2",
-    creator: "Creator Identifier",
-    collectionId: "Collection Identifier",
-    transferable: true,
-    tags: [
-      { name: "Data-Source", value: "Data Source Identifier" },
-      { name: "Root-Source", value: "Root Source Identifier" },
-    ],
-  },
+    id: "comment-id-2", 
+    creator: "creator-address-2",
+    content: "Another comment",
+    dateCreated: 1234567891,
+    status: "active"
+  }
 ];
+```
+
+</details>
+
+##### `updateCommentStatus`
+
+```typescript
+const updateId = await permaweb.updateCommentStatus({
+  commentsId: commentsProcessId,
+  commentId: "comment-id",
+  status: "inactive"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `commentsId`, `commentId`, and `status` ("active" or "inactive")
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CommentUpdateId; // Message or slot of the status update
+```
+
+</details>
+
+##### `removeComment`
+
+```typescript
+const removeId = await permaweb.removeComment({
+  commentsId: commentsProcessId,
+  commentId: "comment-uuid"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `commentsId` and `commentId`
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CommentRemoveId; // Message or slot of the comment removal
 ```
 
 </details>

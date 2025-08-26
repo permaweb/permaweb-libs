@@ -1,118 +1,87 @@
-import { getGQLData } from '../common/gql.ts';
-import { GATEWAYS } from '../helpers/config.ts';
-import { getTxEndpoint } from '../helpers/endpoints.ts';
-import {
-	AssetCreateArgsType,
-	CommentCreateArgType,
-	CommentDetailType,
-	DependencyType,
-	GQLNodeResponseType,
-	TagFilterType,
-} from '../helpers/types.ts';
-
-import { buildAsset, createAtomicAssetWith, getAtomicAsset } from './assets.ts';
+import { aoSend, readProcess } from '../common/ao.ts';
+import { CommentCreateArgType, DependencyType } from '../helpers/types.ts';
+import { mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createCommentWith(deps: DependencyType) {
-	const createAtomicAsset = createAtomicAssetWith(deps);
-	return async (args: CommentCreateArgType, callback?: (status: any) => void) => {
-		const tags = args.tags ? args.tags : [];
-
-		tags.push({ name: 'Data-Source', value: args.parentId });
-		tags.push({ name: 'Root-Source', value: args.rootId ?? args.parentId });
-
-		const assetArgs: AssetCreateArgsType = {
-			name: `Comment on ${args.parentId}`,
-			description: `Comment on ${args.parentId}`,
-			topics: ['comment'],
-			creator: args.creator,
-			data: args.content,
-			contentType: 'text/plain',
-			assetType: 'comment',
-			tags,
-		};
-
-		return createAtomicAsset(assetArgs, callback);
-	};
-}
-
-export function getCommentWith(deps: DependencyType) {
-	return async (id: string): Promise<CommentDetailType | null> => {
+	return async (args: CommentCreateArgType) => {
 		try {
-			const asset: any = await getAtomicAsset(deps, id, { useGateway: true });
+			if (!args.commentsId) throw new Error('Must provide commentsId');
 
-			const dataSource = asset?.dataSource;
-			const rootSource = asset?.rootSource;
+			const commentsUpdateId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Add-Comment',
+				data: args.content,
+				useRawData: true
+			});
 
-			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
-
-			return {
-				content: await getCommentData(id),
-				parentId: dataSource,
-				rootId: rootSource,
-			};
-		} catch (e: any) {
-			throw new Error(e.message ?? 'Error getting comment');
+			return commentsUpdateId;
+		}
+		catch (e: any) {
+			throw new Error(e.message ?? 'Error creating comment');
 		}
 	};
 }
 
-export function getCommentsWith(_deps: DependencyType) {
-	return async (args: { parentId?: string; rootId?: string }) => {
-		if (!args.parentId && !args.rootId) {
-			throw new Error(`Must provide either parentId or rootId`);
+export function getCommentsWith(deps: DependencyType) {
+	return async (args: { commentsId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error(`Must provide commentsId`);
+
+			const comments = mapFromProcessCase(
+				await readProcess(deps, {
+					processId: args.commentsId,
+					path: 'comments',
+					fallbackAction: 'Get-Comments',
+				})
+			);
+
+			return comments;
 		}
-
-		const tags: TagFilterType[] = [];
-
-		if (args.parentId)
-			tags.push({
-				name: 'Data-Source',
-				values: [args.parentId ?? ''],
-			});
-
-		if (args.rootId)
-			tags.push({
-				name: 'Root-Source',
-				values: [args.rootId ?? ''],
-			});
-
-		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.goldsky,
-			ids: null,
-			tags,
-			owners: null,
-			cursor: null,
-		});
-
-		let assets: any[] = [];
-
-		if (gqlResponse && gqlResponse.data.length) {
-			assets = gqlResponse.data.map((element: GQLNodeResponseType) => buildAsset(element));
+		catch (e: any) {
+			throw new Error(e.message ?? 'Error getting comments');
 		}
-
-		const comments = [];
-		for (const asset of assets) {
-			const dataSource = asset?.dataSource;
-			const rootSource = asset?.rootSource;
-
-			if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
-
-			comments.push({
-				id: asset.id,
-				content: await getCommentData(asset.id),
-				parentId: dataSource,
-				rootId: rootSource,
-			});
-		}
-
-		return comments;
 	};
 }
 
-async function getCommentData(id: string) {
-	try {
-		return await (await fetch(getTxEndpoint(id))).text();
-	} catch (e: any) {
-		throw new Error(e.message ?? 'Error getting comment data');
-	}
+export function updateCommentStatusWith(deps: DependencyType) {
+	return async (args: { commentsId: string, commentId: string, status: 'active' | 'inactive' }) => {
+		try {
+			if (!args.commentsId) throw new Error(`Must provide commentsId`);
+			if (!args.commentId) throw new Error(`Must provide commentId`);
+
+			const commentUpdateId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Update-Comment-Status',
+				tags: [
+					{ name: 'Comment-Id', value: args.commentId },
+					{ name: 'Status', value: args.status }
+				]
+			});
+
+			return commentUpdateId;
+		}
+		catch (e: any) {
+			throw new Error(e.message ?? 'Error updating comment status');
+		}
+	};
+}
+
+export function removeCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string, commentId: string, status: 'active' | 'inactive' }) => {
+		try {
+			if (!args.commentsId) throw new Error(`Must provide commentsId`);
+			if (!args.commentId) throw new Error(`Must provide commentId`);
+
+			const commentRemoveId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Remove-Comment',
+				tags: [{ name: 'Comment-Id', value: args.commentId }]
+			});
+
+			return commentRemoveId;
+		}
+		catch (e: any) {
+			throw new Error(e.message ?? 'Error removing comment');
+		}
+	};
 }

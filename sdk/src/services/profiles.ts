@@ -3,11 +3,9 @@ import { GATEWAYS, TAGS } from 'helpers/config.ts';
 import { resolveTransactionWith } from '../common/arweave.ts';
 import { getGQLData } from '../common/gql.ts';
 import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
-import { checkValidAddress, getBootTag, isValidMediaData } from '../helpers/utils.ts';
+import { getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
 import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
-
-
 
 export function createProfileWith(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
@@ -17,7 +15,6 @@ export function createProfileWith(deps: DependencyType) {
 		let profileId: string | null = null;
 
 		const tags: { name: string; value: string }[] = [
-			{ name: TAGS.keys.dataProtocol, value: TAGS.values.zone },
 			{ name: TAGS.keys.zoneType, value: TAGS.values.user },
 		];
 
@@ -134,10 +131,10 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
 		try {
 			const gqlResponse = await getGQLData({
-				gateway: GATEWAYS.goldsky,
+				gateway: GATEWAYS.ao,
 				tags: [
-					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.zone] },
-					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] },
+					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.dataProtocol] },
+					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] }
 				],
 				owners: [walletAddress],
 			});

@@ -9,15 +9,41 @@ import {
 	GQLNodeResponseType,
 	TagType,
 } from '../helpers/types.ts';
-import { getBootTag, mapFromProcessCase, mapToProcessCase } from '../helpers/utils.ts';
+import { getBootTag, globalLog, mapFromProcessCase, mapToProcessCase } from '../helpers/utils.ts';
 
 export function createAtomicAssetWith(deps: DependencyType) {
 	return async (args: AssetCreateArgsType, callback?: (status: any) => void) => {
 		const validationError = getValidationErrorMessage(args);
 		if (validationError) throw new Error(validationError);
 
+		let commentsId = null;
+		if (args.spawnComments) {
+			try {
+				const commentTags = [
+					{ name: TAGS.keys.onBoot, value: AO.src.comments },
+					{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
+				];
+
+				if (args.users) commentTags.push({ name: 'Auth-Users', value: JSON.stringify(args.users) });
+
+				commentsId = await aoCreateProcess(deps, {
+					tags: commentTags
+				}, callback ? (status: any) => callback(status) : undefined);
+
+				globalLog(`Comments ID: ${commentsId}`);
+
+				await new Promise((r) => setTimeout(r, 500));
+			}
+			catch (e: any) {
+				console.error(e);
+			}
+		}
+
 		const data = CONTENT_TYPES[args.contentType]?.serialize(args.data) ?? args.data;
-		const tags = buildAssetCreateTags(args);
+
+		let assetArgs: any = { ...args };
+		if (commentsId) assetArgs.commentsId = commentsId;
+		const tags = buildAssetCreateTags(assetArgs);
 
 		try {
 			const assetId = await aoCreateProcess(
@@ -49,7 +75,7 @@ export async function getAtomicAsset(
 
 		if (args?.useGateway) {
 			const gqlResponse = await getGQLData({
-				gateway: GATEWAYS.goldsky,
+				gateway: GATEWAYS.ao,
 				ids: [id],
 				tags: null,
 				owners: null,
@@ -153,12 +179,8 @@ function buildAssetCreateTags(args: AssetCreateArgsType): { name: string; value:
 		}
 	}
 
-	if (args.users) {
-		for (const user of args.users) {
-			tags.push({ name: 'Auth-User', value: user });
-		}
-	}
-
+	if (args.users) tags.push({ name: 'Auth-Users', value: JSON.stringify(args.users) });
+	if (args.commentsId) tags.push(getBootTag('Comments', args.commentsId));
 	if (args.tags) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	return tags;
