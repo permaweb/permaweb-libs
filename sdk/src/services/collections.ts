@@ -160,8 +160,8 @@ export function updateCollectionAssetsWith(deps: DependencyType) {
 			processId: args.creator,
 			action: 'Run-Action',
 			tags: [
-				{ name: 'ForwardTo', value: args.collectionId },
-				{ name: 'ForwardAction', value: 'Update-Assets' },
+				{ name: 'Forward-To', value: args.collectionId },
+				{ name: 'Forward-Action', value: 'Update-Assets' },
 			],
 			data: {
 				Target: args.collectionId,

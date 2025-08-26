@@ -14,12 +14,12 @@ import { getTagValue, globalLog } from '../helpers/utils.ts';
 
 import { getGQLData } from './gql.ts';
 
-const GATEWAY = GATEWAYS.goldsky;
+const GATEWAY = GATEWAYS.ao;
 
 const GATEWAY_RETRY_COUNT = 100;
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
-	const tags = [{ name: 'Authority', value: AO.mu }];
+	const tags = [{ name: 'Authority', value: deps.node?.scheduler ?? AO.mu }];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	try {
@@ -32,8 +32,8 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 		});
 
 		globalLog(`Process ID: ${processId}`);
-
 		globalLog('Sending initial message...');
+
 		await aoSend(deps, {
 			processId: processId,
 			action: 'Init',
@@ -79,7 +79,7 @@ export function readProcessWith(deps: DependencyType) {
 }
 
 export async function readProcess(deps: DependencyType, args: ProcessReadType) {
-	const node = deps.node ?? HB.defaultNode
+	const node = deps.node?.url ?? HB.defaultNode
 	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	if (args.serialize) url += '/serialize~json@1.0';
 

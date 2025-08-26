@@ -2,7 +2,7 @@ export type DependencyType = {
 	ao: any;
 	signer?: any;
 	arweave?: any;
-	node?: string;
+	node?: { url: string, scheduler: string };
 };
 
 export type ProcessReadType = {
@@ -89,6 +89,8 @@ export type AssetCreateArgsType = {
 	tags?: TagType[];
 	src?: string;
 	users?: string[];
+	spawnComments?: boolean;
+	commentsId?: string;
 };
 
 export type AssetHeaderType = {
@@ -126,7 +128,8 @@ export type CommentDetailType = {
 export type CommentCreateArgType = {
 	content: string;
 	creator: string;
-	parentId: string;
+	commentsId: string;
+	parentId?: string;
 	rootId?: string;
 	tags?: TagType[];
 };

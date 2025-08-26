@@ -3,7 +3,7 @@ import { GATEWAYS, TAGS } from 'helpers/config.ts';
 import { resolveTransactionWith } from '../common/arweave.ts';
 import { getGQLData } from '../common/gql.ts';
 import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
-import { checkValidAddress, getBootTag } from '../helpers/utils.ts';
+import { getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
 import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
 
@@ -15,13 +15,13 @@ export function createProfileWith(deps: DependencyType) {
 		let profileId: string | null = null;
 
 		const tags: { name: string; value: string }[] = [
-			{ name: TAGS.keys.dataProtocol, value: TAGS.values.zone },
 			{ name: TAGS.keys.zoneType, value: TAGS.values.user },
 		];
 
 		const addImageTag = async (imageKey: 'Thumbnail' | 'Banner') => {
 			const key: any = imageKey.toLowerCase();
-			if ((args as any)[key]) {
+			const value = (args as any)[key];
+			if (value && isValidMediaData(value)) {
 				try {
 					const resolvedImage = await resolveTransaction((args as any)[key]);
 					tags.push(getBootTag(imageKey, resolvedImage));
@@ -60,7 +60,7 @@ export function updateProfileWith(deps: DependencyType) {
 				Description: args.description,
 			};
 
-			if (args.thumbnail && (checkValidAddress(args.thumbnail) || args.thumbnail.startsWith('data'))) {
+			if (args.thumbnail && isValidMediaData(args.thumbnail)) {
 				try {
 					data.Thumbnail = await resolveTransaction(args.thumbnail);
 				} catch (e: any) {
@@ -69,7 +69,7 @@ export function updateProfileWith(deps: DependencyType) {
 			}
 			else data.Thumbnail = 'None';
 
-			if (args.banner && (checkValidAddress(args.thumbnail) || args.banner.startsWith('data'))) {
+			if (args.banner && isValidMediaData(args.banner)) {
 				try {
 					data.Banner = await resolveTransaction(args.banner);
 				} catch (e: any) {
@@ -131,10 +131,10 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
 		try {
 			const gqlResponse = await getGQLData({
-				gateway: GATEWAYS.goldsky,
+				gateway: GATEWAYS.ao,
 				tags: [
-					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.zone] },
-					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] },
+					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.dataProtocol] },
+					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] }
 				],
 				owners: [walletAddress],
 			});
