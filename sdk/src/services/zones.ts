@@ -96,13 +96,13 @@ export function setZoneRolesWith(deps: DependencyType) {
 }
 
 export function joinZoneWith(deps: DependencyType) {
-	return async (args: { zoneToJoinId: string; path?: string }, zoneId: string): Promise<string | null> => {
+	return async (args: { zoneToJoinId: string; storePath?: string }, zoneId: string): Promise<string | null> => {
 		const zoneValid = checkValidAddress(zoneId) && checkValidAddress(args.zoneToJoinId);
 
 		if (!zoneValid) throw new Error('Invalid zone address');
 
-		const tags = [{ name: 'ZoneId', value: args.zoneToJoinId }];
-		if (args.path) tags.push({ name: 'Path', value: args.path });
+		const tags = [{ name: 'Zone-Id', value: args.zoneToJoinId }];
+		if (args.storePath) tags.push({ name: 'Store-Path', value: args.storePath });
 
 		try {
 			const zoneUpdateId = await aoSend(deps, {
