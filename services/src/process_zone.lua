@@ -457,7 +457,7 @@ end
 function Zone.Functions.joinZone(msg)
     local index = -1
     for i, invite in ipairs(Zone.Invites) do
-        if invite.Id == msg.Tags.ZoneId then
+        if invite.Id == msg.Tags['Zone-Id'] then
             index = i
         end
     end
@@ -465,23 +465,23 @@ function Zone.Functions.joinZone(msg)
 
     if index > -1 then
         local store = Zone.Data.KV.Store
-        local path = nil
+        local storePath = nil
 
-        if msg.Tags.Path then
-            if not store[msg.Tags.Path] then
-                store[msg.Tags.Path] = {}
+        if msg.Tags['Store-Path'] then
+            if not store[msg.Tags['Store-Path']] then
+                store[msg.Tags['Store-Path']] = {}
             end
 
-            path = store[msg.Tags.Path]
+            storePath = store[msg.Tags['Store-Path']]
         else
             if not store.JoinedZones then
                 store.JoinedZones = {}
             end
 
-            path = store.JoinedZones
+            storePath = store.JoinedZones
         end
 
-        table.insert(path, Zone.Invites[index])
+        table.insert(storePath, Zone.Invites[index])
         table.remove(Zone.Invites, index)
 
         ao.send({
