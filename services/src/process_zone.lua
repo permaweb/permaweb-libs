@@ -317,7 +317,7 @@ function Zone.Functions.zoneUpdate(msg)
     if entries and #entries then
         for _, entry in ipairs(entries) do
             if entry.key and entry.value then
-                local updateType = msg.UpdateType or 'Add-Or-Update'
+                local updateType = msg['Update-Type'] or 'Add-Or-Update'
                 if updateType == 'Add-Or-Update' then
                     Zone.Data.KV:set(entry.key, entry.value)
                 elseif updateType == 'Remove' then
@@ -588,7 +588,7 @@ function Zone.Functions.updateIndexRequest(msg)
         return
     end
 
-    if not msg['Index-Id'] or not msg.UpdateType then
+    if not msg['Index-Id'] or not msg['Update-Type'] then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
         return
     end
@@ -605,7 +605,7 @@ function Zone.Functions.updateIndexRequest(msg)
     end
 
     if entryIndex > -1 then
-        if msg.UpdateType == 'Approve' then
+        if msg['Update-Type'] == 'Approve' then
             table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
 
             if not Zone.Data.KV.Store.Index then
@@ -613,10 +613,10 @@ function Zone.Functions.updateIndexRequest(msg)
             end
 
             table.insert(Zone.Data.KV.Store.Index, entry)
-        elseif msg.UpdateType == 'Reject' then
+        elseif msg['Update-Type'] == 'Reject' then
             table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
         else
-            Zone.Functions.sendError(msg.From, 'Invalid UpdateType')
+            Zone.Functions.sendError(msg.From, 'Invalid Update-Type')
             return
         end
 
