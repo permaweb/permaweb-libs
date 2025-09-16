@@ -36,6 +36,7 @@ Zone.Constants = {
     H_ZONE_ADD_INVITE = 'Zone-Add-Invite',
     H_ZONE_APPEND = 'Zone-Append',
     H_ZONE_REMOVE = 'Zone-Remove',
+    H_ZONE_UPDATE_PATCH_MAP = 'Zone-Update-Patch-Map',
     H_ZONE_ADD_UPLOAD = 'Add-Uploaded-Asset'
 }
 
@@ -71,12 +72,15 @@ Permissions = {
         Zone.RoleOptions.Admin,
         Zone.RoleOptions.Moderator
     },
+    [Zone.Constants.H_ZONE_UPDATE_PATCH_MAP] = {
+        Zone.RoleOptions.Admin
+    },
 }
 
-Zone.Data = Zone.Data or {
-    KV = KV.new({ BatchPlugin }),
-    AssetManager = AssetManager.new()
-}
+Zone.Data = Zone.Data or { KV = KV.new({ BatchPlugin }), AssetManager = AssetManager.new() }
+
+-- PatchMap: { [<PatchKey>]: string = [...] }
+Zone.PatchMap = Zone.PatchMap or {}
 
 -- Roles: { <Id>: string = { Roles = roles, Type = 'wallet' | 'process' } } :. Roles[<id>] = {...}
 Zone.Roles = Zone.Roles or {}
@@ -86,7 +90,7 @@ Zone.Invites = Zone.Invites or {}
 
 Zone.Version = '0.0.1'
 
-function GetState()
+function GetFullState()
     return {
         Owner = Owner,
         Store = Zone.Data.KV:dump(),
@@ -99,25 +103,173 @@ function GetState()
     }
 end
 
-function SyncState()
-    Send({ device = 'patch@1.0', zone = json.encode(GetState()) })
-end
-
-function SyncDynamicState(key, value, opts)
-    opts = opts or {}
-
-    local data = value
-    if opts.jsonEncode then data = json.encode(value) end
-
-    Send({ device = 'patch@1.0', [key] = data })
-end
-
 function Zone.Functions.tableLength(t)
     local count = 0
     for _ in pairs(t) do
         count = count + 1
     end
     return count
+end
+
+function Zone.Functions.getFieldValue(fullState, fieldPath)
+    local parts = {}
+    for part in string.gmatch(fieldPath, '[^%.]+') do
+        table.insert(parts, part)
+    end
+
+    local current = fullState
+    for _, part in ipairs(parts) do
+        if current == nil or type(current) ~= 'table' then
+            return nil
+        end
+        current = current[part]
+    end
+
+    return current
+end
+
+function Zone.Functions.getPatchData(patchKey)
+    local fullState = GetFullState()
+    local fields = Zone.PatchMap[patchKey]
+
+    if not fields or #fields == 0 then
+        return fullState
+    end
+
+    local patchData = {}
+
+    for _, fieldPath in ipairs(fields) do
+        local value = Zone.Functions.getFieldValue(fullState, fieldPath)
+
+        -- Extract the final field name (after the last dot)
+        local parts = {}
+        for part in string.gmatch(fieldPath, '[^%.]+') do
+            table.insert(parts, part)
+        end
+
+        local finalFieldName = parts[#parts]
+        patchData[finalFieldName] = value
+    end
+
+    return patchData
+end
+
+function Zone.Functions.getPatchKeysForChangedFields(changedFields)
+    local matchedPatchKeys = {}
+
+    for patchKey, fields in pairs(Zone.PatchMap) do
+        for _, field in ipairs(fields) do
+            for _, changedField in ipairs(changedFields) do
+                if field == changedField then
+                    matchedPatchKeys[patchKey] = true
+                    break
+                end
+            end
+        end
+    end
+
+    local result = {}
+    for patchKey, _ in pairs(matchedPatchKeys) do
+        table.insert(result, patchKey)
+    end
+
+    return result
+end
+
+function Zone.Functions.extractChangedFields(msg)
+    local changedFields = {}
+
+    -- Check if this is from zoneUpdate with specific keys
+    if msg.Action == Zone.Constants.H_ZONE_UPDATE and msg.Data then
+        local decodedData = Zone.Functions.decodeMessageData(msg.Data)
+        if decodedData.success and decodedData.data then
+            for _, entry in ipairs(decodedData.data) do
+                if entry.key then
+                    table.insert(changedFields, 'Store.' .. entry.key)
+                end
+            end
+        end
+    end
+
+    -- Check for role updates
+    if msg.Action == Zone.Constants.H_ZONE_ROLE_SET then
+        table.insert(changedFields, 'Roles')
+    end
+
+    -- Check for index updates
+    if msg.Action == Zone.Constants.H_ZONE_ADD_INDEX_ID or
+        msg.Action == Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST or
+        msg.Action == Zone.Constants.H_ZONE_INDEX_NOTICE then
+        table.insert(changedFields, 'Store.Index')
+    end
+
+    -- Check for index request updates
+    if msg.Action == Zone.Constants.H_ZONE_ADD_INDEX_REQUEST or
+        msg.Action == Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST then
+        table.insert(changedFields, 'Store.IndexRequests')
+    end
+
+    -- Check for zone set/append/remove operations
+    if msg.Action == Zone.Constants.H_ZONE_SET or
+        msg.Action == Zone.Constants.H_ZONE_APPEND or
+        msg.Action == Zone.Constants.H_ZONE_REMOVE then
+        local path = msg.Tags.Path or ''
+        if path ~= '' then
+            table.insert(changedFields, 'Store.' .. path)
+        end
+    end
+
+    -- Check for joined zones updates
+    if msg.Action == Zone.Constants.H_ZONE_JOIN then
+        if msg.Tags['Store-Path'] then
+            table.insert(changedFields, 'Store.' .. msg.Tags['Store-Path'])
+        else
+            table.insert(changedFields, 'Store.JoinedZones')
+        end
+    end
+
+    -- Check for invite updates
+    if msg.Action == Zone.Constants.H_ZONE_ADD_INVITE then
+        table.insert(changedFields, 'Invites')
+    end
+
+    -- Check for asset updates
+    if msg.Action == Zone.Constants.H_ZONE_ADD_UPLOAD or
+        msg.Action == Zone.Constants.H_ZONE_CREDIT_NOTICE or
+        msg.Action == Zone.Constants.H_ZONE_DEBIT_NOTICE then
+        table.insert(changedFields, 'Assets')
+    end
+
+    return changedFields
+end
+
+function SyncState(msg)
+    local patchMapLength = Zone.Functions.tableLength(Zone.PatchMap)
+
+    if patchMapLength > 0 and msg then
+        local changedFields = Zone.Functions.extractChangedFields(msg)
+
+        if #changedFields > 0 then
+            local patchKeys = Zone.Functions.getPatchKeysForChangedFields(changedFields)
+
+            if #patchKeys > 0 then
+                -- Send targeted patch messages for each matched patch key
+                for _, patchKey in ipairs(patchKeys) do
+                    local patchData = Zone.Functions.getPatchData(patchKey)
+                    Send({ device = 'patch@1.0', [patchKey] = json.encode(patchData) })
+                end
+            else
+                -- If no specific patch keys match, send full zone update
+                Send({ device = 'patch@1.0', zone = json.encode(GetFullState()) })
+            end
+        else
+            -- If no changed fields detected, send full zone update
+            Send({ device = 'patch@1.0', zone = json.encode(GetFullState()) })
+        end
+    else
+        -- If no patch map or no message context, send full zone update
+        Send({ device = 'patch@1.0', zone = json.encode(GetFullState()) })
+    end
 end
 
 function Zone.Functions.rolesHasValue(roles, role)
@@ -159,7 +311,8 @@ function Zone.Functions.authRunAction(msg)
 
     local rolesForHandler = Zone.Functions.getRolesForAction(msg['Forward-Action'])
     if not rolesForHandler then
-        return false, 'AuthRoles: Sender ' .. msg.From .. ' not Authorized to run action ' .. msg['Forward-Action'] .. '.'
+        return false,
+            'AuthRoles: Sender ' .. msg.From .. ' not Authorized to run action ' .. msg['Forward-Action'] .. '.'
     end
 
     local actorRoles = Zone.Functions.getActorRoles(msg.From)
@@ -279,7 +432,7 @@ end
 function Zone.Functions.zoneGet(msg)
     msg.reply({
         Action = Zone.Constants.H_ZONE_SUCCESS,
-        Data = GetState()
+        Data = GetFullState()
     })
 end
 
@@ -326,7 +479,7 @@ function Zone.Functions.zoneUpdate(msg)
             end
         end
 
-        SyncState()
+        SyncState(msg)
         ao.send({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
     end
 end
@@ -423,8 +576,7 @@ function Zone.Functions.zoneRoleSet(msg)
             }
         })
 
-        SyncState()
-        SyncDynamicState('roles', Zone.Roles)
+        SyncState(msg)
     else
         Zone.Functions.sendError(msg.From, string.format(
             'Failed to parse role update data, received: %s. %s.', msg.Data,
@@ -451,7 +603,7 @@ function Zone.Functions.addZoneInvite(msg)
         Action = 'Invite-Acknowledged'
     })
 
-    SyncState()
+    SyncState(msg)
 end
 
 function Zone.Functions.joinZone(msg)
@@ -484,12 +636,27 @@ function Zone.Functions.joinZone(msg)
         table.insert(storePath, Zone.Invites[index])
         table.remove(Zone.Invites, index)
 
-        ao.send({
-            Target = msg.From,
-            Action = 'Joined-Zone'
-        })
+        ao.send({ Target = msg.From, Action = 'Joined-Zone' })
 
-        SyncState()
+        SyncState(msg)
+    end
+end
+
+function Zone.Functions.updatePatchMap(msg)
+    if not Zone.Functions.isAuthorized(msg) then
+        Zone.Functions.sendError(msg.From, 'Not Authorized')
+        return
+    end
+
+    local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
+
+    if decodeResult.success and decodeResult.data then
+        Zone.PatchMap = decodeResult.data
+        ao.send({ Target = msg.From, Action = 'Patch-Map-Updated' })
+    else
+        Zone.Functions.sendError(msg.From, string.format(
+            'Failed to parse role update data, received: %s. %s.', msg.Data,
+            'Data must be an object - { [patch-key]: [] }'))
     end
 end
 
@@ -501,7 +668,7 @@ function Zone.Functions.addUpload(msg)
         AssetType = msg.AssetType,
         ContentType = msg.ContentType,
         Quantity = msg.Quantity,
-        SyncState = SyncState,
+        SyncState = function() SyncState(msg) end,
     })
 end
 
@@ -511,7 +678,7 @@ function Zone.Functions.creditNotice(msg)
         AssetId = msg.From,
         Timestamp = msg.Timestamp,
         Quantity = msg.Quantity,
-        SyncState = SyncState
+        SyncState = function() SyncState(msg) end
     })
 end
 
@@ -521,7 +688,7 @@ function Zone.Functions.debitNotice(msg)
         AssetId = msg.From,
         Timestamp = msg.Timestamp,
         Quantity = msg.Quantity,
-        SyncState = SyncState,
+        SyncState = function() SyncState(msg) end,
     })
 end
 
@@ -533,7 +700,6 @@ function Zone.Functions.addIndexId(msg)
 
     if not msg['Index-Id'] then
         Zone.Functions.sendError(msg.From, 'Invalid Data')
-        ao.send({ Target = msg.From, Data = json.encode(msg) }) -- TODO: Remove
         return
     end
 
@@ -550,7 +716,7 @@ function Zone.Functions.addIndexId(msg)
 
     table.insert(Zone.Data.KV.Store.Index, { Id = msg['Index-Id'] })
 
-    SyncState()
+    SyncState(msg)
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
@@ -578,7 +744,7 @@ function Zone.Functions.addIndexRequest(msg)
 
     table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg['Index-Id'] })
 
-    SyncState()
+    SyncState(msg)
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
@@ -620,7 +786,7 @@ function Zone.Functions.updateIndexRequest(msg)
             return
         end
 
-        SyncState()
+        SyncState(msg)
         msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
     else
         Zone.Functions.sendError(msg.From, 'Entry not found')
@@ -661,7 +827,7 @@ function Zone.Functions.indexNotice(msg)
 
         Zone.Data.KV.Store.Index[entryIndex] = existingEntry
 
-        SyncState()
+        SyncState(msg)
         msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
     else
         Zone.Functions.sendError(msg.From, 'Entry not found')
@@ -683,7 +849,7 @@ function Zone.Functions.setHandler(msg)
 
     Zone.Data.KV:set(path, decodedData.data)
 
-    SyncState()
+    SyncState(msg)
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
@@ -703,7 +869,7 @@ function Zone.Functions.appendHandler(msg)
 
     Zone.Data.KV:append(path, decodedData.data)
 
-    SyncState()
+    SyncState(msg)
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
@@ -721,7 +887,7 @@ function Zone.Functions.removeHandler(msg)
 
     Zone.Data.KV:remove(path)
 
-    SyncState()
+    SyncState(msg)
     msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
@@ -744,6 +910,8 @@ Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Fu
 Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zone.Functions.zoneRoleSet)
 Handlers.add(Zone.Constants.H_ZONE_JOIN, Zone.Constants.H_ZONE_JOIN, Zone.Functions.joinZone)
 Handlers.add(Zone.Constants.H_ZONE_ADD_INVITE, Zone.Constants.H_ZONE_ADD_INVITE, Zone.Functions.addZoneInvite)
+Handlers.add(Zone.Constants.H_ZONE_UPDATE_PATCH_MAP, Zone.Constants.H_ZONE_UPDATE_PATCH_MAP,
+    Zone.Functions.updatePatchMap)
 
 --------------------------------------------------------------------------------
 -- Helper function: setStoreValue
@@ -851,6 +1019,8 @@ end
 ZoneInitCompleted = ZoneInitCompleted or false
 
 if not ZoneInitCompleted then
+    local patchMapUpdated = false
+
     if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
         for _, tag in ipairs(Inbox[1].TagArray) do
             local prefix = 'Bootloader-'
@@ -858,11 +1028,35 @@ if not ZoneInitCompleted then
                 local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
                 setStoreValue(keyWithoutPrefix, tag.value)
             end
+
+            -- Check for Zone.PatchMap tags
+            local patchMapPrefix = 'Zone-Patch-Map-'
+            if string.sub(tag.name, 1, string.len(patchMapPrefix)) == patchMapPrefix then
+                local patchKey = string.lower(string.sub(tag.name, string.len(patchMapPrefix) + 1))
+
+                -- Parse the tag value as JSON array of field paths
+                local status, decodedFields = pcall(json.decode, tag.value)
+                if status and type(decodedFields) == 'table' then
+                    Zone.PatchMap[patchKey] = decodedFields
+                    patchMapUpdated = true
+                end
+            end
         end
     end
 
-    SyncState()
-    SyncDynamicState('roles', Zone.Roles)
+    local patchMapLength = Zone.Functions.tableLength(Zone.PatchMap)
+
+    if patchMapLength > 0 then
+        -- Send individual patch messages for each configured patch key
+        for patchKey, fields in pairs(Zone.PatchMap) do
+            local patchData = Zone.Functions.getPatchData(patchKey)
+            Send({ device = 'patch@1.0', [patchKey] = json.encode(patchData) })
+        end
+    else
+        -- Only send full zone update if no patch map is configured
+        SyncState(nil)
+    end
+
     ZoneInitCompleted = true
 end
 

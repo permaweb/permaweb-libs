@@ -54,7 +54,7 @@ export function aoSendWith(deps: DependencyType) {
 
 export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
 	try {
-		const tags: TagType[] = [{ name: 'Action', value: args.action }];
+		const tags: TagType[] = [{ name: 'Action', value: args.action }, { name: 'Message-Timestamp', value: new Date().getTime().toString() }];
 		if (args.tags) tags.push(...args.tags);
 
 		const data = args.useRawData ? args.data : JSON.stringify(args.data);
@@ -83,12 +83,9 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	if (args.serialize) url += '/serialize~json@1.0';
 
-	console.log('Getting state from HyperBEAM:', url);
-
 	try {
 		const res = await fetch(url);
 		if (res.ok) {
-			console.log('Returning state from HyperBEAM.');
 			return res.json();
 		}
 
@@ -96,9 +93,7 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 
 	} catch (e: any) {
 		if (args.fallbackAction) {
-			console.log('State not found, dryrunning...');
 			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });
-			console.log('Returning state from dryrun.');
 			return result;
 		}
 		throw e;

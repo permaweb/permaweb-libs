@@ -57,6 +57,22 @@ export function addToZoneWith(deps: DependencyType) {
 	};
 }
 
+export function updateZonePatchMapWith(deps: DependencyType) {
+	return async (args: object, zoneId: string): Promise<string | null> => {
+		try {
+			const zonePatchMapUpdateId = await aoSend(deps, {
+				processId: zoneId,
+				action: 'Zone-Update-Patch-Map',
+				data: args,
+			});
+
+			return zonePatchMapUpdateId;
+		} catch (e: any) {
+			throw new Error(e);
+		}
+	};
+}
+
 export function setZoneRolesWith(deps: DependencyType) {
 	return async (
 		args: { granteeId: string; roles: string[]; type: 'wallet' | 'process'; sendInvite: boolean }[],
