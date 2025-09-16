@@ -146,7 +146,15 @@ export function updateZoneVersionWith(deps: DependencyType) {
 
 			const versionUpdate = await handleProcessEval(deps, {
 				processId: args.zoneId,
-				evalSrc: `Zone.Version = '${AO.src.zone.version}'; SyncState()`,
+				evalSrc: `
+				Zone.Version = '${AO.src.zone.version}'
+				if Zone.PatchMap then
+					local patchData = Zone.Functions.getPatchData('overview')
+            		Send({ device = 'patch@1.0', overview = require('json').encode(patchData) })
+				else
+					SyncState(nil)
+				end
+				`,
 			});
 
 			return versionUpdate;

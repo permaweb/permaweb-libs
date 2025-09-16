@@ -1019,8 +1019,6 @@ end
 ZoneInitCompleted = ZoneInitCompleted or false
 
 if not ZoneInitCompleted then
-    local patchMapUpdated = false
-
     if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
         for _, tag in ipairs(Inbox[1].TagArray) do
             local prefix = 'Bootloader-'
@@ -1038,7 +1036,6 @@ if not ZoneInitCompleted then
                 local status, decodedFields = pcall(json.decode, tag.value)
                 if status and type(decodedFields) == 'table' then
                     Zone.PatchMap[patchKey] = decodedFields
-                    patchMapUpdated = true
                 end
             end
         end
