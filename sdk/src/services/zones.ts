@@ -57,6 +57,22 @@ export function addToZoneWith(deps: DependencyType) {
 	};
 }
 
+export function updateZonePatchMapWith(deps: DependencyType) {
+	return async (args: object, zoneId: string): Promise<string | null> => {
+		try {
+			const zonePatchMapUpdateId = await aoSend(deps, {
+				processId: zoneId,
+				action: 'Zone-Update-Patch-Map',
+				data: args,
+			});
+
+			return zonePatchMapUpdateId;
+		} catch (e: any) {
+			throw new Error(e);
+		}
+	};
+}
+
 export function setZoneRolesWith(deps: DependencyType) {
 	return async (
 		args: { granteeId: string; roles: string[]; type: 'wallet' | 'process'; sendInvite: boolean }[],
@@ -130,7 +146,15 @@ export function updateZoneVersionWith(deps: DependencyType) {
 
 			const versionUpdate = await handleProcessEval(deps, {
 				processId: args.zoneId,
-				evalSrc: `Zone.Version = '${AO.src.zone.version}'; SyncState()`,
+				evalSrc: `
+				Zone.Version = '${AO.src.zone.version}'
+				if Zone.PatchMap then
+					local patchData = Zone.Functions.getPatchData('overview')
+            		Send({ device = 'patch@1.0', overview = require('json').encode(patchData) })
+				else
+					SyncState(nil)
+				end
+				`,
 			});
 
 			return versionUpdate;
