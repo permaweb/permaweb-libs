@@ -1,18 +1,16 @@
 import { checkValidAddress } from './utils.ts';
 
-const arweaveEndpoint = 'https://arweave.net';
-
 export function getARBalanceEndpoint(walletAddress: string) {
-	return `${arweaveEndpoint}/wallet/${walletAddress}/balance`;
+	return `ar://wallet/${walletAddress}/balance`;
 }
 
 export function getTxEndpoint(txId: string) {
-	return `${arweaveEndpoint}/${txId}`;
+	return `ar://${txId}`;
 }
 
 export function getRendererEndpoint(renderWith: string, tx: string) {
 	if (checkValidAddress(renderWith)) {
-		return `${arweaveEndpoint}/${renderWith}/?tx=${tx}`;
+		return `ar://${renderWith}/?tx=${tx}`;
 	} else {
 		return `https://${renderWith}.arweave.net/?tx=${tx}`;
 	}

@@ -1,3 +1,4 @@
+import { wayfinder } from 'common/ar_io.ts';
 import { aoCreateProcess, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
 import { resolveTransactionWith } from '../common/arweave.ts';
 import { AO, TAGS } from '../helpers/config.ts';
@@ -64,7 +65,7 @@ export function createCollectionWith(deps: DependencyType) {
 			console.error(e);
 		}
 
-		const processSrcFetch = await fetch(getTxEndpoint(AO.src.collection));
+		const processSrcFetch = await wayfinder.request(getTxEndpoint(AO.src.collection));
 		if (!processSrcFetch.ok) throw new Error(`Unable to fetch process src`);
 
 		let processSrc = await processSrcFetch.text();

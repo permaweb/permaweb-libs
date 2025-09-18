@@ -108,7 +108,6 @@ export function getAtomicAssetWith(deps: DependencyType) {
 export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
 	try {
 		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.arweave,
 			ids: ids ?? null,
 			tags: null,
 			owners: null,

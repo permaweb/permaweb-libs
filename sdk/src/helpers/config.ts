@@ -27,7 +27,6 @@ export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: a
 };
 
 export const GATEWAYS = {
-	arweave: 'arweave.net',
 	ao: 'ao-search-gateway.goldsky.com'
 };
 
