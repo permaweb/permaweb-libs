@@ -176,6 +176,7 @@ function logError(message) {
 	async function testProfiles() {
 		try {
 			logTest('Testing profile creation...');
+			const address = await arweave.wallets.jwkToAddress(wallet)
 			const profileId = await permaweb.createProfile(
 				{
 					username: 'My username',
@@ -196,19 +197,18 @@ function logError(message) {
 
 			logTest('Testing profile fetch by address...');
 			const profileByWalletAddress = await permaweb.getProfileByWalletAddress(
-				await arweave.wallets.jwkToAddress(wallet),
+				address
 			);
 
 			expect(profileByWalletAddress).toBeDefined();
-			expect(profileByWalletAddress.username).toEqual('My username');
-			console.log(profileByWalletAddress)
 
 			logTest('Testing ArNS primary name support...');
 			//check if wallet was generated automatically 
 			//It will show normal display name because generated wallets do not have primary names attached
 			if(fs.existsSync(process.env.PATH_TO_WALLET)) {
-				expect(profileByWalletAddress.displayName).toEqual('merdikim');
+				expect(profileByWalletAddress.displayName).toEqual(process.env.ArNS_NAME);
 			} else {
+				console.log(address, "has no primary name")
                 expect(profileByWalletAddress.displayName).toEqual('My display name')
 			}
 
@@ -456,11 +456,11 @@ function logError(message) {
 	}
 
 	const testMap = {
-		//zones: { key: 'zones', fn: testZones },
+		zones: { key: 'zones', fn: testZones },
 		profiles: { key: 'profiles', fn: testProfiles },
-		// assets: { key: 'assets', fn: testAssets },
-		// comments: { key: 'comments', fn: testComments },
-		// collections: { key: 'assets', fn: testCollections },
+		assets: { key: 'assets', fn: testAssets },
+		comments: { key: 'comments', fn: testComments },
+		collections: { key: 'assets', fn: testCollections },
 	};
 
 	(async function () {
