@@ -6,6 +6,7 @@ import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } fro
 import { getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
 import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
+import { getPrimaryNameWith } from 'common/ario.ts';
 
 export function createProfileWith(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
@@ -104,13 +105,14 @@ export function updateProfileVersionWith(deps: DependencyType) {
 export function getProfileByIdWith(deps: DependencyType) {
 	const getZone = getZoneWith(deps);
 
-	return async (profileId: string): Promise<ProfileType | null> => {
+	return async (profileId: string, primaryName?:string): Promise<ProfileType | null> => {
 		try {
 			const zone = await getZone(profileId);
 			if (!zone) {
 				throw new Error('Error fetching profile - Not found');
 			}
-			return {
+
+			const profile = {
 				id: profileId,
 				owner: zone.owner,
 				assets: zone.assets,
@@ -118,7 +120,13 @@ export function getProfileByIdWith(deps: DependencyType) {
 				invites: zone.invites,
 				version: zone.version,
 				...zone.store,
-			};
+			}
+
+			if(primaryName && primaryName.trim().length > 0) {
+				profile.displayName = primaryName
+			}
+			
+			return profile
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error fetching profile');
 		}
@@ -127,6 +135,7 @@ export function getProfileByIdWith(deps: DependencyType) {
 
 export function getProfileByWalletAddressWith(deps: DependencyType) {
 	const getProfileById = getProfileByIdWith(deps);
+	const getPrimaryName = getPrimaryNameWith(deps)
 
 	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
 		try {
@@ -147,7 +156,9 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 					return timestampB - timestampA;
 				});
 
-				return await getProfileById(gqlResponse.data[0].node.id);
+				const primaryName = await getPrimaryName(walletAddress)
+
+				return await getProfileById(gqlResponse.data[0].node.id, primaryName);
 			}
 
 			return { id: null };
