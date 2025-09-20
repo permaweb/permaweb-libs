@@ -3,6 +3,7 @@ export type DependencyType = {
 	signer?: any;
 	arweave?: any;
 	node?: { url: string, scheduler: string };
+	ario?:any
 };
 
 export type ProcessReadType = {
