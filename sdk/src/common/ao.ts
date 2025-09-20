@@ -11,6 +11,7 @@ import {
 	TagType,
 } from '../helpers/types.ts';
 import { getTagValue, globalLog } from '../helpers/utils.ts';
+import { wayfinder } from './ar_io.ts';
 
 import { getGQLData } from './gql.ts';
 
@@ -397,7 +398,7 @@ export async function aoCreateProcess(
 
 export async function fetchProcessSrc(txId: string): Promise<string> {
 	try {
-		const srcFetch = await fetch(getTxEndpoint(txId));
+		const srcFetch = await wayfinder.request(getTxEndpoint(txId));
 		return await srcFetch.text();
 	} catch (e: any) {
 		throw new Error(e);

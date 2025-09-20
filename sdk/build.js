@@ -37,10 +37,11 @@ const buildConfigs = [
 		outfile: 'dist/index.esm.js',
 		platform: 'browser',
 		format: 'esm',
-		external: ['fs', 'os', 'path', 'http', 'https', 'zlib'],
+		external: ['fs', 'os', 'path', 'http', 'https', 'zlib', 'async_hooks'],
 		plugins: [
 			alias({
 				'node:process': require.resolve('process/browser'),
+				crypto: require.resolve('crypto-browserify')
 			}),
 			nodeModulesPolyfillPlugin({
 				globals: { process: true, Buffer: true },

@@ -7,7 +7,11 @@ import {
 	GQLNodeResponseType,
 	QueryBodyGQLArgsType,
 } from '../helpers/types.ts';
+<<<<<<< HEAD
 import { wayfinder } from './ario.ts';
+=======
+import { wayfinder } from './ar_io.ts';
+>>>>>>> b32987339dd7cb9bf68fed32128190d5ab896bee
 
 const CURSORS = {
 	p1: 'P1',
@@ -178,7 +182,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 	let nodeFields: string = `data { size type } owner { address } block { height timestamp }`;
 	let recipientsfield: string = '';
 
-	const gateway = args.gateway ?? GATEWAYS.ao;
+	const gateway = args.gateway ?? "";
 	switch (gateway) {
 		case GATEWAYS.ao:
 			if (!cursor) txCount = `count`;
@@ -225,7 +229,7 @@ async function getResponse(args: { query: string }): Promise<any> {
 		const response = await wayfinder.request(`ar:///graphql`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: args.query,
+			body: JSON.stringify({query: args.query}),
 		});
 		return await response.json();
 	} catch (e: any) {

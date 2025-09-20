@@ -1,5 +1,5 @@
 import Arweave from 'arweave';
-import { connect, createSigner } from '@permaweb/aoconnect';
+import { connect, createDataItemSigner, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 import { ARIO } from '@ar.io/sdk';
 import fs from 'fs';
@@ -105,6 +105,7 @@ function logError(message) {
 
 	const walletAddress = await arweave.wallets.jwkToAddress(wallet);
 	const signer = createSigner(wallet);
+	//const signer = createDataItemSigner(wallet);
 
 	console.log(`Wallet address: ${walletAddress}`);
 
