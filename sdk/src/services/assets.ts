@@ -1,6 +1,6 @@
-import { aoCreateProcess, aoDryRun, readProcess } from '../common/ao.ts';
+import { aoCreateProcess, readProcess } from '../common/ao.ts';
 import { getGQLData } from '../common/gql.ts';
-import { AO, CONTENT_TYPES, GATEWAYS, TAGS } from '../helpers/config.ts';
+import { AO, CONTENT_TYPES, TAGS } from '../helpers/config.ts';
 import {
 	AssetCreateArgsType,
 	AssetDetailType,
@@ -75,7 +75,6 @@ export async function getAtomicAsset(
 
 		if (args?.useGateway) {
 			const gqlResponse = await getGQLData({
-				gateway: GATEWAYS.ao,
 				ids: [id],
 				tags: null,
 				owners: null,
@@ -108,7 +107,6 @@ export function getAtomicAssetWith(deps: DependencyType) {
 export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
 	try {
 		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.arweave,
 			ids: ids ?? null,
 			tags: null,
 			owners: null,

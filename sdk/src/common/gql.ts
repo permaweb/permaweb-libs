@@ -1,12 +1,13 @@
 import { GATEWAYS } from '../helpers/config.ts';
 import {
+	BaseGQLArgsType,
 	BatchAGQLResponseType,
 	BatchGQLArgsType,
 	DefaultGQLResponseType,
-	GQLArgsType,
 	GQLNodeResponseType,
 	QueryBodyGQLArgsType,
 } from '../helpers/types.ts';
+import { wayfinder } from './ario.ts';
 
 const CURSORS = {
 	p1: 'P1',
@@ -17,7 +18,7 @@ const PAGINATORS = {
 	default: 100,
 };
 
-export async function getGQLData(args: GQLArgsType): Promise<DefaultGQLResponseType> {
+export async function getGQLData(args: BaseGQLArgsType): Promise<DefaultGQLResponseType> {
 	const paginator = args.paginator ? args.paginator : PAGINATORS.default;
 	let data: GQLNodeResponseType[] = [];
 	let count: number = 0;
@@ -29,7 +30,7 @@ export async function getGQLData(args: GQLArgsType): Promise<DefaultGQLResponseT
 
 	try {
 		let queryBody: string = getQueryBody(args);
-		const response = await getResponse({ gateway: args.gateway ?? GATEWAYS.ao, query: getQuery(queryBody) });
+		const response = await getResponse({ query: getQuery(queryBody) });
 
 		if (response?.data?.transactions?.edges?.length) {
 			data = [...response.data.transactions.edges];
@@ -55,7 +56,7 @@ export async function getGQLData(args: GQLArgsType): Promise<DefaultGQLResponseT
 	}
 }
 
-export async function getAggregatedGQLData(args: GQLArgsType, callback?: (message: string) => void) {
+export async function getAggregatedGQLData(args: BaseGQLArgsType, callback?: (message: string) => void) {
 	let index = 1;
 	let fetchResult = await getGQLData(args);
 
@@ -94,11 +95,11 @@ export async function getBatchGQLData(args: BatchGQLArgsType): Promise<BatchAGQL
 
 	for (const [queryKey, baseArgs] of Object.entries(args.entries)) {
 		responseObject[queryKey] = { data: [], count: 0, nextCursor: null, previousCursor: null };
-		queryBody += getQueryBody({ ...baseArgs, gateway: args.gateway ?? GATEWAYS.ao, queryKey: queryKey });
+		queryBody += getQueryBody({ ...baseArgs, queryKey: queryKey });
 	}
 
 	try {
-		const response = await getResponse({ gateway: args.gateway ?? GATEWAYS.ao, query: getQuery(queryBody) });
+		const response = await getResponse({ query: getQuery(queryBody) });
 
 		if (response && response.data) {
 			for (const queryKey of Object.keys(response.data)) {
@@ -179,8 +180,6 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 
 	const gateway = args.gateway ?? GATEWAYS.ao;
 	switch (gateway) {
-		case GATEWAYS.arweave:
-			break;
 		case GATEWAYS.ao:
 			if (!cursor) txCount = `count`;
 			if (recipients) recipientsfield = `recipients: ${recipients}`;
@@ -221,9 +220,9 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 	return body;
 }
 
-async function getResponse(args: { gateway: string; query: string }): Promise<any> {
+async function getResponse(args: { query: string }): Promise<any> {
 	try {
-		const response = await fetch(`https://${args.gateway}/graphql`, {
+		const response = await wayfinder.request(`ar:///graphql`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: args.query,

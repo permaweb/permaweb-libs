@@ -1,4 +1,4 @@
-import { AO, GATEWAYS, HB } from '../helpers/config.ts';
+import { AO, HB } from '../helpers/config.ts';
 import { getTxEndpoint } from '../helpers/endpoints.ts';
 import {
 	DependencyType,
@@ -14,7 +14,6 @@ import { getTagValue, globalLog } from '../helpers/utils.ts';
 
 import { getGQLData } from './gql.ts';
 
-const GATEWAY = GATEWAYS.ao;
 
 const GATEWAY_RETRY_COUNT = 100;
 
@@ -413,7 +412,6 @@ export async function waitForProcess(args: { processId: string; noRetryLimit?: b
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
 		const gqlResponse = await getGQLData({
-			gateway: GATEWAY,
 			ids: [args.processId],
 		});
 

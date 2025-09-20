@@ -180,11 +180,10 @@ export type BaseGQLArgsType = {
 	minBlock?: number;
 	maxBlock?: number;
 	sort?: GQLSortType;
+	gateway?:string
 };
 
-export type GQLArgsType = { gateway: string } & BaseGQLArgsType;
-
-export type QueryBodyGQLArgsType = BaseGQLArgsType & { gateway?: string; queryKey?: string };
+export type QueryBodyGQLArgsType = BaseGQLArgsType & { queryKey?: string };
 
 export type BatchGQLArgsType = {
 	gateway: string;
