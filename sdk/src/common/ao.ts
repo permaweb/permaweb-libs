@@ -11,7 +11,7 @@ import {
 	TagType,
 } from '../helpers/types.ts';
 import { getTagValue, globalLog } from '../helpers/utils.ts';
-import { wayfinder } from './ar_io.ts';
+import { wayfinder } from './ario.ts';
 
 import { getGQLData } from './gql.ts';
 

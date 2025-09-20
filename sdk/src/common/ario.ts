@@ -1,3 +1,4 @@
+import { createWayfinderClient } from "@ar.io/wayfinder-core";
 import { DependencyType } from "helpers/types.ts";
 
 export function getPrimaryNameWith(deps: DependencyType) {
@@ -13,3 +14,5 @@ export function getPrimaryNameWith(deps: DependencyType) {
         }
     }
 }
+
+export const wayfinder = createWayfinderClient()

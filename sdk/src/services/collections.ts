@@ -1,4 +1,4 @@
-import { wayfinder } from 'common/ar_io.ts';
+import { wayfinder } from 'common/ario.ts';
 import { aoCreateProcess, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
 import { resolveTransactionWith } from '../common/arweave.ts';
 import { AO, TAGS } from '../helpers/config.ts';

@@ -7,11 +7,7 @@ import {
 	GQLNodeResponseType,
 	QueryBodyGQLArgsType,
 } from '../helpers/types.ts';
-<<<<<<< HEAD
 import { wayfinder } from './ario.ts';
-=======
-import { wayfinder } from './ar_io.ts';
->>>>>>> b32987339dd7cb9bf68fed32128190d5ab896bee
 
 const CURSORS = {
 	p1: 'P1',
