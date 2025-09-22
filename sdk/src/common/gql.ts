@@ -4,10 +4,12 @@ import {
 	BatchAGQLResponseType,
 	BatchGQLArgsType,
 	DefaultGQLResponseType,
+	DependencyType,
 	GQLNodeResponseType,
 	QueryBodyGQLArgsType,
 } from '../helpers/types.ts';
-import { wayfinder } from './ario.ts';
+
+import { getArweaveDataWith } from './arweave.ts';
 
 const CURSORS = {
 	p1: 'P1',
@@ -18,7 +20,8 @@ const PAGINATORS = {
 	default: 100,
 };
 
-export async function getGQLData(args: BaseGQLArgsType): Promise<DefaultGQLResponseType> {
+export function getGQLDataWith(deps:DependencyType) {
+    return async function getGQLData(args: BaseGQLArgsType): Promise<DefaultGQLResponseType> {
 	const paginator = args.paginator ? args.paginator : PAGINATORS.default;
 	let data: GQLNodeResponseType[] = [];
 	let count: number = 0;
@@ -30,7 +33,7 @@ export async function getGQLData(args: BaseGQLArgsType): Promise<DefaultGQLRespo
 
 	try {
 		let queryBody: string = getQueryBody(args);
-		const response = await getResponse({ query: getQuery(queryBody) });
+		const response = await getResponse(deps, { query: getQuery(queryBody) });
 
 		if (response?.data?.transactions?.edges?.length) {
 			data = [...response.data.transactions.edges];
@@ -54,9 +57,11 @@ export async function getGQLData(args: BaseGQLArgsType): Promise<DefaultGQLRespo
 		console.error(e);
 		return { data: data, count: count, nextCursor: nextCursor, previousCursor: null };
 	}
-}
+}}
 
-export async function getAggregatedGQLData(args: BaseGQLArgsType, callback?: (message: string) => void) {
+export function getAggregatedGQLDataWith(deps:DependencyType) {
+	const getGQLData = getGQLDataWith(deps)
+ return async function getAggregatedGQLData(args: BaseGQLArgsType, callback?: (message: string) => void) {
 	let index = 1;
 	let fetchResult = await getGQLData(args);
 
@@ -87,9 +92,9 @@ export async function getAggregatedGQLData(args: BaseGQLArgsType, callback?: (me
 	}
 
 	return null;
-}
+}}
 
-export async function getBatchGQLData(args: BatchGQLArgsType): Promise<BatchAGQLResponseType> {
+export async function getBatchGQLData(deps: DependencyType, args: BatchGQLArgsType): Promise<BatchAGQLResponseType> {
 	let responseObject: BatchAGQLResponseType = {};
 	let queryBody: string = '';
 
@@ -99,7 +104,7 @@ export async function getBatchGQLData(args: BatchGQLArgsType): Promise<BatchAGQL
 	}
 
 	try {
-		const response = await getResponse({ query: getQuery(queryBody) });
+		const response = await getResponse(deps,{ query: getQuery(queryBody) });
 
 		if (response && response.data) {
 			for (const queryKey of Object.keys(response.data)) {
@@ -178,7 +183,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 	let nodeFields: string = `data { size type } owner { address } block { height timestamp }`;
 	let recipientsfield: string = '';
 
-	const gateway = args.gateway ?? "";
+	const gateway = args.gateway ?? '';
 	switch (gateway) {
 		case GATEWAYS.ao:
 			if (!cursor) txCount = `count`;
@@ -220,12 +225,13 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 	return body;
 }
 
-async function getResponse(args: { query: string }): Promise<any> {
+async function getResponse(deps:DependencyType,args: { query: string }): Promise<any> {
+	const getArweaveData = getArweaveDataWith(deps);
 	try {
-		const response = await wayfinder.request(`ar:///graphql`, {
+		const response = await getArweaveData('/graphql', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({query: args.query}),
+			body: JSON.stringify({ query: args.query }),
 		});
 		return await response.json();
 	} catch (e: any) {

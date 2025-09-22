@@ -29,7 +29,7 @@ function init(deps: Helpers.DependencyType) {
 		/* Assets */
 		createAtomicAsset: Services.createAtomicAssetWith(deps),
 		getAtomicAsset: Services.getAtomicAssetWith(deps),
-		getAtomicAssets: Services.getAtomicAssets,
+		getAtomicAssets: Services.getAtomicAssetsWith(deps),
 
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
@@ -45,8 +45,8 @@ function init(deps: Helpers.DependencyType) {
 
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),
-		getGQLData: Common.getGQLData,
-		getAggregatedGQLData: Common.getAggregatedGQLData,
+		getGQLData: Common.getGQLDataWith(deps),
+		getAggregatedGQLData: Common.getAggregatedGQLDataWith(deps),
 		createProcess: Common.aoCreateProcessWith(deps),
 		readProcess: Common.aoDryRunWith(deps),
 		readState: Common.readProcessWith(deps),

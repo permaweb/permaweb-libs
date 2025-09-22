@@ -11,12 +11,11 @@ export function createCommentWith(deps: DependencyType) {
 				processId: args.commentsId,
 				action: 'Add-Comment',
 				data: args.content,
-				useRawData: true
+				useRawData: true,
 			});
 
 			return commentsUpdateId;
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			throw new Error(e.message ?? 'Error creating comment');
 		}
 	};
@@ -32,19 +31,18 @@ export function getCommentsWith(deps: DependencyType) {
 					processId: args.commentsId,
 					path: 'comments',
 					fallbackAction: 'Get-Comments',
-				})
+				}),
 			);
 
 			return comments;
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			throw new Error(e.message ?? 'Error getting comments');
 		}
 	};
 }
 
 export function updateCommentStatusWith(deps: DependencyType) {
-	return async (args: { commentsId: string, commentId: string, status: 'active' | 'inactive' }) => {
+	return async (args: { commentsId: string; commentId: string; status: 'active' | 'inactive' }) => {
 		try {
 			if (!args.commentsId) throw new Error(`Must provide commentsId`);
 			if (!args.commentId) throw new Error(`Must provide commentId`);
@@ -54,20 +52,19 @@ export function updateCommentStatusWith(deps: DependencyType) {
 				action: 'Update-Comment-Status',
 				tags: [
 					{ name: 'Comment-Id', value: args.commentId },
-					{ name: 'Status', value: args.status }
-				]
+					{ name: 'Status', value: args.status },
+				],
 			});
 
 			return commentUpdateId;
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			throw new Error(e.message ?? 'Error updating comment status');
 		}
 	};
 }
 
 export function removeCommentWith(deps: DependencyType) {
-	return async (args: { commentsId: string, commentId: string, status: 'active' | 'inactive' }) => {
+	return async (args: { commentsId: string; commentId: string; status: 'active' | 'inactive' }) => {
 		try {
 			if (!args.commentsId) throw new Error(`Must provide commentsId`);
 			if (!args.commentId) throw new Error(`Must provide commentId`);
@@ -75,12 +72,11 @@ export function removeCommentWith(deps: DependencyType) {
 			const commentRemoveId = await aoSend(deps, {
 				processId: args.commentsId,
 				action: 'Remove-Comment',
-				tags: [{ name: 'Comment-Id', value: args.commentId }]
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
 			});
 
 			return commentRemoveId;
-		}
-		catch (e: any) {
+		} catch (e: any) {
 			throw new Error(e.message ?? 'Error removing comment');
 		}
 	};

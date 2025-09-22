@@ -1,5 +1,5 @@
 import { aoCreateProcess, readProcess } from '../common/ao.ts';
-import { getGQLData } from '../common/gql.ts';
+import { getGQLDataWith } from '../common/gql.ts';
 import { AO, CONTENT_TYPES, TAGS } from '../helpers/config.ts';
 import {
 	AssetCreateArgsType,
@@ -26,15 +26,18 @@ export function createAtomicAssetWith(deps: DependencyType) {
 
 				if (args.users) commentTags.push({ name: 'Auth-Users', value: JSON.stringify(args.users) });
 
-				commentsId = await aoCreateProcess(deps, {
-					tags: commentTags
-				}, callback ? (status: any) => callback(status) : undefined);
+				commentsId = await aoCreateProcess(
+					deps,
+					{
+						tags: commentTags,
+					},
+					callback ? (status: any) => callback(status) : undefined,
+				);
 
 				globalLog(`Comments ID: ${commentsId}`);
 
 				await new Promise((r) => setTimeout(r, 500));
-			}
-			catch (e: any) {
+			} catch (e: any) {
 				console.error(e);
 			}
 		}
@@ -64,6 +67,7 @@ export async function getAtomicAsset(
 	id: string,
 	args?: { useGateway?: boolean },
 ): Promise<AssetDetailType | null> {
+	const getGQLData = getGQLDataWith(deps)
 	try {
 		const processInfo = mapFromProcessCase(
 			await readProcess(deps, {
@@ -104,7 +108,9 @@ export function getAtomicAssetWith(deps: DependencyType) {
 	};
 }
 
-export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
+export function getAtomicAssetsWith(deps:DependencyType) {
+	const getGQLData = getGQLDataWith(deps)
+return async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
 	try {
 		const gqlResponse = await getGQLData({
 			ids: ids ?? null,
@@ -121,7 +127,7 @@ export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] 
 	} catch (e: any) {
 		throw new Error(e);
 	}
-}
+}}
 
 export function buildAsset(element: GQLNodeResponseType): any {
 	const asset: any = { id: element.node.id, owner: element.node.owner.address };

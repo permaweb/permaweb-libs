@@ -2,8 +2,9 @@ export type DependencyType = {
 	ao: any;
 	signer?: any;
 	arweave?: any;
-	node?: { url: string, scheduler: string };
-	ario?:any
+	node?: { url: string; scheduler: string };
+	ario?: any;
+	wayfinder?: any;
 };
 
 export type ProcessReadType = {
@@ -180,7 +181,7 @@ export type BaseGQLArgsType = {
 	minBlock?: number;
 	maxBlock?: number;
 	sort?: GQLSortType;
-	gateway?:string
+	gateway?: string;
 };
 
 export type QueryBodyGQLArgsType = BaseGQLArgsType & { queryKey?: string };

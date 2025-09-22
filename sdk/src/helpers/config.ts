@@ -9,14 +9,14 @@ export const AO = {
 		comments: 'EIDa_qx_PRPZQA5VhbkImJa1rMk6tp5mm9ysBCO7bk8',
 		zone: {
 			id: 'zxj6tkzsrwQWEsQNDQAphrwzdNe9bWFYdoxSN9TaEy4',
-			version: '0.0.1'
+			version: '0.0.1',
 		},
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
 };
 
 export const HB = {
-	defaultNode: 'https://forward.computer'
+	defaultNode: 'https://forward.computer',
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {
@@ -27,7 +27,8 @@ export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: a
 };
 
 export const GATEWAYS = {
-	ao: 'ao-search-gateway.goldsky.com'
+	arweave: 'arweave.net',
+	ao: 'ao-search-gateway.goldsky.com',
 };
 
 export const LICENSES = {

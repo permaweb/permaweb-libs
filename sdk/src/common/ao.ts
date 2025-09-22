@@ -11,10 +11,8 @@ import {
 	TagType,
 } from '../helpers/types.ts';
 import { getTagValue, globalLog } from '../helpers/utils.ts';
-import { wayfinder } from './ario.ts';
-
-import { getGQLData } from './gql.ts';
-
+import { getArweaveDataWith } from './arweave.ts';
+import { getGQLDataWith } from './gql.ts';
 
 const GATEWAY_RETRY_COUNT = 100;
 
@@ -54,7 +52,10 @@ export function aoSendWith(deps: DependencyType) {
 
 export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
 	try {
-		const tags: TagType[] = [{ name: 'Action', value: args.action }, { name: 'Message-Timestamp', value: new Date().getTime().toString() }];
+		const tags: TagType[] = [
+			{ name: 'Action', value: args.action },
+			{ name: 'Message-Timestamp', value: new Date().getTime().toString() },
+		];
 		if (args.tags) tags.push(...args.tags);
 
 		const data = args.useRawData ? args.data : JSON.stringify(args.data);
@@ -79,7 +80,7 @@ export function readProcessWith(deps: DependencyType) {
 }
 
 export async function readProcess(deps: DependencyType, args: ProcessReadType) {
-	const node = deps.node?.url ?? HB.defaultNode
+	const node = deps.node?.url ?? HB.defaultNode;
 	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	if (args.serialize) url += '/serialize~json@1.0';
 
@@ -89,8 +90,7 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 			return res.json();
 		}
 
-		throw new Error('Error getting state from HyperBEAM.')
-
+		throw new Error('Error getting state from HyperBEAM.');
 	} catch (e: any) {
 		if (args.fallbackAction) {
 			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });
@@ -287,7 +287,14 @@ export async function handleProcessEval(
 	let src: string | null = null;
 
 	if (args.evalSrc) src = args.evalSrc;
-	else if (args.evalTxId) src = await fetchProcessSrc(args.evalTxId);
+	else if (args.evalTxId) {
+		const getArweaveData = getArweaveDataWith(deps);
+		try {
+			src = await getArweaveData(getTxEndpoint(args.evalTxId));
+		} catch (e: any) {
+			throw new Error(e);
+		}
+	}
 
 	if (src) {
 		try {
@@ -396,18 +403,10 @@ export async function aoCreateProcess(
 	}
 }
 
-export async function fetchProcessSrc(txId: string): Promise<string> {
-	try {
-		const srcFetch = await wayfinder.request(getTxEndpoint(txId));
-		return await srcFetch.text();
-	} catch (e: any) {
-		throw new Error(e);
-	}
-}
-
-export async function waitForProcess(args: { processId: string; noRetryLimit?: boolean }) {
+export async function waitForProcess(deps:DependencyType,args: { processId: string; noRetryLimit?: boolean }) {
 	let retries = 0;
 	const retryLimit = args.noRetryLimit ? Infinity : GATEWAY_RETRY_COUNT;
+	const getGQLData = getGQLDataWith(deps)
 
 	while (retries < retryLimit) {
 		await new Promise((resolve) => setTimeout(resolve, 2000));
