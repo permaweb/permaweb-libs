@@ -1,4 +1,4 @@
-import { AO, GATEWAYS, HB } from '../helpers/config.ts';
+import { AO, HB } from '../helpers/config.ts';
 import { getTxEndpoint } from '../helpers/endpoints.ts';
 import {
 	DependencyType,
@@ -12,10 +12,8 @@ import {
 } from '../helpers/types.ts';
 import { getTagValue, globalLog } from '../helpers/utils.ts';
 
-import { getGQLData } from './gql.ts';
-
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
-	const tags = [{ name: 'Authority', value: deps.node?.scheduler ?? AO.mu }];
+	const tags = [{ name: 'Authority', value: deps.node?.authority ?? AO.mu }];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	try {

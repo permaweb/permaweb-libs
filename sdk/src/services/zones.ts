@@ -165,6 +165,23 @@ export function updateZoneVersionWith(deps: DependencyType) {
 	};
 }
 
+export function updateZoneAuthoritiesWith(deps: DependencyType) {
+	return async (args: { zoneId: string, authorityId: string }): Promise<string | null> => {
+		try {
+			globalLog(`Adding authority ${args.authorityId} to process ${args.zoneId}`);
+
+			const authoritiesUpdate = await handleProcessEval(deps, {
+				processId: args.zoneId,
+				evalSrc: `table.insert(ao.authorities, '${args.authorityId}'); SyncState(nil)`,
+			});
+
+			return authoritiesUpdate;
+		} catch (e: any) {
+			throw new Error(e);
+		}
+	};
+}
+
 export function getZoneWith(deps: DependencyType) {
 	return async (zoneId: string): Promise<any | null> => {
 		try {
