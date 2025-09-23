@@ -8,8 +8,8 @@ export const AO = {
 		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
 		comments: 'EIDa_qx_PRPZQA5VhbkImJa1rMk6tp5mm9ysBCO7bk8',
 		zone: {
-			id: 'zxj6tkzsrwQWEsQNDQAphrwzdNe9bWFYdoxSN9TaEy4',
-			version: '0.0.1'
+			id: 'qh8L94J0ZT4h-Gv3mLH8kDb-IhmJo_aIL1j7vtr-jF0',
+			version: '0.0.2'
 		},
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',

@@ -117,6 +117,7 @@ export function getProfileByIdWith(deps: DependencyType) {
 				roles: zone.roles,
 				invites: zone.invites,
 				version: zone.version,
+				authorities: zone.authorities,
 				...zone.store,
 			};
 		} catch (e: any) {
