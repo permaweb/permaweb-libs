@@ -1,4 +1,4 @@
-import { aoCreateProcess, aoDryRun, aoSend, handleProcessEval, readProcess } from '../common/ao.ts';
+import { aoCreateProcessWith, aoSend, handleProcessEval, readProcess } from '../common/ao.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
@@ -9,8 +9,8 @@ export function createZoneWith(deps: DependencyType) {
 			const tags = [{ name: TAGS.keys.onBoot, value: AO.src.zone.id }];
 			if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
 
+			const aoCreateProcess = aoCreateProcessWith(deps);
 			const zoneId = await aoCreateProcess(
-				deps,
 				{ data: args.data, tags: tags },
 				callback ? (status: any) => callback(status) : undefined,
 			);
@@ -148,7 +148,8 @@ export function updateZoneVersionWith(deps: DependencyType) {
 				processId: args.zoneId,
 				evalSrc: `
 				Zone.Version = '${AO.src.zone.version}'
-				if Zone.PatchMap then
+				local patchMapLength = Zone.Functions.tableLength(Zone.PatchMap)
+				if patchMapLength > 0 then
 					local patchData = Zone.Functions.getPatchData('overview')
             		Send({ device = 'patch@1.0', overview = require('json').encode(patchData) })
 				else

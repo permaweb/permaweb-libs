@@ -134,8 +134,7 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 				gateway: GATEWAYS.ao,
 				tags: [
 					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.dataProtocol] },
-					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] } // TODO
-					// { name: TAGS.keys.zoneType, values: ['Dev-User-1'] }
+					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] }
 				],
 				owners: [walletAddress],
 			});
