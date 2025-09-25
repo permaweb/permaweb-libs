@@ -161,11 +161,13 @@ Handlers.add("Add-Comment", "Add-Comment", function(msg)
 		Id = id,
 		Creator = msg.From,
 		DateCreated = msg.Timestamp,
+		UpdatedAt = msg.Timestamp,
 		Status = "active",
 		Content = content,
 		ParentId = parentId,
 		Depth = depth,
 		ChildrenCount = 0,
+		Metadata = {},
 	}
 
 	table.insert(Comments, newComment)
@@ -206,7 +208,7 @@ Handlers.add("Update-Comment-Status", "Update-Comment-Status", function(msg)
 		desired = (c.Status == "active") and "inactive" or "active"
 	end
 	c.Status = desired
-
+	c.UpdatedAt = msg.Timestamp
 	SyncDynamicState("comments", Comments, { jsonEncode = true })
 	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
 
@@ -214,10 +216,6 @@ Handlers.add("Update-Comment-Status", "Update-Comment-Status", function(msg)
 end)
 
 Handlers.add("Update-Comment-Content", "Update-Comment-Content", function(msg)
-	if not isAuthorized(msg.From) then
-		Send({ Target = msg.From, Action = "Update-Comment-Content-Error", Error = "Unauthorized" })
-		return
-	end
 	local id = getTag(msg, "Comment-Id")
 	local comment = id and CommentsById[id]
 	if not comment then
@@ -229,11 +227,19 @@ Handlers.add("Update-Comment-Content", "Update-Comment-Content", function(msg)
 		})
 		return
 	end
+	if comment.Creator ~= msg.From then
+		Send({ Target = msg.From, Action = "Update-Comment-Content-Error", Error = "Unauthorized" })
+		return
+	end
 	if not msg.Data or msg.Data == "" then
 		Send({ Target = msg.From, Action = "Update-Comment-Content-Error", Error = "Content cannot be empty", Id = id })
 		return
 	end
 	comment.Content = msg.Data
+	comment.UpdatedAt = msg.Timestamp
+	comment.Metadata = comment.Metadata or {}
+	comment.Metadata.EditedAt = msg.Timestamp
+
 	SyncDynamicState("comments", Comments, { jsonEncode = true })
 	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
 	Send({ Target = msg.From, Action = "Update-Comment-Content-Success", Id = id })
@@ -253,6 +259,7 @@ Handlers.add("Remove-Comment", "Remove-Comment", function(msg)
 
 	-- soft delete
 	c.Status = "inactive"
+	c.UpdatedAt = msg.Timestamp
 
 	SyncDynamicState("comments", Comments, { jsonEncode = true })
 	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
@@ -260,6 +267,56 @@ Handlers.add("Remove-Comment", "Remove-Comment", function(msg)
 end)
 
 local isInitialized = false
+
+Handlers.add("Pin-Comment", "Pin-Comment", function(msg)
+	if not isAuthorized(msg.From) then
+		Send({ Target = msg.From, Action = "Pin-Comment-Error", Error = "Unauthorized" })
+		return
+	end
+	local id = getTag(msg, "Comment-Id")
+	local c = id and CommentsById[id]
+	if not c then
+		Send({ Target = msg.From, Action = "Pin-Comment-Error", Error = "Invalid Id", Id = tostring(id or "") })
+		return
+	end
+
+	c.Metadata = c.Metadata or {}
+	if c.Depth ~= -1 then
+		c.Metadata.PinnedOriginalDepth = c.Metadata.PinnedOriginalDepth or c.Depth -- NEW
+		c.Depth = -1 -- pin by depth
+		c.Metadata.PinnedAt = msg.Timestamp -- NEW
+		c.UpdatedAt = msg.Timestamp
+	end
+
+	SyncDynamicState("comments", Comments, { jsonEncode = true })
+	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	Send({ Target = msg.From, Action = "Pin-Comment-Success", Id = id })
+end)
+
+Handlers.add("Unpin-Comment", "Unpin-Comment", function(msg)
+	if not isAuthorized(msg.From) then
+		Send({ Target = msg.From, Action = "Unpin-Comment-Error", Error = "Unauthorized" })
+		return
+	end
+	local id = getTag(msg, "Comment-Id")
+	local c = id and CommentsById[id]
+	if not c then
+		Send({ Target = msg.From, Action = "Unpin-Comment-Error", Error = "Invalid Id", Id = tostring(id or "") })
+		return
+	end
+
+	c.Metadata = c.Metadata or {}
+	if c.Depth == -1 then
+		c.Depth = c.Metadata.PinnedOriginalDepth or 0 -- restore
+		c.Metadata.PinnedOriginalDepth = nil -- clear
+		c.Metadata.PinnedAt = nil -- clear
+		c.UpdatedAt = msg.Timestamp
+	end
+
+	SyncDynamicState("comments", Comments, { jsonEncode = true })
+	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	Send({ Target = msg.From, Action = "Unpin-Comment-Success", Id = id })
+end)
 
 -- Boot Initialization
 if not isInitialized and #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
