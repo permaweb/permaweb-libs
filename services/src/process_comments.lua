@@ -63,18 +63,6 @@ local function normalizeStatus(s)
 	return nil
 end
 
-local function findCommentIndexById(id)
-	if not id or type(id) ~= "string" then
-		return nil
-	end
-	for i, c in ipairs(Comments) do
-		if c.Id == id then
-			return i
-		end
-	end
-	return nil
-end
-
 function SyncState()
 	Send({ device = "patch@1.0", zone = json.encode(GetState()) })
 end
@@ -279,7 +267,10 @@ Handlers.add("Pin-Comment", "Pin-Comment", function(msg)
 		Send({ Target = msg.From, Action = "Pin-Comment-Error", Error = "Invalid Id", Id = tostring(id or "") })
 		return
 	end
-
+	if c.Status ~= "active" then
+		Send({ Target = msg.From, Action = "Pin-Comment-Error", Error = "Cannot pin inactive comment" })
+		return
+	end
 	c.Metadata = c.Metadata or {}
 	if c.Depth ~= -1 then
 		c.Metadata.PinnedOriginalDepth = c.Metadata.PinnedOriginalDepth or c.Depth -- NEW
