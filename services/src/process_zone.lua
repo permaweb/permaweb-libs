@@ -99,7 +99,8 @@ function GetFullState()
         RoleOptions = Zone.RoleOptions,
         Permissions = Permissions,
         Invites = Zone.Invites,
-        Version = Zone.Version
+        Version = Zone.Version,
+        Authorities = ao.authorities
     }
 end
 
@@ -1045,7 +1046,7 @@ if not ZoneInitCompleted then
 
     if patchMapLength > 0 then
         -- Send individual patch messages for each configured patch key
-        for patchKey, fields in pairs(Zone.PatchMap) do
+        for patchKey, _ in pairs(Zone.PatchMap) do
             local patchData = Zone.Functions.getPatchData(patchKey)
             Send({ device = 'patch@1.0', [patchKey] = json.encode(patchData) })
         end
