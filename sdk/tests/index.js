@@ -196,13 +196,21 @@ function logError(message) {
 			expect(profileById.username).toEqual('My username');
 
 			logTest('Testing profile fetch by address...');
-			const profileByWalletAddress = await permaweb.getProfileByWalletAddress(
+			let profileByWalletAddress = await permaweb.getProfileByWalletAddress(
 				address
 			);
 
 			expect(profileByWalletAddress).toBeDefined();
 
 			logTest('Testing ArNS primary name support...');
+
+			expect(profileByWalletAddress.arnsName).toEqual(undefined)
+
+			const isFetchArns = true
+
+			profileByWalletAddress = await permaweb.getProfileByWalletAddress(
+				address, isFetchArns
+			);
 			//check if wallet was generated automatically 
 			//It will show normal display name because generated wallets do not have primary names attached
 			if(fs.existsSync(process.env.PATH_TO_WALLET)) {

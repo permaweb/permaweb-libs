@@ -136,9 +136,8 @@ export function getProfileByIdWith(deps: DependencyType) {
 
 export function getProfileByWalletAddressWith(deps: DependencyType) {
 	const getProfileById = getProfileByIdWith(deps);
-	const getPrimaryName = getPrimaryNameWith(deps)
 
-	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
+	return async (walletAddress: string, arns:boolean=false): Promise<(ProfileType & any) | null> => {
 		try {
 			const gqlResponse = await getGQLData({
 				gateway: GATEWAYS.ao,
@@ -156,7 +155,12 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 					return timestampB - timestampA;
 				});
 
-				const primaryName = await getPrimaryName(walletAddress)
+				let primaryName
+
+				if(arns) {
+					const getPrimaryName = getPrimaryNameWith(deps)
+					primaryName = await getPrimaryName(walletAddress)
+				}
 
 				return await getProfileById(gqlResponse.data[0].node.id, primaryName);
 			}
