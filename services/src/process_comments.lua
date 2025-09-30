@@ -17,15 +17,56 @@ local function addToIndex(pid, id)
 	table.insert(ByParent[k], id)
 end
 
-local function listSlice(arr, startIdx, limit)
-	local i = startIdx or 1
-	local j = math.min(i + (limit or 20) - 1, #arr)
-	local out = {}
-	for k = i, j do
-		out[#out + 1] = CommentsById[arr[k]]
+local function updateParentChildCount(parentId, delta)
+	if not parentId then
+		return
 	end
-	local nextCursor = (j < #arr) and (j + 1) or nil
-	return out, nextCursor
+	local p = CommentsById[parentId]
+	if not p then
+		return
+	end
+	p.ChildrenCount = math.max(0, (p.ChildrenCount or 0) + delta)
+end
+
+local function collectVisibleSorted(parentId)
+	local k = parentKey(parentId)
+	local arr = ByParent[k] or {}
+
+	local items = {}
+	for _, id in ipairs(arr) do
+		local c = CommentsById[id]
+		if c and c.Status == "active" then
+			table.insert(items, c)
+		end
+	end
+
+	table.sort(items, function(a, b)
+		-- Pinned first (Depth == -1)
+		local ap = (a.Depth == -1)
+		local bp = (b.Depth == -1)
+		if ap ~= bp then
+			return ap
+		end
+
+		-- Among pinned: newest pin first (PinnedAt desc), fallback UpdatedAt desc
+		if ap and bp then
+			local aPin = (a.Metadata and a.Metadata.PinnedAt) or a.UpdatedAt or a.DateCreated or 0
+			local bPin = (b.Metadata and b.Metadata.PinnedAt) or b.UpdatedAt or b.DateCreated or 0
+			if aPin ~= bPin then
+				return aPin > bPin
+			end
+		end
+
+		-- Among unpinned: oldest first by DateCreated (stable), fallback Id
+		local ad = a.DateCreated or 0
+		local bd = b.DateCreated or 0
+		if ad ~= bd then
+			return ad < bd
+		end
+		return tostring(a.Id) < tostring(b.Id)
+	end)
+
+	return items
 end
 
 local function isAuthorized(addr)
@@ -82,31 +123,88 @@ Handlers.add("Get-Comments", "Get-Comments", function(msg)
 	Send({ Target = msg.From, Data = json.encode(Comments) })
 end)
 
+-- expects collectVisibleSorted(parentId) defined:
+--   - returns visible children of parentId, sorted with pinned (Depth == -1) first
+-- cursor semantics:
+--   - Cursor is 1-based index into the ROOT list for the given Parent-Id
+--   - We expand each root by also including its immediate children (depth +1)
+--   - Limit applies to the TOTAL number of returned comments (roots + their child rows)
+
 Handlers.add("Get-Comments-Pagination", "Get-Comments-Pagination", function(msg)
 	local parentId = getTag(msg, "Parent-Id") -- nil => top-level
 	local limit = tonumber(getTag(msg, "Limit")) or 20
-	local cursor = tonumber(getTag(msg, "Cursor")) -- 1-based
+	local cursor = tonumber(getTag(msg, "Cursor")) or 1 -- 1-based
 
+	-- clamp page size
+	if limit < 1 then
+		limit = 1
+	end
+	if limit > 200 then
+		limit = 200
+	end
+
+	-- validate parent (if provided)
 	if parentId then
 		local p = CommentsById[parentId]
-		if not p or p.Status ~= "active" then -- if parent doesn't exist or is inactive, return empty
-			Send({ Target = msg.From, Data = json.encode({ items = {}, nextCursor = nil }) })
+		if not p or p.Status ~= "active" then
+			Send({ Target = msg.From, Data = json.encode({ items = {}, nextCursor = nil, totalRootItems = 0 }) })
 			return
 		end
 	end
 
-	local k = parentKey(parentId)
-	local arr = ByParent[k] or {}
-	local items, nextCursor = listSlice(arr, cursor, limit)
+	-- ROOTS = visible, sorted children of Parent-Id
+	local roots = collectVisibleSorted(parentId)
+	local totalRootItems = #roots
 
-	local visible = {}
-	for _, c in ipairs(items) do
-		if c.Status == "active" then
-			table.insert(visible, c)
-		end
+	-- guard empty or out-of-range cursor
+	local rootIdx = math.max(1, cursor)
+	if rootIdx > totalRootItems then
+		Send({
+			Target = msg.From,
+			Data = json.encode({ items = {}, nextCursor = nil, totalRootItems = totalRootItems }),
+		})
+		return
 	end
 
-	Send({ Target = msg.From, Data = json.encode({ items = visible, nextCursor = nextCursor }) })
+	local items = {}
+	local count = 0
+	local i = rootIdx
+
+	while i <= totalRootItems and count < limit do
+		local root = roots[i]
+
+		-- add the root itself
+		items[#items + 1] = root
+		count = count + 1
+		if count >= limit then
+			break
+		end
+
+		-- add depth-1 children of this root
+		local children = collectVisibleSorted(root.Id) -- immediate children list
+		for _, child in ipairs(children) do
+			if count >= limit then
+				break
+			end
+			items[#items + 1] = child
+			count = count + 1
+		end
+
+		i = i + 1
+	end
+
+	-- nextCursor: next root index if we didn't exhaust roots
+	local nextCursor = (i <= totalRootItems) and i or nil
+
+	Send({
+		Target = msg.From,
+		Data = json.encode({
+			items = items,
+			nextCursor = nextCursor,
+			totalRootItems = totalRootItems, -- count of roots under Parent-Id
+			depthIncluded = 1, -- we included up to depth 1 relative to Parent-Id
+		}),
+	})
 end)
 
 Handlers.add("Get-Auth-Users", "Get-Auth-Users", function(msg)
@@ -163,8 +261,7 @@ Handlers.add("Add-Comment", "Add-Comment", function(msg)
 	addToIndex(parentId, id)
 
 	if parentId then
-		local parent = CommentsById[parentId]
-		parent.ChildrenCount = (parent.ChildrenCount or 0) + 1
+		updateParentChildCount(parentId, 1)
 	end
 
 	SyncDynamicState("comments", Comments, { jsonEncode = true })
@@ -190,10 +287,21 @@ Handlers.add("Update-Comment-Status", "Update-Comment-Status", function(msg)
 		})
 		return
 	end
-
+	local prev = c.Status
 	local desired = normalizeStatus(getTag(msg, "Status"))
 	if not desired then
 		desired = (c.Status == "active") and "inactive" or "active"
+	end
+	if desired == c.Status then
+		Send({ Target = msg.From, Action = "Update-Comment-Status-Error", Error = "No status change", Id = id })
+		return
+	end
+	if prev ~= desired then
+		if desired == "inactive" and prev == "active" then
+			updateParentChildCount(c.ParentId, -1)
+		elseif desired == "active" and prev == "inactive" then
+			updateParentChildCount(c.ParentId, 1)
+		end
 	end
 	c.Status = desired
 	c.UpdatedAt = msg.Timestamp
@@ -244,17 +352,18 @@ Handlers.add("Remove-Comment", "Remove-Comment", function(msg)
 		Send({ Target = msg.From, Action = "Remove-Comment-Error", Error = "Invalid Id", Id = tostring(id or "") })
 		return
 	end
-
+	if c.Status ~= "inactive" then
+		updateParentChildCount(c.ParentId, -1)
+	end
 	-- soft delete
 	c.Status = "inactive"
 	c.UpdatedAt = msg.Timestamp
+	c.Content = ""
 
 	SyncDynamicState("comments", Comments, { jsonEncode = true })
 	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
 	Send({ Target = msg.From, Action = "Remove-Comment-Success", Id = id })
 end)
-
-local isInitialized = false
 
 Handlers.add("Pin-Comment", "Pin-Comment", function(msg)
 	if not isAuthorized(msg.From) then
@@ -271,17 +380,43 @@ Handlers.add("Pin-Comment", "Pin-Comment", function(msg)
 		Send({ Target = msg.From, Action = "Pin-Comment-Error", Error = "Cannot pin inactive comment" })
 		return
 	end
+	if c.Depth ~= 0 then
+		Send({ Target = msg.From, Action = "Pin-Comment-Error", Error = "Can only pin top-level comments" })
+		return
+	end
 	c.Metadata = c.Metadata or {}
 	if c.Depth ~= -1 then
 		c.Metadata.PinnedOriginalDepth = c.Metadata.PinnedOriginalDepth or c.Depth -- NEW
-		c.Depth = -1 -- pin by depth
-		c.Metadata.PinnedAt = msg.Timestamp -- NEW
+		c.Depth = -1
+		c.Metadata.PinnedAt = msg.Timestamp
 		c.UpdatedAt = msg.Timestamp
 	end
 
 	SyncDynamicState("comments", Comments, { jsonEncode = true })
 	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
 	Send({ Target = msg.From, Action = "Pin-Comment-Success", Id = id })
+end)
+
+Handlers.add("Remove-Own-Comment", "Remove-Own-Comment", function(msg)
+	local id = getTag(msg, "Comment-Id")
+	local c = id and CommentsById[id]
+	if not c then
+		Send({ Target = msg.From, Action = "Remove-Own-Comment-Error", Error = "Invalid Id", Id = tostring(id or "") })
+		return
+	end
+	if c.Creator ~= msg.From then
+		Send({ Target = msg.From, Action = "Remove-Own-Comment-Error", Error = "Unauthorized" })
+		return
+	end
+	if c.Status ~= "inactive" then
+		updateParentChildCount(c.ParentId, -1)
+	end
+	c.Status = "inactive"
+	c.UpdatedAt = msg.Timestamp
+	c.Content = ""
+	SyncDynamicState("comments", Comments, { jsonEncode = true })
+	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	Send({ Target = msg.From, Action = "Remove-Own-Comment-Success", Id = id })
 end)
 
 Handlers.add("Unpin-Comment", "Unpin-Comment", function(msg)
@@ -309,6 +444,8 @@ Handlers.add("Unpin-Comment", "Unpin-Comment", function(msg)
 	Send({ Target = msg.From, Action = "Unpin-Comment-Success", Id = id })
 end)
 
+local isInitialized = false
+
 -- Boot Initialization
 if not isInitialized and #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
 	isInitialized = true
@@ -324,13 +461,3 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
 
 	SyncDynamicState("users", AuthUsers, { jsonEncode = true })
 end
-
-Handlers.add("Bootstrap", "Bootstrap", function(Msg)
-	if isInitialized then
-		Send({ Target = Msg.From, Action = "Bootstrap-Error", Error = "Already initialized" })
-		return
-	end
-	isInitialized = true
-	table.insert(AuthUsers, Msg.From)
-	SyncDynamicState("users", AuthUsers, { jsonEncode = true })
-end)
