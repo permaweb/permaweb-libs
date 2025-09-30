@@ -2,7 +2,7 @@ import Arweave from 'arweave';
 import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 import { ARIO } from '@ar.io/sdk';
-import { createWayfinderClient } from '@ar.io/wayfinder-core';
+import { createWayfinderClient, PreferredWithFallbackRoutingStrategy, StaticRoutingStrategy } from '@ar.io/wayfinder-core';
 import fs from 'fs';
 
 import 'dotenv/config';
@@ -120,6 +120,11 @@ function logError(message) {
 		signer,
 	});
 
+	const routingStrategy = new PreferredWithFallbackRoutingStrategy({
+		preferredGateway:['https://pergamate.io'],
+		fallbackStrategy: new StaticRoutingStrategy({gateway:'https://arweave.net'})
+	})
+
 	const dependencies = {
 		ao: connect({
 			MODE: 'legacy',
@@ -132,7 +137,7 @@ function logError(message) {
 		node: AO_NODE,
 		ario,
 		wayfinder: createWayfinderClient({
-			trustedGateways: ['https://permagate.io', 'https://arweave.net']
+			routingStrategy
 		})
 	};
 
