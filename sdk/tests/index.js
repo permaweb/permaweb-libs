@@ -206,10 +206,10 @@ function logError(message) {
 			//check if wallet was generated automatically 
 			//It will show normal display name because generated wallets do not have primary names attached
 			if(fs.existsSync(process.env.PATH_TO_WALLET)) {
-				expect(profileByWalletAddress.displayName).toEqual(process.env.ArNS_NAME);
+				expect(profileByWalletAddress.arnsName).toEqual(process.env.ArNS_NAME);
 			} else {
 				console.log(address, "has no primary name")
-                expect(profileByWalletAddress.displayName).toEqual('My display name')
+                expect(profileByWalletAddress.arnsName).toEqual(undefined)
 			}
 
 			logTest('Testing profile update...');

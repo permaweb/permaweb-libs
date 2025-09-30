@@ -123,7 +123,7 @@ export function getProfileByIdWith(deps: DependencyType) {
 			}
 
 			if(primaryName && primaryName.trim().length > 0) {
-				profile.displayName = primaryName
+				profile.arnsName = primaryName
 			}
 			
 			return profile
