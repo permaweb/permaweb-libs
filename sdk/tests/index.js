@@ -1,9 +1,11 @@
 import Arweave from 'arweave';
-import { connect, createDataItemSigner, createSigner } from '@permaweb/aoconnect';
+import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
 import { ARIO } from '@ar.io/sdk';
+import { createWayfinderClient } from '@ar.io/wayfinder-core';
 import fs from 'fs';
-import 'dotenv/config'
+
+import 'dotenv/config';
 
 const CREATOR = 'L0p6ecK4PdgWome2LI0STBNl5_ZK3XwnXCcoUq0tLLY';
 
@@ -111,16 +113,16 @@ function logError(message) {
 
 	const AO_NODE = {
 		url: 'http://localhost:8734',
-		scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc'
-	}
+		scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc',
+	};
 
 	const ario = ARIO.init({
-		signer
+		signer,
 	});
 
 	const dependencies = {
 		ao: connect({
-			MODE: "legacy",
+			MODE: 'legacy',
 			URL: AO_NODE.url,
 			SCHEDULER: AO_NODE.scheduler,
 			signer: signer,
@@ -128,7 +130,10 @@ function logError(message) {
 		arweave: arweave,
 		signer: signer,
 		node: AO_NODE,
-		ario
+		ario,
+		wayfinder: createWayfinderClient({
+			trustedGateways: ['https://permagate.io', 'https://arweave.net']
+		})
 	};
 
 	const permaweb = Permaweb.init(dependencies);
@@ -177,7 +182,7 @@ function logError(message) {
 	async function testProfiles() {
 		try {
 			logTest('Testing profile creation...');
-			const address = await arweave.wallets.jwkToAddress(wallet)
+			const address = await arweave.wallets.jwkToAddress(wallet);
 			const profileId = await permaweb.createProfile(
 				{
 					username: 'My username',
@@ -197,20 +202,18 @@ function logError(message) {
 			expect(profileById.username).toEqual('My username');
 
 			logTest('Testing profile fetch by address...');
-			const profileByWalletAddress = await permaweb.getProfileByWalletAddress(
-				address
-			);
+			const profileByWalletAddress = await permaweb.getProfileByWalletAddress(address);
 
 			expect(profileByWalletAddress).toBeDefined();
 
 			logTest('Testing ArNS primary name support...');
-			//check if wallet was generated automatically 
+			//check if wallet was generated automatically
 			//It will show normal display name because generated wallets do not have primary names attached
-			if(fs.existsSync(process.env.PATH_TO_WALLET)) {
+			if (fs.existsSync(process.env.PATH_TO_WALLET)) {
 				expect(profileByWalletAddress.displayName).toEqual(process.env.ArNS_NAME);
 			} else {
-				console.log(address, "has no primary name")
-                expect(profileByWalletAddress.displayName).toEqual('My display name')
+				console.log(address, 'has no primary name');
+				expect(profileByWalletAddress.displayName).toEqual('My display name');
 			}
 
 			logTest('Testing profile update...');
@@ -324,9 +327,9 @@ function logError(message) {
 					contentType: 'text/plain',
 					assetType: 'ANS-110',
 					users: [walletAddress, CREATOR],
-					spawnComments: true
+					spawnComments: true,
 				},
-				(status) => console.log(status)
+				(status) => console.log(status),
 			);
 
 			expect(assetId).toBeDefined();
@@ -345,7 +348,7 @@ function logError(message) {
 				const commentAdd1 = await permaweb.createComment({
 					commentsId: commentsId,
 					creator: CREATOR,
-					content: 'Test Comment 1'
+					content: 'Test Comment 1',
 				});
 
 				expect(commentAdd1).toBeDefined();
@@ -353,14 +356,14 @@ function logError(message) {
 				const commentAdd2 = await permaweb.createComment({
 					commentsId: commentsId,
 					creator: CREATOR,
-					content: 'Test Comment 2'
+					content: 'Test Comment 2',
 				});
 
 				expect(commentAdd2).toBeDefined();
 
 				logTest('Testing comments fetch...');
 				let comments = await permaweb.getComments({
-					commentsId: commentsId
+					commentsId: commentsId,
 				});
 
 				expect(comments).toEqualLength(2);
@@ -369,7 +372,7 @@ function logError(message) {
 				const commentStatusUpdate = await permaweb.updateCommentStatus({
 					commentsId: commentsId,
 					commentId: comments[0].id,
-					status: 'inactive'
+					status: 'inactive',
 				});
 
 				comments = await permaweb.getComments({ commentsId: commentsId });
@@ -379,18 +382,16 @@ function logError(message) {
 				logTest('Testing comment removal...');
 				const commentRemoveUpdate = await permaweb.removeComment({
 					commentsId: commentsId,
-					commentId: comments[0].id
+					commentId: comments[0].id,
 				});
 
 				comments = await permaweb.getComments({ commentsId: commentsId });
 
 				expect(comments).toEqualLength(1);
-			}
-			else {
+			} else {
 				logError('Comment creation failed');
 			}
-		}
-		catch (e) {
+		} catch (e) {
 			logError(e.message ?? 'Comment tests failed');
 		}
 	}
