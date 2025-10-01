@@ -6,6 +6,9 @@ export function checkValidAddress(address: string | null) {
 	if (!address) return false;
 	return /^[a-z0-9_-]{43}$/i.test(address);
 }
+export function clamp(n: number, lo: number, hi: number) {
+	return Math.max(lo, Math.min(hi, n));
+}
 
 export function formatAddress(address: string | null, wrap: boolean) {
 	if (!address) return '';
@@ -281,5 +284,6 @@ export function getBootTag(key: string, value: string) {
 }
 
 export function isValidMediaData(data: any) {
-	return checkValidAddress(data) || data.startsWith('data')
+	return checkValidAddress(data) || data.startsWith('data');
 }
+
