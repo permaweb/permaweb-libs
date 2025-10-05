@@ -17,13 +17,13 @@ import { getGQLDataWith } from './gql.ts';
 const GATEWAY_RETRY_COUNT = 100;
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
-	const tags = [{ name: 'Authority', value: deps.node?.scheduler ?? AO.mu }];
+	const tags = [{ name: 'Authority', value: deps.node?.authority ?? AO.mu }];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	try {
 		const processId = await deps.ao.spawn({
 			module: args.module,
-			scheduler: args.scheduler,
+			scheduler: deps.node?.scheduler || args.scheduler,
 			signer: deps.signer,
 			tags: tags,
 			data: args.data,
@@ -328,7 +328,7 @@ export function aoCreateProcessWith(deps: DependencyType) {
 		try {
 			const spawnArgs: any = {
 				module: args.module || AO.module,
-				scheduler: args.scheduler || AO.scheduler,
+				scheduler: deps.node?.scheduler || AO.scheduler,
 			};
 
 			if (args.data) spawnArgs.data = args.data;

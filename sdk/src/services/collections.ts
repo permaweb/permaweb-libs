@@ -1,4 +1,4 @@
-import { aoCreateProcess, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
+import { aoCreateProcessWith, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
 import { getArweaveDataWith, resolveTransactionWith } from '../common/arweave.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { getTxEndpoint } from '../helpers/endpoints.ts';
@@ -82,8 +82,8 @@ export function createCollectionWith(deps: DependencyType) {
 		processSrc = processSrc.replace(/<LASTUPDATE>/g, dateTime);
 
 		try {
+			const aoCreateProcess = aoCreateProcessWith(deps);
 			const collectionId = await aoCreateProcess(
-				deps,
 				{ tags: tags },
 				callback ? (status) => callback(status) : undefined,
 			);
@@ -131,7 +131,6 @@ export function createCollectionWith(deps: DependencyType) {
 				];
 
 				const collectionActivityId = await aoCreateProcess(
-					deps,
 					{ tags: activityTags },
 					callback ? (status) => callback(status) : undefined,
 				);

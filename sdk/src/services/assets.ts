@@ -1,6 +1,6 @@
-import { aoCreateProcess, readProcess } from '../common/ao.ts';
+import { aoCreateProcessWith, aoDryRun, readProcess } from '../common/ao.ts';
 import { getGQLDataWith } from '../common/gql.ts';
-import { AO, CONTENT_TYPES, TAGS } from '../helpers/config.ts';
+import { AO, CONTENT_TYPES, GATEWAYS, TAGS } from '../helpers/config.ts';
 import {
 	AssetCreateArgsType,
 	AssetDetailType,
@@ -26,13 +26,10 @@ export function createAtomicAssetWith(deps: DependencyType) {
 
 				if (args.users) commentTags.push({ name: 'Auth-Users', value: JSON.stringify(args.users) });
 
-				commentsId = await aoCreateProcess(
-					deps,
-					{
-						tags: commentTags,
-					},
-					callback ? (status: any) => callback(status) : undefined,
-				);
+				const aoCreateProcess = aoCreateProcessWith(deps);
+				commentsId = await aoCreateProcess({
+					tags: commentTags
+				}, callback ? (status: any) => callback(status) : undefined);
 
 				globalLog(`Comments ID: ${commentsId}`);
 
@@ -49,8 +46,8 @@ export function createAtomicAssetWith(deps: DependencyType) {
 		const tags = buildAssetCreateTags(assetArgs);
 
 		try {
+			const aoCreateProcess = aoCreateProcessWith(deps);
 			const assetId = await aoCreateProcess(
-				deps,
 				{ tags: tags, data: data },
 				callback ? (status: any) => callback(status) : undefined,
 			);

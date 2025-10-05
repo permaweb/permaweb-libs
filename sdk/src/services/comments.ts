@@ -6,10 +6,15 @@ export function createCommentWith(deps: DependencyType) {
 	return async (args: CommentCreateArgType) => {
 		try {
 			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.content) throw new Error('Content cannot be empty');
+
+			const tags = [];
+			if (args.parentId) tags.push({ name: 'Parent-Id', value: args.parentId });
 
 			const commentsUpdateId = await aoSend(deps, {
 				processId: args.commentsId,
 				action: 'Add-Comment',
+				tags: tags,
 				data: args.content,
 				useRawData: true,
 			});
@@ -63,21 +68,101 @@ export function updateCommentStatusWith(deps: DependencyType) {
 	};
 }
 
-export function removeCommentWith(deps: DependencyType) {
-	return async (args: { commentsId: string; commentId: string; status: 'active' | 'inactive' }) => {
+export function updateCommentContentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string; content: string }) => {
 		try {
-			if (!args.commentsId) throw new Error(`Must provide commentsId`);
-			if (!args.commentId) throw new Error(`Must provide commentId`);
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+			if (!args.content) throw new Error('Content cannot be empty');
 
-			const commentRemoveId = await aoSend(deps, {
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Update-Comment-Content',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+				data: args.content,
+				useRawData: true,
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'updateCommentContentWith' doing 'Update-Comment-Content': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function removeCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+
+			const txId = await aoSend(deps, {
 				processId: args.commentsId,
 				action: 'Remove-Comment',
 				tags: [{ name: 'Comment-Id', value: args.commentId }],
 			});
 
-			return commentRemoveId;
+			return txId;
 		} catch (e: any) {
-			throw new Error(e.message ?? 'Error removing comment');
+			throw new Error(`Error at 'removeCommentWith' doing 'Remove-Comment': ${e?.message ?? String(e)}`);
 		}
 	};
 }
+
+export function removeUserCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Remove-Own-Comment',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'removeUserCommentWith' doing 'Remove-Own-Comment': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function pinCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Pin-Comment',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'pinCommentWith' doing 'Pin-Comment': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function unpinCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Unpin-Comment',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'unpinCommentWith' doing 'Unpin-Comment': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+

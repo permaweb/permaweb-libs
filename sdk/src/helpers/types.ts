@@ -2,7 +2,7 @@ export type DependencyType = {
 	ao: any;
 	signer?: any;
 	arweave?: any;
-	node?: { url: string; scheduler: string };
+	node?: { url: string; scheduler: string; authority: string };
 	ario?: any;
 	wayfinder?: any;
 };
@@ -74,6 +74,7 @@ export type ProfileType = {
 	thumbnail?: any;
 	banner?: any;
 	assets: { id: string; quantity: string }[];
+	authorities?: string[];
 } & any;
 
 export type AssetCreateArgsType = {

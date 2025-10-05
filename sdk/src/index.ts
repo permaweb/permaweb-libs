@@ -18,6 +18,7 @@ function init(deps: Helpers.DependencyType) {
 		joinZone: Services.joinZoneWith(deps),
 		updateZonePatchMap: Services.updateZonePatchMapWith(deps),
 		updateZoneVersion: Services.updateZoneVersionWith(deps),
+		updateZoneAuthorities: Services.updateZoneAuthoritiesWith(deps),
 
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),
@@ -36,6 +37,10 @@ function init(deps: Helpers.DependencyType) {
 		getComments: Services.getCommentsWith(deps),
 		updateCommentStatus: Services.updateCommentStatusWith(deps),
 		removeComment: Services.removeCommentWith(deps),
+		updateCommentContent: Services.updateCommentContentWith(deps),
+		userRemoveComment: Services.removeUserCommentWith(deps),
+		pinComment: Services.pinCommentWith(deps),
+		unpinComment: Services.unpinCommentWith(deps),
 
 		/* Collections */
 		createCollection: Services.createCollectionWith(deps),
