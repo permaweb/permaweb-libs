@@ -25,32 +25,18 @@ jobs:
         with:
           node-version: '22'
           
-      - name: Get package version
-        id: package-version
+      - name: Determine version bump from commit message
+        id: bump
         run: |
-          VERSION=$(node -p "require('./sdk/package.json').version")
-          echo "version=v$VERSION" >> $GITHUB_OUTPUT
-          echo "Package version: v$VERSION"
-        
-      - name: Check if tag exists
-        id: tag-exists
-        run: |
-          if git tag --list | grep -q "^${{ steps.package-version.outputs.version }}$"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.package-version.outputs.version }} already exists"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.package-version.outputs.version }} does not exist"
-          fi
-        
-      - name: Create and push tag
-        if: github.ref == 'refs/heads/main' && steps.tag-exists.outputs.exists == 'false'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ steps.package-version.outputs.version }}
-          git push origin ${{ steps.package-version.outputs.version }}
-          echo "Created and pushed tag: ${{ steps.package-version.outputs.version }}"
+          msg=$(git log -1 --pretty=%B)
+          echo "Latest commit message: $msg"
+
+          if echo "$msg" | grep -Eq "^(feat|fix)!:"; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$msg" | grep -Eq "^feat:"; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          elif echo "$msg" | grep -Eq "^fix:"; then
+            echo "type=patch" >> $GITHUB_OUTPUT
           
       - name: Install dependencies
         run: npm run clean:install
@@ -59,6 +45,28 @@ jobs:
       - name: Build package
         run: npm run build
         working-directory: ./sdk
+
+      - name: Bump version, generate changelog, and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          VERSION_TYPE=${{ steps.bump.outputs.type }}
+          echo "Bumping version: $VERSION_TYPE"
+          npm version $VERSION_TYPE -m "chore(release): %s"
+
+          # Generate or update CHANGELOG.md
+          npx auto-changelog -p -u
+
+          if [ -n "$(git status --porcelain CHANGELOG.md)" ]; then
+            git add CHANGELOG.md
+            git commit -m "chore(release): update changelog for $VERSION_TYPE"
+          fi
+
+          git push origin HEAD --follow-tags
+        working-directory: ./sdk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Setup npm authentication
         run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
