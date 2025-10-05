@@ -124,7 +124,11 @@ export function getProfileByIdWith(deps: DependencyType) {
 				profile.displayName = primaryName;
 			}
 
-			return profile;
+			if(primaryName && primaryName.trim().length > 0) {
+				profile.arnsName = primaryName
+			}
+			
+			return profile
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error fetching profile');
 		}
@@ -136,7 +140,7 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 	const getPrimaryName = getPrimaryNameWith(deps);
 	const getGQLData = getGQLDataWith(deps)
 
-	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
+	return async (walletAddress: string, arns:boolean=false): Promise<(ProfileType & any) | null> => {
 		try {
 			const gqlResponse = await getGQLData({
 				gateway: GATEWAYS.ao,
@@ -154,7 +158,12 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 					return timestampB - timestampA;
 				});
 
-				const primaryName = await getPrimaryName(walletAddress);
+				let primaryName
+
+				if(arns) {
+					const getPrimaryName = getPrimaryNameWith(deps)
+					primaryName = await getPrimaryName(walletAddress)
+				}
 
 				return await getProfileById(gqlResponse.data[0].node.id, primaryName);
 			}

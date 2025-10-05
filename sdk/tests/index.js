@@ -213,13 +213,21 @@ function logError(message) {
 			expect(profileByWalletAddress).toBeDefined();
 
 			logTest('Testing ArNS primary name support...');
-			//check if wallet was generated automatically
+
+			expect(profileByWalletAddress.arnsName).toEqual(undefined)
+
+			const isFetchArns = true
+
+			profileByWalletAddress = await permaweb.getProfileByWalletAddress(
+				address, isFetchArns
+			);
+			//check if wallet was generated automatically 
 			//It will show normal display name because generated wallets do not have primary names attached
-			if (fs.existsSync(process.env.PATH_TO_WALLET)) {
-				expect(profileByWalletAddress.displayName).toEqual(process.env.ArNS_NAME);
+			if(fs.existsSync(process.env.PATH_TO_WALLET)) {
+				expect(profileByWalletAddress.arnsName).toEqual(process.env.ArNS_NAME);
 			} else {
-				console.log(address, 'has no primary name');
-				expect(profileByWalletAddress.displayName).toEqual('My display name');
+				console.log(address, "has no primary name")
+                expect(profileByWalletAddress.arnsName).toEqual(undefined)
 			}
 
 			logTest('Testing profile update...');
