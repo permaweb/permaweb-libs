@@ -120,10 +120,6 @@ export function getProfileByIdWith(deps: DependencyType) {
 				...zone.store,
 			};
 
-			if (primaryName && primaryName.trim().length > 0) {
-				profile.displayName = primaryName;
-			}
-
 			if(primaryName && primaryName.trim().length > 0) {
 				profile.arnsName = primaryName
 			}
