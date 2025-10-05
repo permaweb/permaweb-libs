@@ -107,23 +107,24 @@ function logError(message) {
 
 	const walletAddress = await arweave.wallets.jwkToAddress(wallet);
 	const signer = createSigner(wallet);
-	//const signer = createDataItemSigner(wallet);
 
 	console.log(`Wallet address: ${walletAddress}`);
 
 	const AO_NODE = {
 		url: 'http://localhost:8734',
-		scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc',
+		//scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc',
 	};
 
 	const ario = ARIO.init({
 		signer,
 	});
 
-	const routingStrategy = new PreferredWithFallbackRoutingStrategy({
-		preferredGateway:['https://pergamate.io'],
-		fallbackStrategy: new StaticRoutingStrategy({gateway:'https://arweave.net'})
-	})
+	// const routingStrategy = new PreferredWithFallbackRoutingStrategy({
+	// 	preferredGateway:['https://arweave.net'],
+	// 	fallbackStrategy: new StaticRoutingStrategy({gateway:'https://permagate.io'})
+	// })
+
+	const routingStrategy = new StaticRoutingStrategy({ gateway: 'https://arweave.net'})
 
 	const dependencies = {
 		ao: connect({
