@@ -1,0 +1,39 @@
+name: 🚀 Feature Request
+description: Suggest a new SDK feature or enhancement
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please explain the context and the use case clearly.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: What feature do you want to add?
+      placeholder: Support for custom API keys...
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this feature important?
+      placeholder: |
+        This would simplify authentication for SDK consumers using custom endpoints.
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work in your opinion?
+      placeholder: e.g. Add a new `setApiKey()` method that stores and validates the key.
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact Level
+      description: How significant is this feature to your use case?
+      options:
+        - Critical
+        - Important
+        - Nice to have
+      default: 2
