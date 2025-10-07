@@ -29,7 +29,10 @@ function init(deps: DependencyType) {
 
     createComment: Services.createCommentWith(deps),
     getComment: Services.getCommentWith(deps),
-    getComments: Services.getCommentsWith(deps)
+    getComments: Services.getCommentsWith(deps),
+
+    addModerationAction: Services.addModerationActionWith(deps),
+    getModerationActions: Services.getModerationActionsWith(deps)
   }
 }
 
