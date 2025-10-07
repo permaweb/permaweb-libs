@@ -35,6 +35,9 @@ This SDK provides a set of libraries designed as foundational building blocks fo
     - [updateCollectionAssets](#updatecollectionassets)
     - [getCollection](#getcollection)
     - [getCollections](#getcollections)
+  - [Moderation](#moderation)
+    - [addModerationAction](#addmoderationaction)
+    - [getModerationActions](#getmoderationactions)
 - [Examples](#examples)
 - [Resources](#resources)
 
@@ -803,6 +806,76 @@ const collections = await permaweb.getCollections();
     banner: "BannerTx",
     assets: ["AssetId1", "AssetId2", "AssetId3"],
   },
+];
+```
+
+</details>
+
+### Moderation
+
+Moderation actions track administrative actions taken on comments, users, and other entities within a Zone. Actions are stored in the Zone's `Moderation` array.
+
+##### `addModerationAction`
+
+```typescript
+const moderationId = await permaweb.addModerationAction(zoneId, {
+  targetType: "comment",
+  targetId: "CommentId",
+  targetContext: "CommentsProcessId",
+  action: "hide",
+  moderator: "ModeratorAddress",
+  reason: "Spam content"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone where moderation actions are stored
+- `args`: Object containing moderation details, including `targetType` ('comment' | 'user' | 'asset' | 'collection'), `targetId`, `targetContext (optional)`, `action` ('hide' | 'remove' | 'restore' | 'ban' | 'unban' | 'warn'), `moderator`, `reason (optional)`, and `metadata (optional)`
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationActionId;
+```
+
+</details>
+
+##### `getModerationActions`
+
+```typescript
+const moderationActions = await permaweb.getModerationActions(zoneId, {
+  targetType: "comment",
+  targetContext: "CommentsProcessId"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to fetch moderation actions from
+- `filters` (optional): Object to filter results
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+[
+  {
+    targetType: "comment",
+    targetId: "CommentId",
+    targetContext: "CommentsProcessId",
+    action: "hide",
+    moderator: "ModeratorAddress",
+    dateCreated: 1234567890000,
+    reason: "Spam content"
+  }
 ];
 ```
 

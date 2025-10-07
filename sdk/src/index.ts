@@ -49,7 +49,7 @@ function init(deps: Helpers.DependencyType) {
 		getCollections: Services.getCollectionsWith(deps),
 
     /* Moderation */
-    addModerationAction: Services.addModerationActionWith(deps),    
+    addModerationAction: Services.addModerationActionWith(deps),
     getModerationActions: Services.getModerationActionsWith(deps),
 
 		/* Common */
