@@ -1,5 +1,5 @@
 export const AO = {
-	module: 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk',
+	module: 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s',
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
@@ -8,8 +8,8 @@ export const AO = {
 		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
 		comments: 'RvozS-4Mbcmq66gPapsNOyERkg3LrpR0vSRKz8wIi4k',
 		zone: {
-			id: 'qh8L94J0ZT4h-Gv3mLH8kDb-IhmJo_aIL1j7vtr-jF0',
-			version: '0.0.2',
+			id: 'eDZu7f4RKNT0TawGluj0Uo-qN-rQqleWR-rIgF26A5A',
+			version: '0.0.4'
 		},
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',

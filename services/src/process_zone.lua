@@ -49,31 +49,54 @@ Zone.RoleOptions = {
 
 Permissions = {
     [Zone.Constants.H_ZONE_UPDATE] = {
-        Zone.RoleOptions.Admin
+        Roles = {
+            Zone.RoleOptions.Admin
+        }
     },
     [Zone.Constants.H_ZONE_ROLE_SET] = {
-        Zone.RoleOptions.Admin
+        Roles = {
+            Zone.RoleOptions.Admin
+        }
     },
     [Zone.Constants.H_ZONE_ADD_UPLOAD] = {
-        Zone.RoleOptions.Admin
+        Roles = {
+            Zone.RoleOptions.Admin
+        }
     },
     [Zone.Constants.H_ZONE_RUN_ACTION] = {
-        Zone.RoleOptions.Admin
+        Roles = {
+            Zone.RoleOptions.Admin
+        },
+        ForwardActions = {
+            ['Update-Asset'] = {
+                Zone.RoleOptions.Admin,
+                Zone.RoleOptions.Moderator,
+                Zone.RoleOptions.Contributor
+            }
+        }
     },
     [Zone.Constants.H_ZONE_ADD_INDEX_ID] = {
-        Zone.RoleOptions.Admin
+        Roles = {
+            Zone.RoleOptions.Admin
+        }
     },
     [Zone.Constants.H_ZONE_ADD_INDEX_REQUEST] = {
-        Zone.RoleOptions.Admin,
-        Zone.RoleOptions.Contributor,
-        Zone.RoleOptions.ExternalContributor
+        Roles = {
+            Zone.RoleOptions.Admin,
+            Zone.RoleOptions.Contributor,
+            Zone.RoleOptions.ExternalContributor
+        }
     },
     [Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST] = {
-        Zone.RoleOptions.Admin,
-        Zone.RoleOptions.Moderator
+        Roles = {
+            Zone.RoleOptions.Admin,
+            Zone.RoleOptions.Moderator
+        }
     },
     [Zone.Constants.H_ZONE_UPDATE_PATCH_MAP] = {
-        Zone.RoleOptions.Admin
+        Roles = {
+            Zone.RoleOptions.Admin
+        }
     },
 }
 
@@ -299,36 +322,6 @@ function Zone.Functions.actorHasRole(actor, role)
     return false
 end
 
-function Zone.Functions.authRunAction(msg)
-    -- True if caller has role to call ForwardAction
-    if not msg['Forward-To'] or not msg['Forward-Action'] then
-        return false, 'Forward-To and Forward-Action are required'
-    end
-
-    -- A wallet user calling run-action must be an owner or admin
-    if msg.From == Owner or msg.From == ao.id then
-        return true
-    end
-
-    local rolesForHandler = Zone.Functions.getRolesForAction(msg['Forward-Action'])
-    if not rolesForHandler then
-        return false,
-            'AuthRoles: Sender ' .. msg.From .. ' not Authorized to run action ' .. msg['Forward-Action'] .. '.'
-    end
-
-    local actorRoles = Zone.Functions.getActorRoles(msg.From)
-
-    if actorRoles then
-        for _, role in pairs(rolesForHandler) do
-            if Zone.Functions.rolesHasValue(actorRoles, role) then
-                return true
-            end
-        end
-    end
-
-    return true
-end
-
 function Zone.Functions.isAuthorized(msg)
     if msg.From ~= Owner and msg.From ~= ao.id and Zone.Functions.tableLength(Zone.Roles) == 0 then
         return false, 'Not Authorized'
@@ -338,12 +331,39 @@ function Zone.Functions.isAuthorized(msg)
         return true
     end
 
-    local rolesForHandler = Permissions[msg.Action]
+    local permissions = Permissions[msg.Action]
 
-    if not rolesForHandler then
+    if not permissions then
         return msg.From == Owner or false,
             'AuthRoles: Sender ' .. msg.From .. ' not Authorized. Only Owner can access the handler ' .. msg.Action
     end
+
+    -- Check for ForwardActions if present
+    if permissions.ForwardActions and msg['Forward-Action'] then
+        local forwardActionRoles = permissions.ForwardActions[msg['Forward-Action']]
+
+        if not forwardActionRoles then
+            return false, 'AuthRoles: Forward-Action ' .. msg['Forward-Action'] .. ' is not allowed'
+        end
+
+        local actorRoles = Zone.Functions.getActorRoles(msg.From)
+
+        if actorRoles then
+            for _, role in pairs(forwardActionRoles) do
+                if Zone.Functions.rolesHasValue(actorRoles, role) then
+                    return true
+                end
+            end
+        end
+
+        if not actorRoles then
+            return false, 'AuthRoles: ' .. msg.From .. ' Not Authorized'
+        end
+
+        return false, 'AuthRoles: Sender ' .. msg.From .. ' not Authorized for Forward-Action ' .. msg['Forward-Action']
+    end
+
+    local rolesForHandler = permissions.Roles
 
     local actorRoles = Zone.Functions.getActorRoles(msg.From)
 
