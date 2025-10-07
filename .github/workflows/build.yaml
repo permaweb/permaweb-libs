@@ -1,0 +1,58 @@
+name: Build and Test
+
+# Concurrency to avoid multiple runs for the same ref(branch)
+concurrency:
+  group: ${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node_version: [22.x]
+        command: ['lint', 'format', 'build']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+
+      - name: Install dependencies
+        working-directory: sdk
+        run: npm ci
+
+      - name: Run ${{ matrix.command }}
+        working-directory: sdk
+        run: npm run ${{ matrix.command }}
+
+  test:
+    strategy:
+      matrix:
+        node_version: [22.x]
+        suite: [unit, web, esm, cjs, integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+
+      - name: Install dependencies
+        working-directory: sdk/tests
+        run: npm ci
+
+      - name: Run tests
+        working-directory: sdk/tests
+        run: npm run test:${{ matrix.suite }}
