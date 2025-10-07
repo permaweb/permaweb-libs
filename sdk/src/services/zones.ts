@@ -153,6 +153,7 @@ export function updateZoneVersionWith(deps: DependencyType) {
 					local patchData = Zone.Functions.getPatchData('overview')
             		Send({ device = 'patch@1.0', overview = require('json').encode(patchData) })
 				else
+					local json = require('json')
 					SyncState(nil)
 				end
 				`,
