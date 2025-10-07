@@ -12,9 +12,11 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"@ar.io/sdk": "^3.19.0",
 		"@permaweb/aoconnect": "file:../../../ao/connect",
 		"@permaweb/libs": "file:..",
-		"arweave": "^1.15.5"
+		"arweave": "^1.15.5",
+		"dotenv": "^17.2.2"
 	},
 	"devDependencies": {
 		"@types/node": "^22.7.9"
