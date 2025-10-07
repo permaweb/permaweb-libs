@@ -11,6 +11,10 @@ import {
 	TagType,
 } from '../helpers/types.ts';
 import { getTagValue, globalLog } from '../helpers/utils.ts';
+import { getArweaveDataWith } from './arweave.ts';
+import { getGQLDataWith } from './gql.ts';
+
+const GATEWAY_RETRY_COUNT = 100;
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
 	const tags = [{ name: 'Authority', value: deps.node?.authority ?? AO.mu }];
@@ -48,7 +52,10 @@ export function aoSendWith(deps: DependencyType) {
 
 export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
 	try {
-		const tags: TagType[] = [{ name: 'Action', value: args.action }, { name: 'Message-Timestamp', value: new Date().getTime().toString() }];
+		const tags: TagType[] = [
+			{ name: 'Action', value: args.action },
+			{ name: 'Message-Timestamp', value: new Date().getTime().toString() },
+		];
 		if (args.tags) tags.push(...args.tags);
 
 		const data = args.useRawData ? args.data : JSON.stringify(args.data);
@@ -73,7 +80,7 @@ export function readProcessWith(deps: DependencyType) {
 }
 
 export async function readProcess(deps: DependencyType, args: ProcessReadType) {
-	const node = deps.node?.url ?? HB.defaultNode
+	const node = deps.node?.url ?? HB.defaultNode;
 	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	if (args.serialize) url += '/serialize~json@1.0';
 
@@ -83,8 +90,7 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 			return res.json();
 		}
 
-		throw new Error('Error getting state from HyperBEAM.')
-
+		throw new Error('Error getting state from HyperBEAM.');
 	} catch (e: any) {
 		if (args.fallbackAction) {
 			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });
@@ -282,9 +288,9 @@ export async function handleProcessEval(
 
 	if (args.evalSrc) src = args.evalSrc;
 	else if (args.evalTxId) {
+		const getArweaveData = getArweaveDataWith(deps);
 		try {
-			const srcFetch = await fetch(getTxEndpoint(args.evalTxId));
-			src = await srcFetch.text();
+			src = await getArweaveData(getTxEndpoint(args.evalTxId));
 		} catch (e: any) {
 			throw new Error(e);
 		}
@@ -354,4 +360,72 @@ export function aoCreateProcessWith(deps: DependencyType) {
 			throw new Error(e.message ?? 'Error creating process');
 		}
 	};
+}
+
+export async function aoCreateProcess(
+	deps: DependencyType,
+	args: ProcessCreateType,
+	statusCB?: (status: any) => void,
+): Promise<string> {
+	try {
+		const spawnArgs: any = {
+			module: args.module || AO.module,
+			scheduler: args.scheduler || AO.scheduler,
+		};
+
+		if (args.data) spawnArgs.data = args.data;
+		if (args.tags) spawnArgs.tags = args.tags;
+
+		statusCB && statusCB(`Spawning process...`);
+		const processId = await aoSpawn(deps, spawnArgs);
+
+		if (args.evalTxId || args.evalSrc) {
+			statusCB && statusCB(`Process retrieved!`);
+			statusCB && statusCB('Sending eval...');
+
+			try {
+				const evalResult = await handleProcessEval(deps, {
+					processId: processId,
+					evalTxId: args.evalTxId || null,
+					evalSrc: args.evalSrc || null,
+					evalTags: args.evalTags,
+				});
+
+				if (evalResult && statusCB) statusCB('Eval complete');
+			} catch (e: any) {
+				throw new Error(e.message ?? 'Error creating process');
+			}
+		}
+
+		return processId;
+	} catch (e: any) {
+		throw new Error(e.message ?? 'Error creating process');
+	}
+}
+
+export async function waitForProcess(deps:DependencyType,args: { processId: string; noRetryLimit?: boolean }) {
+	let retries = 0;
+	const retryLimit = args.noRetryLimit ? Infinity : GATEWAY_RETRY_COUNT;
+	const getGQLData = getGQLDataWith(deps)
+
+	while (retries < retryLimit) {
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
+		const gqlResponse = await getGQLData({
+			ids: [args.processId],
+		});
+
+		if (gqlResponse?.data?.length) {
+			const foundProcess = gqlResponse.data[0].node.id;
+			globalLog(`Process found: ${foundProcess} (Try ${retries + 1})`);
+			return foundProcess;
+		} else {
+			globalLog(`Process not found: ${args.processId} (Try ${retries + 1})`);
+			retries++;
+		}
+	}
+
+	if (retryLimit !== Infinity) {
+		throw new Error(`Process not found, please try again`);
+	}
 }

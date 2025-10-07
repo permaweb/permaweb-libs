@@ -6,3 +6,4 @@
 !**/packages/bundler/dist
 **.idea/
 **.npmrc
+**.env

@@ -1,6 +1,6 @@
 import { ArconnectSigner, createData } from '@dha-team/arbundles/web';
 
-import { TAGS, UPLOAD } from '../helpers/config.ts';
+import { GATEWAYS, TAGS, UPLOAD } from '../helpers/config.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType } from '../helpers/utils.ts';
 
@@ -203,4 +203,19 @@ export async function runUpload(
 	}
 
 	return finishRes.json();
+}
+
+export function getArweaveDataWith(deps: DependencyType) {
+	return async (url: string, args: any = {}) => {
+		try {
+			if (deps.wayfinder) {
+				const result = await deps.wayfinder.request(`ar://${url}`, args);
+				return await result.json();
+			}
+			const result = await fetch(`https://${GATEWAYS.arweave}/${url}`, args);
+			return await result.json();
+		} catch (error) {
+			throw error;
+		}
+	};
 }

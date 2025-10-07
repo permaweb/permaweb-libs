@@ -1,5 +1,5 @@
 import { aoCreateProcessWith, aoDryRun, readProcess } from '../common/ao.ts';
-import { getGQLData } from '../common/gql.ts';
+import { getGQLDataWith } from '../common/gql.ts';
 import { AO, CONTENT_TYPES, GATEWAYS, TAGS } from '../helpers/config.ts';
 import {
 	AssetCreateArgsType,
@@ -34,8 +34,7 @@ export function createAtomicAssetWith(deps: DependencyType) {
 				globalLog(`Comments ID: ${commentsId}`);
 
 				await new Promise((r) => setTimeout(r, 500));
-			}
-			catch (e: any) {
+			} catch (e: any) {
 				console.error(e);
 			}
 		}
@@ -65,6 +64,7 @@ export async function getAtomicAsset(
 	id: string,
 	args?: { useGateway?: boolean },
 ): Promise<AssetDetailType | null> {
+	const getGQLData = getGQLDataWith(deps)
 	try {
 		const processInfo = mapFromProcessCase(
 			await readProcess(deps, {
@@ -76,7 +76,6 @@ export async function getAtomicAsset(
 
 		if (args?.useGateway) {
 			const gqlResponse = await getGQLData({
-				gateway: GATEWAYS.ao,
 				ids: [id],
 				tags: null,
 				owners: null,
@@ -106,10 +105,11 @@ export function getAtomicAssetWith(deps: DependencyType) {
 	};
 }
 
-export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
+export function getAtomicAssetsWith(deps:DependencyType) {
+	const getGQLData = getGQLDataWith(deps)
+return async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
 	try {
 		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.arweave,
 			ids: ids ?? null,
 			tags: null,
 			owners: null,
@@ -124,7 +124,7 @@ export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] 
 	} catch (e: any) {
 		throw new Error(e);
 	}
-}
+}}
 
 export function buildAsset(element: GQLNodeResponseType): any {
 	const asset: any = { id: element.node.id, owner: element.node.owner.address };

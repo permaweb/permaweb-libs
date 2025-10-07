@@ -157,7 +157,6 @@ Queries Arweave gateways using GraphQL for transaction data.
 
 ```typescript
 const response = await permaweb.getGQLData({
-  gateway: 'arweave.net',
   ids: ['TX_ID_1', 'TX_ID_2'],
   tags: [{ name: 'App-Name', values: ['MyApp'] }],
   owners: ['OWNER_ADDRESS'],
@@ -172,7 +171,6 @@ Fetches all pages of GraphQL data automatically.
 
 ```typescript
 const allData = await permaweb.getAggregatedGQLData({
-  gateway: 'arweave.net',
   tags: [{ name: 'App-Name', values: ['MyApp'] }],
   paginator: 100
 }, (message) => console.log(message)); // Optional progress callback

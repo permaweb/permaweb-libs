@@ -1,5 +1,5 @@
 import { aoCreateProcessWith, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
-import { resolveTransactionWith } from '../common/arweave.ts';
+import { getArweaveDataWith, resolveTransactionWith } from '../common/arweave.ts';
 import { AO, TAGS } from '../helpers/config.ts';
 import { getTxEndpoint } from '../helpers/endpoints.ts';
 import { CollectionDetailType, CollectionType, DependencyType, TagType } from '../helpers/types.ts';
@@ -9,6 +9,7 @@ const DEFAULT_COLLECTION_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
 const DEFAULT_COLLECTION_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';
 
 export function createCollectionWith(deps: DependencyType) {
+	const getArweaveData = getArweaveDataWith(deps);
 	return async (
 		args: {
 			title: string;
@@ -64,10 +65,13 @@ export function createCollectionWith(deps: DependencyType) {
 			console.error(e);
 		}
 
-		const processSrcFetch = await fetch(getTxEndpoint(AO.src.collection));
-		if (!processSrcFetch.ok) throw new Error(`Unable to fetch process src`);
+		let processSrc: string;
 
-		let processSrc = await processSrcFetch.text();
+		try {
+			processSrc = await getArweaveData(getTxEndpoint(AO.src.collection));
+		} catch (error) {
+			throw new Error(`Unable to fetch process src`);
+		}
 
 		processSrc = processSrc.replace(/'<NAME>'/g, cleanProcessField(args.title));
 		processSrc = processSrc.replace(/'<DESCRIPTION>'/g, cleanProcessField(args.description));

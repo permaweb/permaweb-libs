@@ -1,19 +1,19 @@
-import { checkValidAddress } from './utils.ts';
+//import { checkValidAddress } from './utils.ts';
 
-const arweaveEndpoint = 'https://arweave.net';
+// TO DO : Needs to consider the ar://protocol and restructure `getRendererEndpoint` 
 
 export function getARBalanceEndpoint(walletAddress: string) {
-	return `${arweaveEndpoint}/wallet/${walletAddress}/balance`;
+	return `/wallet/${walletAddress}/balance`;
 }
 
 export function getTxEndpoint(txId: string) {
-	return `${arweaveEndpoint}/${txId}`;
+	return txId;
 }
 
-export function getRendererEndpoint(renderWith: string, tx: string) {
-	if (checkValidAddress(renderWith)) {
-		return `${arweaveEndpoint}/${renderWith}/?tx=${tx}`;
-	} else {
-		return `https://${renderWith}.arweave.net/?tx=${tx}`;
-	}
-}
+// export function getRendererEndpoint(renderWith: string, tx: string) {
+// 	if (checkValidAddress(renderWith)) {
+// 		return `ar://${renderWith}/?tx=${tx}`;
+// 	} else {
+// 		return `https://${renderWith}.arweave.net/?tx=${tx}`;
+// 	}
+// }
