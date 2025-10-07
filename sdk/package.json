@@ -46,6 +46,8 @@
 		"@dha-team/arbundles": "^1.0.3"
 	},
 	"devDependencies": {
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/git": "^10.0.1",
 		"@types/async-retry": "^1.4.9",
 		"@types/node": "^22.10.4",
 		"@typescript-eslint/eslint-plugin": "^5.57.1",
@@ -62,6 +64,7 @@
 		"eslint-plugin-simple-import-sort": "^10.0.0",
 		"os-browserify": "^0.3.0",
 		"process": "^0.11.10",
+		"semantic-release": "^24.2.9",
 		"stream-browserify": "^3.0.0",
 		"tsc-alias": "^1.8.10",
 		"typescript": "^5.7.2",
