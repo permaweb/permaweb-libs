@@ -1,44 +1,71 @@
-import { Buffer } from 'buffer';
-import { DependencyType } from 'helpers/types';
-import * as Services from './services';
+import * as Common from './common/index.ts';
+import * as Helpers from './helpers/index.ts';
+import * as Services from './services/index.ts';
 
-if (!globalThis.Buffer) globalThis.Buffer = Buffer;
+export * as Types from './helpers/types.ts';
 
-function init(deps: DependencyType) {
-  return {
-    createZone: Services.createZoneWith(deps),
-    updateZone: Services.updateZoneWith(deps),
-    addToZone: Services.addToZoneWith(deps),
-    getZone: Services.getZoneWith(deps),
+/* For clients to be able to detect new zone versions */
+export const CurrentZoneVersion = Helpers.AO.src.zone.version;
 
-    createAtomicAsset: Services.createAtomicAssetWith(deps),
-    getAtomicAsset: Services.getAtomicAssetWith(deps),
-    getAtomicAssets: Services.getAtomicAssets,
-    getAoAtomicAsset: Services.getAoAtomicAssetWith(deps),
-    buildAsset: Services.buildAsset,
+function init(deps: Helpers.DependencyType) {
+	return {
+		/* Zones */
+		createZone: Services.createZoneWith(deps),
+		updateZone: Services.updateZoneWith(deps),
+		addToZone: Services.addToZoneWith(deps),
+		getZone: Services.getZoneWith(deps),
+		setZoneRoles: Services.setZoneRolesWith(deps),
+		joinZone: Services.joinZoneWith(deps),
+		updateZonePatchMap: Services.updateZonePatchMapWith(deps),
+		updateZoneVersion: Services.updateZoneVersionWith(deps),
+		updateZoneAuthorities: Services.updateZoneAuthoritiesWith(deps),
 
-    createProfile: Services.createProfileWith(deps),
-    updateProfile: Services.updateProfileWith(deps),
-    getProfileById: Services.getProfileByIdWith(deps),
-    getProfileByWalletAddress: Services.getProfileByWalletAddressWith(deps),
+		/* Profiles */
+		createProfile: Services.createProfileWith(deps),
+		updateProfile: Services.updateProfileWith(deps),
+		updateProfileVersion: Services.updateProfileVersionWith(deps),
+		getProfileById: Services.getProfileByIdWith(deps),
+		getProfileByWalletAddress: Services.getProfileByWalletAddressWith(deps),
 
-    createCollection: Services.createCollectionWith(deps),
-    updateCollection: Services.updateCollectionWith(deps),
-    getCollection: Services.getCollectionWith(deps),
-    getCollections: Services.getCollectionsWith(deps),
+		/* Assets */
+		createAtomicAsset: Services.createAtomicAssetWith(deps),
+		getAtomicAsset: Services.getAtomicAssetWith(deps),
+		getAtomicAssets: Services.getAtomicAssets,    
+  
+		/* Comments */
+		createComment: Services.createCommentWith(deps),
+		getComments: Services.getCommentsWith(deps),
+		updateCommentStatus: Services.updateCommentStatusWith(deps),
+		removeComment: Services.removeCommentWith(deps),
+		updateCommentContent: Services.updateCommentContentWith(deps),
+		userRemoveComment: Services.removeUserCommentWith(deps),
+		pinComment: Services.pinCommentWith(deps),
+		unpinComment: Services.unpinCommentWith(deps),
 
-    createComment: Services.createCommentWith(deps),
-    getComment: Services.getCommentWith(deps),
-    getComments: Services.getCommentsWith(deps),
+		/* Collections */
+		createCollection: Services.createCollectionWith(deps),
+		updateCollectionAssets: Services.updateCollectionAssetsWith(deps),
+		getCollection: Services.getCollectionWith(deps),
+		getCollections: Services.getCollectionsWith(deps),
 
-    addModerationAction: Services.addModerationActionWith(deps),
-    getModerationActions: Services.getModerationActionsWith(deps)
-  }
+    /* Moderation */
+    addModerationAction: Services.addModerationActionWith(deps),    
+    getModerationActions: Services.getModerationActionsWith(deps),
+
+		/* Common */
+		resolveTransaction: Common.resolveTransactionWith(deps),
+		getGQLData: Common.getGQLData,
+		getAggregatedGQLData: Common.getAggregatedGQLData,
+		createProcess: Common.aoCreateProcessWith(deps),
+		readProcess: Common.aoDryRunWith(deps),
+		readState: Common.readProcessWith(deps),
+		sendMessage: Common.aoSendWith(deps),
+
+		/* Utils */
+		mapFromProcessCase: Helpers.mapFromProcessCase,
+		mapToProcessCase: Helpers.mapToProcessCase,
+    
+	};
 }
 
-export default {
-  init
-};
-
-export * from './helpers/types';
-
+export default { init };

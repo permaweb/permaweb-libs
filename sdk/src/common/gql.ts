@@ -1,4 +1,4 @@
-import { GATEWAYS } from 'helpers/config';
+import { GATEWAYS } from '../helpers/config.ts';
 import {
 	BatchAGQLResponseType,
 	BatchGQLArgsType,
@@ -6,7 +6,7 @@ import {
 	GQLArgsType,
 	GQLNodeResponseType,
 	QueryBodyGQLArgsType,
-} from 'helpers/types';
+} from '../helpers/types.ts';
 
 const CURSORS = {
 	p1: 'P1',
@@ -29,9 +29,9 @@ export async function getGQLData(args: GQLArgsType): Promise<DefaultGQLResponseT
 
 	try {
 		let queryBody: string = getQueryBody(args);
-		const response = await getResponse({ gateway: args.gateway, query: getQuery(queryBody) });
+		const response = await getResponse({ gateway: args.gateway ?? GATEWAYS.ao, query: getQuery(queryBody) });
 
-		if (response.data.transactions.edges.length) {
+		if (response?.data?.transactions?.edges?.length) {
 			data = [...response.data.transactions.edges];
 			count = response.data.transactions.count ?? 0;
 
@@ -55,17 +55,50 @@ export async function getGQLData(args: GQLArgsType): Promise<DefaultGQLResponseT
 	}
 }
 
+export async function getAggregatedGQLData(args: GQLArgsType, callback?: (message: string) => void) {
+	let index = 1;
+	let fetchResult = await getGQLData(args);
+
+	if (fetchResult && fetchResult.data.length) {
+		let aggregatedData = fetchResult.data;
+		callback && callback(`Count: ${fetchResult.count}`);
+		callback && callback(`Pages to fetch: ${Math.ceil(fetchResult.count / (args.paginator ?? PAGINATORS.default))}`);
+		callback && callback(`Page ${index} fetched`);
+
+		while (fetchResult.nextCursor && fetchResult.nextCursor !== CURSORS.end) {
+			index += 1;
+			callback && callback(`Fetching page ${index}...`);
+
+			fetchResult = await getGQLData({
+				...args,
+				cursor: fetchResult.nextCursor,
+			});
+
+			if (fetchResult && fetchResult.data.length) {
+				aggregatedData = aggregatedData.concat(fetchResult.data);
+			}
+		}
+
+		callback && callback(`All pages fetched!`);
+		return aggregatedData;
+	} else {
+		callback && callback('No data found');
+	}
+
+	return null;
+}
+
 export async function getBatchGQLData(args: BatchGQLArgsType): Promise<BatchAGQLResponseType> {
 	let responseObject: BatchAGQLResponseType = {};
 	let queryBody: string = '';
 
 	for (const [queryKey, baseArgs] of Object.entries(args.entries)) {
 		responseObject[queryKey] = { data: [], count: 0, nextCursor: null, previousCursor: null };
-		queryBody += getQueryBody({ ...baseArgs, gateway: args.gateway, queryKey: queryKey });
+		queryBody += getQueryBody({ ...baseArgs, gateway: args.gateway ?? GATEWAYS.ao, queryKey: queryKey });
 	}
 
 	try {
-		const response = await getResponse({ gateway: args.gateway, query: getQuery(queryBody) });
+		const response = await getResponse({ gateway: args.gateway ?? GATEWAYS.ao, query: getQuery(queryBody) });
 
 		if (response && response.data) {
 			for (const queryKey of Object.keys(response.data)) {
@@ -118,21 +151,40 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 		? JSON.stringify(args.tags)
 				.replace(/"(name)":/g, '$1:')
 				.replace(/"(values)":/g, '$1:')
+				.replace(/"match"/g, 'match')
 				.replace(/"FUZZY_OR"/g, 'FUZZY_OR')
+				.replace(/"WILDCARD"/g, 'WILDCARD')
 		: null;
 	const owners = args.owners ? JSON.stringify(args.owners) : null;
+	const recipients = args.recipients ? JSON.stringify(args.recipients) : null;
 	const cursor = args.cursor && args.cursor !== CURSORS.end ? `"${args.cursor}"` : null;
+
+	let sort: string = '';
+	if (args.sort) {
+		sort += 'sort: ';
+		switch (args.sort) {
+			case 'ascending':
+				sort += 'HEIGHT_ASC';
+				break;
+			case 'descending':
+				sort += 'HEIGHT_DESC';
+				break;
+		}
+	}
 
 	let fetchCount: string = `first: ${paginator}`;
 	let txCount: string = '';
 	let nodeFields: string = `data { size type } owner { address } block { height timestamp }`;
-	let order: string = '';
+	let recipientsfield: string = '';
 
-	switch (args.gateway) {
+	const gateway = args.gateway ?? GATEWAYS.ao;
+	switch (gateway) {
 		case GATEWAYS.arweave:
 			break;
-		case GATEWAYS.goldsky:
-			txCount = `count`;
+		case GATEWAYS.ao:
+			if (!cursor) txCount = `count`;
+			if (recipients) recipientsfield = `recipients: ${recipients}`;
+			nodeFields += ` recipient`;
 			break;
 	}
 
@@ -142,10 +194,10 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 				tags: ${tags},
 				${fetchCount}
 				owners: ${owners},
+				${recipientsfield},
 				block: ${blockFilterStr},
 				after: ${cursor},
-				${order}
-				
+				${sort}
 			){
 			${txCount}
 				pageInfo {

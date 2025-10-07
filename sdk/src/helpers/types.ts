@@ -1,7 +1,15 @@
 export type DependencyType = {
-  ao: any,
-  signer?: any,
-  arweave?: any
+	ao: any;
+	signer?: any;
+	arweave?: any;
+	node?: { url: string, scheduler: string, authority: string };
+};
+
+export type ProcessReadType = {
+	processId: string;
+	path: string;
+	fallbackAction: string;
+	serialize?: boolean;
 };
 
 export type ProcessSpawnType = {
@@ -15,8 +23,8 @@ export type ProcessSpawnType = {
 export type ProcessCreateType = {
 	module?: string;
 	scheduler?: string;
-	spawnData?: any;
-	spawnTags?: TagType[];
+	data?: any;
+	tags?: TagType[];
 	evalTags?: TagType[];
 	evalTxId?: string;
 	evalSrc?: string;
@@ -43,9 +51,9 @@ export type MessageDryRunType = {
 	data?: string | object;
 };
 
-export type ZoneType = { store: any, assets: ZoneAssetType[] };
+export type ZoneType = { store: any; assets: ZoneAssetType[] };
 
-export type ZoneAssetType = { id: string, balance: string, dateCreated: number, lastUpdate: number }
+export type ZoneAssetType = { id: string; balance: string; dateCreated: number; lastUpdate: number };
 
 export type ProfileArgsType = {
 	username: string;
@@ -63,68 +71,69 @@ export type ProfileType = {
 	description: string;
 	thumbnail?: any;
 	banner?: any;
-	assets: { id: string, quantity: string }[];
+	assets: { id: string; quantity: string }[];
+	authorities?: string[];
 } & any;
 
 export type AssetCreateArgsType = {
-	title: string;
+	name: string;
 	description: string;
-	type: string;
 	topics: string[];
-	contentType: string;
+	creator: string;
 	data: any;
-	creator?: string;
-	collectionId?: string;
-	renderWith?: string;
-	thumbnail?: string;
+	contentType: string;
+	assetType: string;
 	supply?: number;
 	denomination?: number;
 	transferable?: boolean;
+	metadata?: object;
 	tags?: TagType[];
 	src?: string;
+	users?: string[];
+	spawnComments?: boolean;
+	commentsId?: string;
 };
 
 export type AssetHeaderType = {
 	id: string;
 	owner: string | null;
-	creator: string | null;
-	title: string | null;
-	description: string | null;
-	type: string | null;
-	topics: string[] | null;
-	implementation: string | null;
-	contentType: string | null;
-	renderWith: string | null;
-	thumbnail: string | null;
-	udl: UDLicenseType | null;
-	collectionId: string | null;
-	dateCreated: number | null;
-	blockHeight: number | null;
-	tags?: TagType[];
 };
 
-export type AssetStateType = {
-	ticker: string | null;
-	denomination: string | null;
-	balances: { [key: string]: string } | null;
-	transferable: boolean | null;
-}
-
-export type AoAssetType = {
+export type AssetDetailType = {
+	id: string;
+	name: string;
 	ticker: string;
 	denomination: string;
-	balances: {
-		[key: string]: string;
-	};
-	transferable: boolean;
-	name: string;
+	totalSupply: string;
+	transferable: string;
 	creator: string;
-	assetMetadata: {
-		[key: string]: any;
-	};
+	balances: object;
+	metadata: any;
+	dateCreated: string;
+	lastUpdate: string;
 };
 
-export type AssetDetailType = AssetHeaderType & AssetStateType;
+export type CommentHeaderType = {
+	id: string;
+	content: string;
+	parentId: string;
+	rootId: string;
+};
+
+export type CommentDetailType = {
+	content: string;
+	parentId: string;
+	rootId: string;
+};
+
+export type CommentCreateArgType = {
+	content: string;
+	creator: string;
+	commentsId: string;
+	parentId?: string;
+	rootId?: string;
+	tags?: TagType[];
+};
 
 export type CollectionManifestType = {
 	type: string;
@@ -143,16 +152,7 @@ export type CollectionType = {
 
 export type CollectionDetailType = CollectionType & {
 	assetIds: string[];
-	creatorProfile: ProfileType;
 };
-
-export type CommentHeaderType = AssetHeaderType & { dataSource: string, rootSource: string };
-
-export type CommentStateType = AssetStateType;
-
-export type CommentDetailType = CommentHeaderType & CommentStateType;
-
-export type CommentCreateArgType = AssetCreateArgsType & { dataSource: string, rootSource: string };
 
 export type UDLicenseType = {
 	access: UDLicenseValueType | null;
@@ -174,10 +174,12 @@ export type BaseGQLArgsType = {
 	ids?: string[] | null;
 	tags?: TagFilterType[] | null;
 	owners?: string[] | null;
+	recipients?: string[] | null;
 	cursor?: string | null;
 	paginator?: number;
 	minBlock?: number;
 	maxBlock?: number;
+	sort?: GQLSortType;
 };
 
 export type GQLArgsType = { gateway: string } & BaseGQLArgsType;
@@ -194,6 +196,7 @@ export type GQLNodeResponseType = {
 	node: {
 		id: string;
 		tags: TagType[];
+		recipient?: string;
 		data: {
 			size: string;
 			type: string;
@@ -235,3 +238,5 @@ export type ModerationEntryType = {
 export type TagType = { name: string; value: string };
 
 export type TagFilterType = { name: string; values: string[]; match?: string };
+
+export type GQLSortType = 'ascending' | 'descending';

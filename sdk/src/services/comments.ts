@@ -1,118 +1,168 @@
-
-import { DependencyType, CommentCreateArgType, AssetCreateArgsType, CommentHeaderType, CommentDetailType, TagType, GQLNodeResponseType, TagFilterType, AssetDetailType, AssetHeaderType } from "helpers/types";
-import { buildAsset, createAtomicAssetWith, getAtomicAssetWith, getAtomicAssets } from "./assets";
-import { getGQLData } from "common/gql";
-import { AO, GATEWAYS } from "helpers/config";
+import { aoSend, readProcess } from '../common/ao.ts';
+import { CommentCreateArgType, DependencyType } from '../helpers/types.ts';
+import { mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createCommentWith(deps: DependencyType) {
-  const createAtomicAsset = createAtomicAssetWith(deps);
-  return async (args: CommentCreateArgType, callback?: (status: any) => void) => {
-    const existingTags = args.tags ? args.tags : [];
+	return async (args: CommentCreateArgType) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.content) throw new Error('Content cannot be empty');
 
-    const tags = [
-      ...existingTags, 
-      { name: 'Data-Source', value: args.dataSource },
-      { name: 'Root-Source', value: args.rootSource }
-    ];
+			const tags = [];
+			if (args.parentId) tags.push({ name: 'Parent-Id', value: args.parentId });
 
-    const assetArgs: AssetCreateArgsType = {
-      title: args.title,
-      description: args.description,
-      type: args.type,
-      topics: args.topics,
-      contentType: args.contentType,
-      data: args.data,
-      creator: args.creator,
-      collectionId: args.collectionId,
-      supply: args.supply,
-      denomination: args.denomination,
-      transferable: args.transferable,
-      src: args.src ?? AO.src.asset,
-      tags
-    };
+			const commentsUpdateId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Add-Comment',
+				tags: tags,
+				data: args.content,
+				useRawData: true,
+			});
 
-    if(args.renderWith) assetArgs.renderWith = args.renderWith;
-    if(args.thumbnail) assetArgs.thumbnail = args.thumbnail;
-    
-    return createAtomicAsset(assetArgs, callback);
-  }
+			return commentsUpdateId;
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error creating comment');
+		}
+	};
 }
 
-export function getCommentWith(deps: DependencyType) {
-  const getAtomicAsset = getAtomicAssetWith(deps);
-  return async (args: { id: string }) => {
-    const asset = await getAtomicAsset(args.id);
+export function getCommentsWith(deps: DependencyType) {
+	return async (args: { commentsId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error(`Must provide commentsId`);
 
-    const dataSource = asset?.tags?.find((t: TagType) => {
-      return t.name === 'Data-Source'
-    })?.value;
+			const comments = mapFromProcessCase(
+				await readProcess(deps, {
+					processId: args.commentsId,
+					path: 'comments',
+					fallbackAction: 'Get-Comments',
+				}),
+			);
 
-    const rootSource = asset?.tags?.find((t: TagType) => {
-      return t.name === 'Root-Source'
-    })?.value;
-
-    if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
-
-    const comment: CommentDetailType = {
-      ...asset,
-      dataSource,
-      rootSource
-    };
-
-    return comment;
-  }
+			return comments;
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error getting comments');
+		}
+	};
 }
 
-export function getCommentsWith(_deps: DependencyType) {
-  return async(args: { routeSource?: string, dataSource?: string }) => {
-    if(!args.routeSource && !args.dataSource) {
-      throw new Error(`Must provide either rootSource or dataSource`);
-    }
+export function updateCommentStatusWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string; status: 'active' | 'inactive' }) => {
+		try {
+			if (!args.commentsId) throw new Error(`Must provide commentsId`);
+			if (!args.commentId) throw new Error(`Must provide commentId`);
 
-    let tags: TagFilterType[] = []
+			const commentUpdateId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Update-Comment-Status',
+				tags: [
+					{ name: 'Comment-Id', value: args.commentId },
+					{ name: 'Status', value: args.status },
+				],
+			});
 
-    if(args.routeSource) tags.push({ 
-      name: 'Root-Source', 
-      values: [args.routeSource ? args.routeSource : ''] 
-    });
-    
-    if(args.dataSource) tags.push({ 
-      name: 'Data-Source', 
-      values: [args.dataSource ? args.dataSource : ''] 
-    })
-
-    const gqlResponse = await getGQLData({
-      gateway: GATEWAYS.goldsky,
-      ids: null,
-      tags,
-      owners: null,
-      cursor: null,
-    });
-
-    let assets: AssetHeaderType[] = [];
-
-    if (gqlResponse && gqlResponse.data.length) {
-      assets = gqlResponse.data.map((element: GQLNodeResponseType) => buildAsset(element));
-    }
-
-    return assets.map((asset: AssetHeaderType) => {
-      const dataSource = asset?.tags?.find((t: TagType) => {
-        return t.name === 'Data-Source'
-      })?.value;
-  
-      const rootSource = asset?.tags?.find((t: TagType) => {
-        return t.name === 'Root-Source'
-      })?.value;
-  
-      if (!dataSource || !rootSource) throw new Error(`dataSource and rootSource must be present on a comment`);
-  
-      const comment: CommentHeaderType = {
-        ...asset,
-        dataSource,
-        rootSource
-      };
-  
-      return comment;
-    })
-  }
+			return commentUpdateId;
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error updating comment status');
+		}
+	};
 }
+
+export function updateCommentContentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string; content: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+			if (!args.content) throw new Error('Content cannot be empty');
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Update-Comment-Content',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+				data: args.content,
+				useRawData: true,
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'updateCommentContentWith' doing 'Update-Comment-Content': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function removeCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Remove-Comment',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'removeCommentWith' doing 'Remove-Comment': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function removeUserCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Remove-Own-Comment',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'removeUserCommentWith' doing 'Remove-Own-Comment': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function pinCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Pin-Comment',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'pinCommentWith' doing 'Pin-Comment': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function unpinCommentWith(deps: DependencyType) {
+	return async (args: { commentsId: string; commentId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.commentId) throw new Error('Must provide commentId');
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Unpin-Comment',
+				tags: [{ name: 'Comment-Id', value: args.commentId }],
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'unpinCommentWith' doing 'Unpin-Comment': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+

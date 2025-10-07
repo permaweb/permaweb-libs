@@ -1,3 +1,3 @@
-export * from './ao';
-export * from './arweave';
-export * from './gql';
+export * from './ao.ts';
+export * from './arweave.ts';
+export * from './gql.ts';

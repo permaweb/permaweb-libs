@@ -1,13 +1,22 @@
 export const AO = {
-	module: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM',
+	module: 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk',
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'gyvfBebLlNJw0_bdq6NLL_BK_dqpgj9nRTYebyoOmKI',
-		zone: 'UmDqxL8ufIj2Zj9eKDQfDj_hyJ8rWZn7VaTgpyeRT94',
-    collection: '2ZDuM2VUCN8WHoAKOOjiH4_7Apq0ZHKnTWdLppxCdGY'
+		asset: 'LlyF5s11sJIWvfNbkH-tavR-P7IJfTvkHHOdlwtGIJM',
+		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
+		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
+		comments: 'RvozS-4Mbcmq66gPapsNOyERkg3LrpR0vSRKz8wIi4k',
+		zone: {
+			id: 'qh8L94J0ZT4h-Gv3mLH8kDb-IhmJo_aIL1j7vtr-jF0',
+			version: '0.0.2',
+		},
 	},
-  collectionsRegistry: 'TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg'
+	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
+};
+
+export const HB = {
+	defaultNode: 'https://forward.computer',
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {
@@ -17,25 +26,22 @@ export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: a
 	},
 };
 
-export const DEFAULT_UCM_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
-export const DEFAULT_UCM_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';
-
 export const GATEWAYS = {
 	arweave: 'arweave.net',
-	goldsky: 'arweave-search.goldsky.com',
+	ao: 'ao-search-gateway.goldsky.com',
 };
 
 export const LICENSES = {
 	udl: {
 		label: 'Universal Data License',
-		address: 'dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw'
+		address: 'dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw',
 	},
 };
 
 export const TAGS = {
 	keys: {
 		access: 'Access-Fee',
-    ans110: {
+		ans110: {
 			title: 'Title',
 			description: 'Description',
 			topic: 'Topic:*',
@@ -43,9 +49,9 @@ export const TAGS = {
 			implements: 'Implements',
 			license: 'License',
 		},
+		assetType: 'Asset-Type',
 		banner: 'Banner',
 		bootloader: 'Bootloader',
-		bootloaderInit: 'On-Boot',
 		collectionId: 'Collection-Id',
 		collectionName: 'Collection-Name',
 		commericalUse: 'Commercial-Use',
@@ -63,9 +69,10 @@ export const TAGS = {
 		initialOwner: 'Initial-Owner',
 		license: 'License',
 		name: 'Name',
+		onBoot: 'On-Boot',
 		paymentAddress: 'Payment-Address',
 		paymentMode: 'Payment-Mode',
-    profileCreator: 'Profile-Creator',
+		profileCreator: 'Profile-Creator',
 		profileIndex: 'Profile-Index',
 		protocolName: 'Protocol-Name',
 		renderWith: 'Render-With',
@@ -73,16 +80,17 @@ export const TAGS = {
 		title: 'Title',
 		topic: 'Topic',
 		type: 'Type',
-		zoneType: 'Zone-Type'
+		zoneType: 'Zone-Type',
 	},
-  values: {
-    document: 'Document',
-  }
+	values: {
+		dataProtocol: 'ao',
+		document: 'Document',
+		user: 'User',
+	},
 };
 
 export const UPLOAD = {
-	node1: 'https://up.arweave.net',
-	node2: 'https://turbo.ardrive.io',
+	node1: 'https://turbo.ardrive.io',
 	batchSize: 1,
 	chunkSize: 7500000,
 	dispatchUploadSize: 100 * 1024,

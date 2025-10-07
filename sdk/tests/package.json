@@ -1,0 +1,22 @@
+{
+	"name": "node",
+	"type": "module",
+	"version": "1.0.0",
+	"description": "",
+	"main": "tests.ts",
+	"scripts": {
+		"clean:install": "rm -rf node_modules package-lock.json || true && npm cache clean --force && npm install",
+		"test": "node index.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@permaweb/aoconnect": "file:../../../ao/connect",
+		"@permaweb/libs": "file:..",
+		"arweave": "^1.15.5"
+	},
+	"devDependencies": {
+		"@types/node": "^22.7.9"
+	}
+}

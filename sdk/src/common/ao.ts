@@ -1,46 +1,54 @@
-import { AO, GATEWAYS } from 'helpers/config';
-import { getTxEndpoint } from 'helpers/endpoints';
+import { AO, HB } from '../helpers/config.ts';
+import { getTxEndpoint } from '../helpers/endpoints.ts';
 import {
-  DependencyType,
+	DependencyType,
 	MessageDryRunType,
 	MessageResultType,
 	MessageSendType,
 	ProcessCreateType,
+	ProcessReadType,
 	ProcessSpawnType,
 	TagType,
-} from 'helpers/types';
-import { getTagValue, globalLog } from 'helpers/utils';
-
-import { getGQLData } from './gql';
-
-const GATEWAY = GATEWAYS.goldsky;
-
-const GATEWAY_RETRY_COUNT = 1000;
+} from '../helpers/types.ts';
+import { getTagValue, globalLog } from '../helpers/utils.ts';
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
-
-	const tags = [{ name: 'Authority', value: AO.mu }];
+	const tags = [{ name: 'Authority', value: deps.node?.authority ?? AO.mu }];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 	try {
 		const processId = await deps.ao.spawn({
 			module: args.module,
-			scheduler: args.scheduler,
+			scheduler: deps.node?.scheduler || args.scheduler,
 			signer: deps.signer,
 			tags: tags,
 			data: args.data,
 		});
 
+		globalLog(`Process ID: ${processId}`);
+		globalLog('Sending initial message...');
+
+		await aoSend(deps, {
+			processId: processId,
+			action: 'Init',
+		});
+
 		return processId;
-	}
-	catch (e: any) {
+	} catch (e: any) {
+		console.log(e);
 		throw new Error(e.message ?? 'Error spawning process');
 	}
 }
 
+export function aoSendWith(deps: DependencyType) {
+	return async (args: MessageSendType) => {
+		return await aoSend(deps, args);
+	};
+}
+
 export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
 	try {
-		const tags: TagType[] = [{ name: 'Action', value: args.action }];
+		const tags: TagType[] = [{ name: 'Action', value: args.action }, { name: 'Message-Timestamp', value: new Date().getTime().toString() }];
 		if (args.tags) tags.push(...args.tags);
 
 		const data = args.useRawData ? args.data : JSON.stringify(args.data);
@@ -56,6 +64,40 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 	} catch (e: any) {
 		throw new Error(e);
 	}
+}
+
+export function readProcessWith(deps: DependencyType) {
+	return async (args: ProcessReadType) => {
+		return await readProcess(deps, args);
+	};
+}
+
+export async function readProcess(deps: DependencyType, args: ProcessReadType) {
+	const node = deps.node?.url ?? HB.defaultNode
+	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
+	if (args.serialize) url += '/serialize~json@1.0';
+
+	try {
+		const res = await fetch(url);
+		if (res.ok) {
+			return res.json();
+		}
+
+		throw new Error('Error getting state from HyperBEAM.')
+
+	} catch (e: any) {
+		if (args.fallbackAction) {
+			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });
+			return result;
+		}
+		throw e;
+	}
+}
+
+export function aoDryRunWith(deps: DependencyType) {
+	return async (args: MessageSendType) => {
+		return await aoDryRun(deps, args);
+	};
 }
 
 export async function aoDryRun(deps: DependencyType, args: MessageDryRunType): Promise<any> {
@@ -94,7 +136,7 @@ export async function aoDryRun(deps: DependencyType, args: MessageDryRunType): P
 			}
 		}
 	} catch (e: any) {
-		throw new Error(e.message ?? 'Error dryrunning process')
+		throw new Error(e.message ?? 'Error dryrunning process');
 	}
 }
 
@@ -138,15 +180,15 @@ export async function aoMessageResult(deps: DependencyType, args: MessageResultT
 }
 
 export async function aoMessageResults(
-  deps: DependencyType, 
-  args: {
-    processId: string;
-    action: string;
-    tags: TagType[] | null;
-    data: any;
-    responses?: string[];
-    handler?: string;
-  }
+	deps: DependencyType,
+	args: {
+		processId: string;
+		action: string;
+		tags: TagType[] | null;
+		data: any;
+		responses?: string[];
+		handler?: string;
+	},
 ): Promise<any> {
 	try {
 		const tags = [{ name: 'Action', value: args.action }];
@@ -227,52 +269,26 @@ export async function aoMessageResults(
 	}
 }
 
-export async function waitForProcess(processId: string, _setStatus?: (status: any) => void) {
-	let retries = 0;
-
-	while (retries < GATEWAY_RETRY_COUNT) {
-		await new Promise((r) => setTimeout(r, 2000));
-
-		const gqlResponse = await getGQLData({
-			gateway: GATEWAY,
-			ids: [processId],
-		});
-
-		if (gqlResponse?.data?.length) {
-			const foundProcess = gqlResponse.data[0].node.id;
-			globalLog(`Fetched transaction: ${foundProcess} (Try ${retries + 1})`);
-			return foundProcess;
-		} else {
-			globalLog(`Transaction not found: ${processId} (Try ${retries + 1})`);
-			retries++;
-		}
-	}
-
-	throw new Error(`Process not found, please try again`);
-}
-
-export async function fetchProcessSrc(txId: string): Promise<string> {
-	try {
-		const srcFetch = await fetch(getTxEndpoint(txId));
-		return await srcFetch.text();
-	} catch (e: any) {
-		throw new Error(e);
-	}
-}
-
 export async function handleProcessEval(
-  deps: DependencyType, 
-  args: {
-    processId: string;
-    evalTxId: string | null;
-    evalSrc: string | null;
-    evalTags?: TagType[];
-  }
+	deps: DependencyType,
+	args: {
+		processId: string;
+		evalTxId?: string | null;
+		evalSrc?: string | null;
+		evalTags?: TagType[];
+	},
 ): Promise<string | null> {
 	let src: string | null = null;
 
 	if (args.evalSrc) src = args.evalSrc;
-	else if (args.evalTxId) src = await fetchProcessSrc(args.evalTxId);
+	else if (args.evalTxId) {
+		try {
+			const srcFetch = await fetch(getTxEndpoint(args.evalTxId));
+			src = await srcFetch.text();
+		} catch (e: any) {
+			throw new Error(e);
+		}
+	}
 
 	if (src) {
 		try {
@@ -301,42 +317,41 @@ export async function handleProcessEval(
 	return null;
 }
 
-export async function aoCreateProcess(deps: DependencyType, args: ProcessCreateType, statusCB?: (status: any) => void): Promise<string> {
-	try {
-		const spawnArgs: any = {
-			module: args.module || AO.module,
-			scheduler: args.scheduler || AO.scheduler,
-		};
+export function aoCreateProcessWith(deps: DependencyType) {
+	return async (args: ProcessCreateType, statusCB?: (status: any) => void) => {
+		try {
+			const spawnArgs: any = {
+				module: args.module || AO.module,
+				scheduler: deps.node?.scheduler || AO.scheduler,
+			};
 
-		if (args.spawnData) spawnArgs.data = args.spawnData;
-		if (args.spawnTags) spawnArgs.tags = args.spawnTags;
+			if (args.data) spawnArgs.data = args.data;
+			if (args.tags) spawnArgs.tags = args.tags;
 
-		statusCB && statusCB(`Spawning process...`);
-		const processId = await aoSpawn(deps, spawnArgs);
+			statusCB && statusCB(`Spawning process...`);
+			const processId = await aoSpawn(deps, spawnArgs);
 
-		if (args.evalTxId || args.evalSrc) {
-			statusCB && statusCB(`Retrieving process...`);
-			await waitForProcess(processId, statusCB);
+			if (args.evalTxId || args.evalSrc) {
+				statusCB && statusCB(`Process retrieved!`);
+				statusCB && statusCB('Sending eval...');
 
-			statusCB && statusCB(`Process retrieved!`);
-			statusCB && statusCB('Sending eval...');
-			
-			try {
-				const evalResult = await handleProcessEval(deps, {
-					processId: processId,
-					evalTxId: args.evalTxId || null,
-					evalSrc: args.evalSrc || null,
-					evalTags: args.evalTags,
-				});
+				try {
+					const evalResult = await handleProcessEval(deps, {
+						processId: processId,
+						evalTxId: args.evalTxId || null,
+						evalSrc: args.evalSrc || null,
+						evalTags: args.evalTags,
+					});
 
-				if (evalResult && statusCB) statusCB('Eval complete');
-			} catch (e: any) {
-				throw new Error(e.message ?? 'Error creating process');
+					if (evalResult && statusCB) statusCB('Eval complete');
+				} catch (e: any) {
+					throw new Error(e.message ?? 'Error creating process');
+				}
 			}
-		}
 
-		return processId;
-	} catch (e: any) {
-		throw new Error(e.message ?? 'Error creating process');
-	}
+			return processId;
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error creating process');
+		}
+	};
 }

@@ -1,239 +1,221 @@
-import { aoDryRun, aoMessageResult, aoSend } from "common/ao";
-import { resolveTransaction } from "common/arweave";
-import { getGQLData } from "common/gql";
-import { 
-  TAGS, 
-  CONTENT_TYPES, 
-  AO, 
-  DEFAULT_UCM_BANNER, 
-  DEFAULT_UCM_THUMBNAIL, 
-  GATEWAYS
-} from "helpers/config";
-import { getTxEndpoint } from "helpers/endpoints";
-import { CollectionDetailType, CollectionType, DependencyType, TagType } from "helpers/types";
-import { cleanTagValue, cleanProcessField } from "helpers/utils";
+import { aoCreateProcessWith, aoDryRun, aoSend, readProcess } from '../common/ao.ts';
+import { resolveTransactionWith } from '../common/arweave.ts';
+import { AO, TAGS } from '../helpers/config.ts';
+import { getTxEndpoint } from '../helpers/endpoints.ts';
+import { CollectionDetailType, CollectionType, DependencyType, TagType } from '../helpers/types.ts';
+import { cleanProcessField, cleanTagValue, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
+
+const DEFAULT_COLLECTION_BANNER = 'eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo';
+const DEFAULT_COLLECTION_THUMBNAIL = 'lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk';
 
 export function createCollectionWith(deps: DependencyType) {
-  return async (
-    args: { 
-      walletAddress: string, 
-      profileId: string,
-      title: string,
-      description: string,
-      contentType: string,
-      banner: any,
-      thumbnail: any
-    }
-  ) => {
-    if(!deps.signer) throw new Error(`Must provide a signer when initializing to create collections`);
+	return async (
+		args: {
+			title: string;
+			description: string;
+			creator: string;
+			thumbnail: any;
+			banner: any;
+			skipRegistry?: boolean;
+			skipActivity?: boolean;
+		},
+		callback?: (status: any) => void,
+	) => {
+		if (!deps.signer) throw new Error(`No signer provided`);
 
-    const dateTime = new Date().getTime().toString();
-  
-    const collectionTags: TagType[] = [
-      { name: TAGS.keys.contentType, value: CONTENT_TYPES[args.contentType].type },
-      { name: TAGS.keys.creator, value: args.walletAddress },
-      { name: TAGS.keys.profileCreator, value: args.profileId },
-      {
-        name: TAGS.keys.ans110.title,
-        value: cleanTagValue(args.title),
-      },
-      {
-        name: TAGS.keys.ans110.description,
-        value: cleanTagValue(args.description),
-      },
-      { name: TAGS.keys.ans110.type, value: TAGS.values.document },
-      { name: TAGS.keys.dateCreated, value: dateTime },
-      {
-        name: TAGS.keys.name,
-        value: cleanTagValue(args.title),
-      },
-      { name: 'Action', value: 'Add-Collection' },
-    ];
+		const resolveTransaction = resolveTransactionWith(deps);
 
-    const bannerTx = args.banner ? await resolveTransaction(deps, args.banner) : DEFAULT_UCM_BANNER;
-    const thumbnailTx = args.banner ? await resolveTransaction(deps, args.thumbnail) : DEFAULT_UCM_THUMBNAIL;
-  
-    if (args.banner) collectionTags.push({ 
-      name: TAGS.keys.banner, 
-      value: bannerTx
-    });
-  
-    if (args.thumbnail) collectionTags.push({ 
-      name: TAGS.keys.thumbnail, 
-      value: thumbnailTx
-    });
-  
-    const processSrcFetch = await fetch(getTxEndpoint(AO.src.collection));
-    if (!processSrcFetch.ok) throw new Error(`Unable to fetch process src`)
+		const dateTime = new Date().getTime().toString();
+		const tags: TagType[] = [
+			{ name: TAGS.keys.creator, value: args.creator },
+			{
+				name: TAGS.keys.ans110.title,
+				value: cleanTagValue(args.title),
+			},
+			{
+				name: TAGS.keys.name,
+				value: cleanTagValue(args.title),
+			},
+			{
+				name: TAGS.keys.ans110.description,
+				value: cleanTagValue(args.description),
+			},
+		];
 
-    let processSrc = await processSrcFetch.text();
-  
-    processSrc = processSrc.replace(/'<NAME>'/g, cleanProcessField(args.title));
-    processSrc = processSrc.replace(/'<DESCRIPTION>'/g, cleanProcessField(args.description));
-    processSrc = processSrc.replace(/<CREATOR>/g, args.profileId);
-    processSrc = processSrc.replace(/<BANNER>/g, bannerTx ? bannerTx : DEFAULT_UCM_BANNER);
-    processSrc = processSrc.replace(/<THUMBNAIL>/g, thumbnailTx ? thumbnailTx : DEFAULT_UCM_THUMBNAIL);
-    processSrc = processSrc.replace(/<DATECREATED>/g, dateTime);
-    processSrc = processSrc.replace(/<LASTUPDATE>/g, dateTime);
-  
-    let processId: string | undefined = undefined;
-    let retryCount = 0;
-    const maxRetries = 25;
-  
-    while (!processId && retryCount < maxRetries) {
-      try {
-        processId = await deps.ao.spawn({
-          module: AO.module,
-          scheduler: AO.scheduler,
-          signer: deps.signer,
-          tags: collectionTags,
-        });
-        console.log(`Collection process: ${processId}`);
-      } catch (e: any) {
-        console.error(`Spawn attempt ${retryCount + 1} failed:`, e);
-        retryCount++;
-        if (retryCount < maxRetries) {
-          await new Promise((r) => setTimeout(r, 1000));
-        } else {
-          throw new Error(`Failed to spawn process after ${maxRetries} attempts`);
-        }
-      }
-    }
-  
-    let fetchedCollectionId: string | undefined = undefined;
-    retryCount = 0;
-    
-    while (!fetchedCollectionId) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const gqlResponse = await getGQLData({
-        gateway: GATEWAYS.goldsky,
-        ids: [processId ? processId : ''],
-        owners: null,
-        cursor: null
-      });
-  
-      if (gqlResponse && gqlResponse.data.length) {
-        console.log(`Fetched transaction`, gqlResponse.data[0].node.id, 0);
-        fetchedCollectionId = gqlResponse.data[0].node.id;
-      } else {
-        console.log(`Transaction not found`, processId, 0);
-        retryCount++;
-        if (retryCount >= 10) {
-          throw new Error(`Transaction not found after 10 attempts, process deployment retries failed`);
-        }
-      }
-    }
-  
-    await deps.ao.message({
-      process: processId,
-      signer: deps.signer,
-      tags: [{ name: 'Action', value: 'Eval' }],
-      data: processSrc,
-    });
-    
-    const registryTags = [
-      { name: 'Action', value: 'Add-Collection' },
-      { name: 'CollectionId', value: processId },
-      { name: 'Name', value: cleanTagValue(args.title) },
-      { name: 'Creator', value: args.profileId },
-      { name: 'DateCreated', value: dateTime },
-    ];
+		let thumbnailTx = null;
+		let bannerTx = null;
 
-    if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
-    if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
+		try {
+			thumbnailTx = args.banner ? await resolveTransaction(args.thumbnail) : DEFAULT_COLLECTION_THUMBNAIL;
+			bannerTx = args.banner ? await resolveTransaction(args.banner) : DEFAULT_COLLECTION_BANNER;
 
-    await deps.ao.message({
-      process: AO.collectionsRegistry,
-      signer: deps.signer,
-      tags: registryTags,
-    });
+			if (args.thumbnail)
+				tags.push({
+					name: TAGS.keys.thumbnail,
+					value: thumbnailTx,
+				});
 
-    await deps.ao.message({
-      process: processId,
-      signer: deps.signer,
-      tags: [
-        { name: 'Action', value: 'Add-Collection-To-Profile' },
-        { name: 'ProfileProcess', value: args.profileId },
-      ],
-    });
+			if (args.banner)
+				tags.push({
+					name: TAGS.keys.banner,
+					value: bannerTx,
+				});
+		} catch (e: any) {
+			console.error(e);
+		}
 
-    return processId;
-  }
+		const processSrcFetch = await fetch(getTxEndpoint(AO.src.collection));
+		if (!processSrcFetch.ok) throw new Error(`Unable to fetch process src`);
+
+		let processSrc = await processSrcFetch.text();
+
+		processSrc = processSrc.replace(/'<NAME>'/g, cleanProcessField(args.title));
+		processSrc = processSrc.replace(/'<DESCRIPTION>'/g, cleanProcessField(args.description));
+		processSrc = processSrc.replace(/<CREATOR>/g, args.creator);
+		processSrc = processSrc.replace(/<THUMBNAIL>/g, thumbnailTx ? thumbnailTx : DEFAULT_COLLECTION_THUMBNAIL);
+		processSrc = processSrc.replace(/<BANNER>/g, bannerTx ? bannerTx : DEFAULT_COLLECTION_THUMBNAIL);
+		processSrc = processSrc.replace(/<DATECREATED>/g, dateTime);
+		processSrc = processSrc.replace(/<LASTUPDATE>/g, dateTime);
+
+		try {
+			const aoCreateProcess = aoCreateProcessWith(deps);
+			const collectionId = await aoCreateProcess(
+				{ tags: tags },
+				callback ? (status) => callback(status) : undefined,
+			);
+
+			globalLog('Sending eval message to collection...');
+			if (callback) callback('Sending eval message to collection...');
+			await deps.ao.message({
+				process: collectionId,
+				signer: deps.signer,
+				tags: [{ name: 'Action', value: 'Eval' }],
+				data: processSrc,
+			});
+
+			if (!args.skipRegistry) {
+				globalLog('Sending collection to registry...');
+				if (callback) callback('Sending collection to registry...');
+
+				const registryTags = [
+					{ name: 'Action', value: 'Add-Collection' },
+					{ name: 'CollectionId', value: collectionId },
+					{ name: 'Name', value: cleanTagValue(args.title) },
+					{ name: 'Creator', value: args.creator },
+					{ name: 'DateCreated', value: dateTime },
+				];
+
+				if (bannerTx) registryTags.push({ name: 'Banner', value: bannerTx });
+				if (thumbnailTx) registryTags.push({ name: 'Thumbnail', value: thumbnailTx });
+
+				await deps.ao.message({
+					process: AO.collectionRegistry,
+					signer: deps.signer,
+					tags: registryTags,
+				});
+			}
+
+			if (!args.skipActivity) {
+				globalLog('Creating collection activity process...');
+				if (callback) callback('Creating collection activity process...');
+
+				const activityTags = [
+					{ name: 'CollectionId', value: collectionId },
+					{ name: 'DateCreated', value: dateTime },
+					{ name: 'UCM-Process', value: 'Collection-Activity' },
+					{ name: 'On-Boot', value: AO.src.collectionActivity },
+				];
+
+				const collectionActivityId = await aoCreateProcess(
+					{ tags: activityTags },
+					callback ? (status) => callback(status) : undefined,
+				);
+
+				globalLog('Adding activity to collection process...');
+				if (callback) callback('Adding activity to collection process...');
+				await deps.ao.message({
+					process: collectionId,
+					signer: deps.signer,
+					tags: [{ name: 'Action', value: 'Eval' }],
+					data: `ActivityProcess = '${collectionActivityId}'`,
+				});
+			}
+
+			return collectionId;
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error creating collection');
+		}
+	};
 }
 
-export function updateCollectionWith(deps: DependencyType) {
-  return async(args: { 
-    profileId: string, 
-    collectionId: string, 
-    assetIds: string[] 
-  }): Promise<string> => {
-    return await aoSend(deps, {
-      processId: args.profileId,
-      action: 'Run-Action',
-      tags: null,
-      data: {
-        Target: args.collectionId,
-        Action: 'Update-Assets',
-        Input: JSON.stringify({
-          AssetIds: args.assetIds,
-          UpdateType: 'Add',
-        }),
-      }
-    });
-  }
+export function updateCollectionAssetsWith(deps: DependencyType) {
+	return async (args: {
+		collectionId: string;
+		assetIds: string[];
+		creator: string;
+		updateType: 'Add' | 'Remove';
+	}): Promise<string> => {
+		return await aoSend(deps, {
+			processId: args.creator,
+			action: 'Run-Action',
+			tags: [
+				{ name: 'Forward-To', value: args.collectionId },
+				{ name: 'Forward-Action', value: 'Update-Assets' },
+			],
+			data: {
+				Target: args.collectionId,
+				Action: 'Update-Assets',
+				Input: {
+					AssetIds: args.assetIds,
+					UpdateType: args.updateType,
+				},
+			},
+		});
+	};
 }
 
 export function getCollectionWith(deps: DependencyType) {
-  return async(args: { id: string }): Promise<CollectionDetailType | null> => {
-    const response = await aoDryRun(deps, {
-      processId: args.id,
-      action: 'Info',
-    });
+	return async (collectionId: string): Promise<CollectionDetailType | null> => {
+		const response = await readProcess(deps, {
+			processId: collectionId,
+			path: 'collection',
+			fallbackAction: 'Info',
+		});
 
-    const collection = {
-      id: args.id,
-      title: response.Name,
-      description: response.Description,
-      creator: response.Creator,
-      dateCreated: response.DateCreated,
-      banner: response.Banner ?? DEFAULT_UCM_BANNER,
-      thumbnail: response.Thumbnail ?? DEFAULT_UCM_THUMBNAIL,
-    };
+		if (response) {
+			return mapFromProcessCase(response);
+		}
 
-    return {
-      ...collection,
-      assetIds: response.Assets,
-      creatorProfile: null,
-    };
-  }
+		return null;
+	};
 }
 
 export function getCollectionsWith(deps: DependencyType) {
-  return async (args: {creator?: string}): Promise<CollectionType[] | null> => {
-    const action = args.creator ? 'Get-Collections-By-User' : 'Get-Collections';
+	return async (args: { creator?: string }): Promise<CollectionType[] | null> => {
+		const action = args.creator ? 'Get-Collections-By-User' : 'Get-Collections';
 
-    const response = await aoDryRun(deps, {
-      processId: AO.collectionsRegistry,
-      action: action,
-      tags: args.creator ? [{ name: 'Creator', value: args.creator }] : null,
-    });
+		const response = await aoDryRun(deps, {
+			processId: AO.collectionRegistry,
+			action: action,
+			tags: args.creator ? [{ name: 'Creator', value: args.creator }] : null,
+		});
 
-    if (response && response.Collections && response.Collections.length) {
-      const collections = response.Collections.map((collection: any) => {
-        return {
-          id: collection.Id,
-          title: collection.Name.replace(/\[|\]/g, ''),
-          description: collection.Description,
-          creator: collection.Creator,
-          dateCreated: collection.DateCreated,
-          banner: collection.Banner,
-          thumbnail: collection.Thumbnail,
-        };
-      });
+		if (response && response.Collections && response.Collections.length) {
+			const collections = response.Collections.map((collection: any) => {
+				return {
+					id: collection.Id,
+					title: collection.Name.replace(/\[|\]/g, ''),
+					description: collection.Description,
+					creator: collection.Creator,
+					dateCreated: collection.DateCreated,
+					banner: collection.Banner,
+					thumbnail: collection.Thumbnail,
+				};
+			});
 
-      return collections;
-    }
+			return collections;
+		}
 
-    return null;
-  }
+		return null;
+	};
 }

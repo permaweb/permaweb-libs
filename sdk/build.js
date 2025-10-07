@@ -1,20 +1,23 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import esbuild from 'esbuild';
+import alias from 'esbuild-plugin-alias';
 import dtsPlugin from 'esbuild-plugin-d.ts';
+import { nodeModulesPolyfillPlugin } from 'esbuild-plugins-node-modules-polyfill';
 import path from 'path';
 
 const sharedConfig = {
-  entryPoints: ['src/index.ts'],
-  bundle: true,
-  sourcemap: true,
-  minify: true,
-  inject: [path.resolve('node_modules/process/browser.js')], // Explicitly inject the process polyfill
-  define: {
-    'process.env.NODE_ENV': JSON.stringify('production'),
-  },
+	entryPoints: ['src/index.ts'],
+	bundle: true,
+	sourcemap: false,
+	minify: true,
+	inject: [path.resolve('node_modules/process/browser.js')],
+	define: {
+		'process.env.NODE_ENV': JSON.stringify('production'),
+	},
 };
 
 const buildConfigs = [
-  // Node.js (CJS)
 	{
 		...sharedConfig,
 		outfile: 'dist/index.cjs',
@@ -22,32 +25,51 @@ const buildConfigs = [
 		format: 'cjs',
 		plugins: [dtsPlugin({ outDir: 'dist/types' })],
 	},
-  // Node.js (ESM)
-  {
+	{
 		...sharedConfig,
 		outfile: 'dist/index.js',
 		platform: 'node',
 		format: 'esm',
 		plugins: [dtsPlugin({ outDir: 'dist/types' })],
 	},
-	// Browser (ESM)
 	{
 		...sharedConfig,
 		outfile: 'dist/index.esm.js',
 		platform: 'browser',
 		format: 'esm',
-		plugins: [dtsPlugin({ outDir: 'dist/types' })],
+		external: ['fs', 'os', 'path', 'http', 'https', 'zlib'],
+		plugins: [
+			alias({
+				'node:process': require.resolve('process/browser'),
+			}),
+			nodeModulesPolyfillPlugin({
+				globals: { process: true, Buffer: true },
+				modules: {
+					crypto: true,
+					stream: true,
+					events: true,
+					util: true,
+					buffer: true,
+				},
+			}),
+			dtsPlugin({ outDir: 'dist/types' }),
+		],
 	},
 ];
 
 async function build() {
-  try {
-    await Promise.all(buildConfigs.map(config => esbuild.build(config)));
-    console.log('Build complete!');
-  } catch (error) {
-    console.error('Build failed:', error);
-    process.exit(1);
-  }
+	try {
+		for (let i = 0; i < buildConfigs.length; i++) {
+			const cfg = buildConfigs[i];
+			console.log(`Building configuration ${i + 1}: ${cfg.outfile}`);
+			await esbuild.build(cfg);
+			console.log(`Finished building configuration ${i + 1}: ${cfg.outfile}`);
+		}
+		console.log('Build complete!');
+	} catch (err) {
+		console.error('Build failed:', err);
+		process.exit(1);
+	}
 }
 
 build();

@@ -1,155 +1,158 @@
-import { resolveTransaction } from 'common/arweave';
-import { getGQLData } from 'common/gql';
+import { GATEWAYS, TAGS } from 'helpers/config.ts';
 
-import { GATEWAYS, TAGS } from 'helpers/config';
-import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from 'helpers/types';
-import { getBootTag, mapFromProcessCase } from 'helpers/utils';
+import { resolveTransactionWith } from '../common/arweave.ts';
+import { getGQLData } from '../common/gql.ts';
+import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
+import { getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
-import { createZoneWith, updateZoneWith, getZoneWith } from './zones';
-
-// TODO: Bootloader registry
+import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
 
 export function createProfileWith(deps: DependencyType) {
-  const createZone = createZoneWith(deps);
+	const createZone = createZoneWith(deps);
+	const resolveTransaction = resolveTransactionWith(deps);
 
-  return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
-    let profileId: string | null = null;
-  
-    const tags: { name: string, value: string }[] = [
-      { name: TAGS.keys.dataProtocol, value: 'Zone' },
-      { name: TAGS.keys.zoneType, value: 'User' }
-    ];
-  
-    const addImageTag = async (imageKey: 'Thumbnail' | 'Banner') => {
-      const key: any = imageKey.toLowerCase();
-      if ((args as any)[key]) {
-        try {
-          const resolvedImage = await resolveTransaction(deps, (args as any)[key]);
-          tags.push(getBootTag(imageKey, resolvedImage));
-        } catch (e: any) {
-          if (callback) callback(`Failed to resolve ${imageKey}: ${e.message}`);
-          else console.error(e);
-        }
-      }
-    };
-  
-    tags.push(getBootTag('Username', args.username));
-    tags.push(getBootTag('DisplayName', args.displayName));
-    tags.push(getBootTag('Description', args.description));
-  
-    await Promise.all([addImageTag('Thumbnail'), addImageTag('Banner')]);
-  
-    try {
-      profileId = await createZone({ tags: tags }, callback);
-  
-      // if (profileId) {
-      // 	globalLog(`Profile ID: ${profileId}`);
-  
-      // 	await waitForProcess(profileId);
-  
-      // 	const registerId = await aoSend({
-      // 		processId: profileId,
-      // 		wallet: wallet,
-      // 		action: 'Register-Whitelisted-Subscriber',
-      // 		tags: [
-      // 			{ name: 'Topics', value: JSON.stringify(['Zone-Update']) },
-      // 			{ name: 'Subscriber-Process-Id', value: 'Wl7pTf-UEp6SIIu3S5MsTX074Sg8MhCx40NuG_YEhmk' },
-      // 		]
-      // 	});
-  
-      // 	console.log(`Register ID: ${registerId}`);
-      // }
-    }
-    catch (e: any) {
-      throw new Error(e.message ?? 'Error creating profile');
-    }
-  
-    return profileId;
-  }
+	return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
+		let profileId: string | null = null;
+
+		const tags: { name: string; value: string }[] = [
+			{ name: TAGS.keys.zoneType, value: TAGS.values.user },
+		];
+
+		const addImageTag = async (imageKey: 'Thumbnail' | 'Banner') => {
+			const key: any = imageKey.toLowerCase();
+			const value = (args as any)[key];
+			if (value && isValidMediaData(value)) {
+				try {
+					const resolvedImage = await resolveTransaction((args as any)[key]);
+					tags.push(getBootTag(imageKey, resolvedImage));
+				} catch (e: any) {
+					if (callback) callback(`Failed to resolve ${imageKey}: ${e.message}`);
+					else console.error(e);
+				}
+			}
+		};
+
+		if (args.username) tags.push(getBootTag('Username', args.username));
+		if (args.displayName) tags.push(getBootTag('DisplayName', args.displayName));
+		if (args.description) tags.push(getBootTag('Description', args.description));
+
+		await Promise.all([addImageTag('Thumbnail'), addImageTag('Banner')]);
+
+		try {
+			profileId = await createZone({ tags: tags }, callback);
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error creating profile');
+		}
+
+		return profileId;
+	};
 }
 
 export function updateProfileWith(deps: DependencyType) {
-  const updateZone = updateZoneWith(deps);
+	const updateZone = updateZoneWith(deps);
+	const resolveTransaction = resolveTransactionWith(deps);
 
-  return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
-    if (profileId) {
-      let data: any = {
-        Username: args.username,
-        DisplayName: args.displayName,
-        Description: args.description
-      };
-  
-      if (args.thumbnail) {
-        try {
-          data.Thumbnail = await resolveTransaction(deps, args.thumbnail);
-        } catch (e: any) {
-          if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
-        }
-      }
-  
-      if (args.banner) {
-        try {
-          data.Banner = await resolveTransaction(deps, args.banner);
-        } catch (e: any) {
-          if (callback) callback(`Failed to resolve banner: ${e.message}`);
-        }
-      }
-  
-      try {
-        return await updateZone(data, profileId);
-      }
-      catch (e: any) {
-        throw new Error(e.message ?? 'Error creating profile');
-      }
-    }
-    else {
-      throw new Error('No profile provided');
-    }
-  }
+	return async (args: ProfileArgsType, profileId: string, callback?: (status: any) => void): Promise<string | null> => {
+		if (profileId) {
+			let data: any = {
+				Username: args.username,
+				DisplayName: args.displayName,
+				Description: args.description,
+			};
+
+			if (args.thumbnail && isValidMediaData(args.thumbnail)) {
+				try {
+					data.Thumbnail = await resolveTransaction(args.thumbnail);
+				} catch (e: any) {
+					if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
+				}
+			}
+			else data.Thumbnail = 'None';
+
+			if (args.banner && isValidMediaData(args.banner)) {
+				try {
+					data.Banner = await resolveTransaction(args.banner);
+				} catch (e: any) {
+					if (callback) callback(`Failed to resolve banner: ${e.message}`);
+				}
+			}
+			else data.Banner = 'None';
+
+			try {
+				return await updateZone(data, profileId);
+			} catch (e: any) {
+				throw new Error(e.message ?? 'Error creating profile');
+			}
+		} else {
+			throw new Error('No profile provided');
+		}
+	};
+}
+
+export function updateProfileVersionWith(deps: DependencyType) {
+	const updateZoneVersion = updateZoneVersionWith(deps);
+
+	return async (args: { profileId: string }): Promise<string | null> => {
+		try {
+			return await updateZoneVersion({ zoneId: args.profileId });
+		} catch (e: any) {
+			throw new Error(e);
+		}
+	};
 }
 
 export function getProfileByIdWith(deps: DependencyType) {
-  const getZone = getZoneWith(deps);
+	const getZone = getZoneWith(deps);
 
-  return async (profileId: string): Promise<ProfileType | null> => {
-    try {
-      const zone = await getZone(profileId);
-      return { id: profileId, ...mapFromProcessCase(zone.Store ?? {}), assets: mapFromProcessCase(zone.Assets ?? []) };
-    }
-    catch (e: any) {
-      throw new Error(e.message ?? 'Error fetching profile');
-    }
-  }
+	return async (profileId: string): Promise<ProfileType | null> => {
+		try {
+			const zone = await getZone(profileId);
+			if (!zone) {
+				throw new Error('Error fetching profile - Not found');
+			}
+			return {
+				id: profileId,
+				owner: zone.owner,
+				assets: zone.assets,
+				roles: zone.roles,
+				invites: zone.invites,
+				version: zone.version,
+				authorities: zone.authorities,
+				...zone.store,
+			};
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error fetching profile');
+		}
+	};
 }
 
 export function getProfileByWalletAddressWith(deps: DependencyType) {
-  const getProfileById = getProfileByIdWith(deps);
+	const getProfileById = getProfileByIdWith(deps);
 
-  return async (walletAddress: string): Promise<ProfileType & any | null> => {
-    try {
-      const gqlResponse = await getGQLData({
-        gateway: GATEWAYS.arweave,
-        tags: [
-          { name: TAGS.keys.dataProtocol, values: ['Zone'] },
-          { name: TAGS.keys.zoneType, values: ['User'] },
-        ],
-        owners: [walletAddress]
-      });
-  
-      if (gqlResponse?.data?.length > 0) {
-        gqlResponse.data.sort((a: GQLNodeResponseType, b: GQLNodeResponseType) => {
-          const timestampA = a.node.block?.timestamp ?? 0;
-          const timestampB = b.node.block?.timestamp ?? 0;
-          return timestampB - timestampA;
-        });
-  
-        return await getProfileById(gqlResponse.data[0].node.id);
-      }
-  
-      return { id: null };
-    }
-    catch (e: any) {
-      throw new Error(e.message ?? 'Error fetching profile');
-    }
-  }
+	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
+		try {
+			const gqlResponse = await getGQLData({
+				gateway: GATEWAYS.ao,
+				tags: [
+					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.dataProtocol] },
+					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] }
+				],
+				owners: [walletAddress],
+			});
+
+			if (gqlResponse?.data?.length > 0) {
+				gqlResponse.data.sort((a: GQLNodeResponseType, b: GQLNodeResponseType) => {
+					const timestampA = a.node.block?.timestamp ?? 0;
+					const timestampB = b.node.block?.timestamp ?? 0;
+					return timestampB - timestampA;
+				});
+
+				return await getProfileById(gqlResponse.data[0].node.id);
+			}
+
+			return { id: null };
+		} catch (e: any) {
+			throw new Error(e.message ?? 'Error fetching profile');
+		}
+	};
 }
