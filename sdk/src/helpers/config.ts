@@ -6,7 +6,7 @@ export const AO = {
 		asset: 'LlyF5s11sJIWvfNbkH-tavR-P7IJfTvkHHOdlwtGIJM',
 		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
 		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
-		comments: 'EIDa_qx_PRPZQA5VhbkImJa1rMk6tp5mm9ysBCO7bk8',
+		comments: 'RvozS-4Mbcmq66gPapsNOyERkg3LrpR0vSRKz8wIi4k',
 		zone: {
 			id: 'eDZu7f4RKNT0TawGluj0Uo-qN-rQqleWR-rIgF26A5A',
 			version: '0.0.4'
@@ -16,7 +16,7 @@ export const AO = {
 };
 
 export const HB = {
-	defaultNode: 'https://forward.computer'
+	defaultNode: 'https://forward.computer',
 };
 
 export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: any) => any } } = {
@@ -28,7 +28,7 @@ export const CONTENT_TYPES: { [key: string]: { type: string; serialize: (data: a
 
 export const GATEWAYS = {
 	arweave: 'arweave.net',
-	ao: 'ao-search-gateway.goldsky.com'
+	ao: 'ao-search-gateway.goldsky.com',
 };
 
 export const LICENSES = {

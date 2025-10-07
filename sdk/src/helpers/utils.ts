@@ -281,5 +281,6 @@ export function getBootTag(key: string, value: string) {
 }
 
 export function isValidMediaData(data: any) {
-	return checkValidAddress(data) || data.startsWith('data')
+	return checkValidAddress(data) || data.startsWith('data');
 }
+
