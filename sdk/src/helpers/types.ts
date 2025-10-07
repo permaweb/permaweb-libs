@@ -227,12 +227,11 @@ export type ModerationActionType = 'hide' | 'remove' | 'restore';
 
 export type ModerationEntryType = {
 	commentId: string;
+	commentsId: string;
 	action: ModerationActionType;
 	reason?: string;
 	moderator: string;
 	dateCreated: number;
-	dataSource?: string;
-	rootSource?: string;
 };
 
 export type TagType = { name: string; value: string };

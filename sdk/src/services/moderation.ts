@@ -7,23 +7,19 @@ export function addModerationActionWith(deps: DependencyType) {
   return async (
     zoneId: string,
     commentId: string,
+    commentsId: string,
     action: ModerationActionType,
     moderator: string,
-    options?: {
-      reason?: string;
-      dataSource?: string;
-      rootSource?: string;
-    }
+    reason?: string
   ): Promise<string | null> => {
     try {
       const moderationEntry: ModerationEntryType = {
         commentId,
+        commentsId,
         action,
         moderator,
         dateCreated: Date.now(),
-        ...(options?.reason && { reason: options.reason }),
-        ...(options?.dataSource && { dataSource: options.dataSource }),
-        ...(options?.rootSource && { rootSource: options.rootSource })
+        ...(reason && { reason })
       };
 
       return await addToZone(
