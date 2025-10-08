@@ -108,12 +108,12 @@ function logError(message) {
 
 	const AO_NODE = {
 		url: 'http://localhost:8734',
-		scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc'
+		//scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc'
 	}
 
 	const dependencies = {
 		ao: connect({
-			MODE: 'mainnet',
+			MODE: 'legacy',
 			URL: AO_NODE.url,
 			SCHEDULER: AO_NODE.scheduler,
 			signer: signer,
