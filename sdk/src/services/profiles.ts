@@ -14,9 +14,7 @@ export function createProfileWith(deps: DependencyType) {
 	return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
 		let profileId: string | null = null;
 
-		const tags: { name: string; value: string }[] = [
-			{ name: TAGS.keys.zoneType, value: TAGS.values.user },
-		];
+		const tags: { name: string; value: string }[] = [{ name: TAGS.keys.zoneType, value: TAGS.values.user }];
 
 		const addImageTag = async (imageKey: 'Thumbnail' | 'Banner') => {
 			const key: any = imageKey.toLowerCase();
@@ -66,8 +64,7 @@ export function updateProfileWith(deps: DependencyType) {
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
 				}
-			}
-			else data.Thumbnail = 'None';
+			} else data.Thumbnail = 'None';
 
 			if (args.banner && isValidMediaData(args.banner)) {
 				try {
@@ -75,8 +72,7 @@ export function updateProfileWith(deps: DependencyType) {
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve banner: ${e.message}`);
 				}
-			}
-			else data.Banner = 'None';
+			} else data.Banner = 'None';
 
 			try {
 				return await updateZone(data, profileId);
@@ -135,7 +131,7 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 				gateway: GATEWAYS.ao,
 				tags: [
 					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.dataProtocol] },
-					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] }
+					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] },
 				],
 				owners: [walletAddress],
 			});

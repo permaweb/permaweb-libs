@@ -167,7 +167,7 @@ export function updateZoneVersionWith(deps: DependencyType) {
 }
 
 export function updateZoneAuthoritiesWith(deps: DependencyType) {
-	return async (args: { zoneId: string, authorityId: string }): Promise<string | null> => {
+	return async (args: { zoneId: string; authorityId: string }): Promise<string | null> => {
 		try {
 			globalLog(`Adding authority ${args.authorityId} to process ${args.zoneId}`);
 
