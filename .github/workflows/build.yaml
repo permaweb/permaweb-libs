@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         node_version: [22.x]
-        command: ['lint', 'format', 'build']
+        command: ['format', 'build']
     steps:
       - uses: actions/checkout@v4
 

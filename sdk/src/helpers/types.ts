@@ -2,7 +2,7 @@ export type DependencyType = {
 	ao: any;
 	signer?: any;
 	arweave?: any;
-	node?: { url: string, scheduler: string, authority: string };
+	node?: { url: string; scheduler: string; authority: string };
 };
 
 export type ProcessReadType = {

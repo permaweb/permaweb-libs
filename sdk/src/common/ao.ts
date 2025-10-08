@@ -48,7 +48,10 @@ export function aoSendWith(deps: DependencyType) {
 
 export async function aoSend(deps: DependencyType, args: MessageSendType): Promise<string> {
 	try {
-		const tags: TagType[] = [{ name: 'Action', value: args.action }, { name: 'Message-Timestamp', value: new Date().getTime().toString() }];
+		const tags: TagType[] = [
+			{ name: 'Action', value: args.action },
+			{ name: 'Message-Timestamp', value: new Date().getTime().toString() },
+		];
 		if (args.tags) tags.push(...args.tags);
 
 		const data = args.useRawData ? args.data : JSON.stringify(args.data);
@@ -73,7 +76,7 @@ export function readProcessWith(deps: DependencyType) {
 }
 
 export async function readProcess(deps: DependencyType, args: ProcessReadType) {
-	const node = deps.node?.url ?? HB.defaultNode
+	const node = deps.node?.url ?? HB.defaultNode;
 	let url = `${node}/${args.processId}~process@1.0/now/${args.path}`;
 	if (args.serialize) url += '/serialize~json@1.0';
 
@@ -83,8 +86,7 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 			return res.json();
 		}
 
-		throw new Error('Error getting state from HyperBEAM.')
-
+		throw new Error('Error getting state from HyperBEAM.');
 	} catch (e: any) {
 		if (args.fallbackAction) {
 			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });

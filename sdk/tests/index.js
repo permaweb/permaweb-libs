@@ -109,7 +109,7 @@ function logError(message) {
 	const AO_NODE = {
 		url: 'http://localhost:8734',
 		//scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc'
-	}
+	};
 
 	const dependencies = {
 		ao: connect({
@@ -306,9 +306,9 @@ function logError(message) {
 					contentType: 'text/plain',
 					assetType: 'ANS-110',
 					users: [walletAddress, CREATOR],
-					spawnComments: true
+					spawnComments: true,
 				},
-				(status) => console.log(status)
+				(status) => console.log(status),
 			);
 
 			expect(assetId).toBeDefined();
@@ -327,7 +327,7 @@ function logError(message) {
 				const commentAdd1 = await permaweb.createComment({
 					commentsId: commentsId,
 					creator: CREATOR,
-					content: 'Test Comment 1'
+					content: 'Test Comment 1',
 				});
 
 				expect(commentAdd1).toBeDefined();
@@ -335,14 +335,14 @@ function logError(message) {
 				const commentAdd2 = await permaweb.createComment({
 					commentsId: commentsId,
 					creator: CREATOR,
-					content: 'Test Comment 2'
+					content: 'Test Comment 2',
 				});
 
 				expect(commentAdd2).toBeDefined();
 
 				logTest('Testing comments fetch...');
 				let comments = await permaweb.getComments({
-					commentsId: commentsId
+					commentsId: commentsId,
 				});
 
 				expect(comments).toEqualLength(2);
@@ -351,7 +351,7 @@ function logError(message) {
 				const commentStatusUpdate = await permaweb.updateCommentStatus({
 					commentsId: commentsId,
 					commentId: comments[0].id,
-					status: 'inactive'
+					status: 'inactive',
 				});
 
 				comments = await permaweb.getComments({ commentsId: commentsId });
@@ -361,18 +361,16 @@ function logError(message) {
 				logTest('Testing comment removal...');
 				const commentRemoveUpdate = await permaweb.removeComment({
 					commentsId: commentsId,
-					commentId: comments[0].id
+					commentId: comments[0].id,
 				});
 
 				comments = await permaweb.getComments({ commentsId: commentsId });
 
 				expect(comments).toEqualLength(1);
-			}
-			else {
+			} else {
 				logError('Comment creation failed');
 			}
-		}
-		catch (e) {
+		} catch (e) {
 			logError(e.message ?? 'Comment tests failed');
 		}
 	}
