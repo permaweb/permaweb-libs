@@ -49,8 +49,13 @@ function init(deps: Helpers.DependencyType) {
 		getCollections: Services.getCollectionsWith(deps),
 
     /* Moderation */
-    addModerationAction: Services.addModerationActionWith(deps),
-    getModerationActions: Services.getModerationActionsWith(deps),
+    addModerationEntry: Services.addModerationEntryWith(deps),
+    getModerationEntries: Services.getModerationEntriesWith(deps),
+    updateModerationEntry: Services.updateModerationEntryWith(deps),
+    removeModerationEntry: Services.removeModerationEntryWith(deps),
+    addModerationSubscription: Services.addModerationSubscriptionWith(deps),
+    removeModerationSubscription: Services.removeModerationSubscriptionWith(deps),
+    getModerationSubscriptions: Services.getModerationSubscriptionsWith(deps),
 
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),

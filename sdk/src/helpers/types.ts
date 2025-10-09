@@ -223,19 +223,18 @@ export type DefaultGQLResponseType = {
 
 export type BatchAGQLResponseType = { [queryKey: string]: DefaultGQLResponseType };
 
-export type ModerationActionType = 'hide' | 'remove' | 'restore' | 'ban' | 'unban' | 'warn';
+export type ModerationStatusType = 'blocked' | 'allowed';
 
-export type ModerationTargetType = 'comment' | 'user' | 'asset' | 'collection';
+export type ModerationTargetType = 'comment' | 'profile';
 
 export type ModerationEntryType = {
-	targetType: ModerationTargetType;
 	targetId: string;
-	targetContext?: string; // e.g., commentsId for comments, zoneId for users
-	action: ModerationActionType;
+	status: ModerationStatusType;
+	targetContext?: string;
 	reason?: string;
 	moderator: string;
 	dateCreated: number;
-	metadata?: any; // Additional data specific to the target type
+	metadata?: any;
 };
 
 export type TagType = { name: string; value: string };
