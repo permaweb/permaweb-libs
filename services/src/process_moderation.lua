@@ -314,10 +314,16 @@ Handlers.add("Add-Moderation-Subscription", "Add-Moderation-Subscription", funct
 	end
 
 	local zoneId = getTag(msg, "Zone-Id")
+	local moderationProcessId = getTag(msg, "Moderation-Process-Id")
 	local subType = getTag(msg, "Subscription-Type") or "default"
 
 	if not zoneId then
 		Send({ Target = msg.From, Action = "Add-Subscription-Error", Error = "Zone-Id required" })
+		return
+	end
+
+	if not moderationProcessId then
+		Send({ Target = msg.From, Action = "Add-Subscription-Error", Error = "Moderation-Process-Id required" })
 		return
 	end
 
@@ -329,6 +335,7 @@ Handlers.add("Add-Moderation-Subscription", "Add-Moderation-Subscription", funct
 
 	local subscription = {
 		Id = zoneId,
+		ModerationProcessId = moderationProcessId,
 		Type = subType,
 		DateCreated = msg.Timestamp
 	}

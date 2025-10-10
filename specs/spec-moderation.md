@@ -47,6 +47,7 @@ Each moderation process is an independent AO process that:
 ```lua
 {
   Id = "zone-or-source-id",
+  ModerationProcessId = "moderation-process-id",
   Type = "default" | "spam" | string,
   DateCreated = timestamp
 }
@@ -90,7 +91,7 @@ Removes a moderation entry.
 
 ##### Add-Moderation-Subscription
 Adds a subscription to another moderation source.
-- Required Tags: `Zone-Id`
+- Required Tags: `Zone-Id`, `Moderation-Process-Id`
 - Optional Tags: `Subscription-Type`
 - Authorization: Required
 

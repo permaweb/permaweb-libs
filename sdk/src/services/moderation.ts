@@ -233,7 +233,15 @@ export function addModerationSubscriptionWith(deps: DependencyType) {
         throw new Error('No moderation process found for this zone');
       }
 
-      const tags = [{ name: 'Zone-Id', value: subscriptionZoneId }];
+      const targetModerationProcessId = await getModerationProcessId(deps, subscriptionZoneId);
+      if (!targetModerationProcessId) {
+        throw new Error('No moderation process found for the subscription zone');
+      }
+
+      const tags = [
+        { name: 'Zone-Id', value: subscriptionZoneId },
+        { name: 'Moderation-Process-Id', value: targetModerationProcessId }
+      ];
       if (subscriptionType) {
         tags.push({ name: 'Subscription-Type', value: subscriptionType });
       }

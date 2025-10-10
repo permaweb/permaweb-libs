@@ -953,7 +953,7 @@ const subscriptionId = await permaweb.addModerationSubscription(
   <summary><strong>Parameters</strong></summary>
 
 - `zoneId`: The ID of the zone that will subscribe to another zone's moderation list
-- `subscriptionZoneId`: The ID of the zone to subscribe to
+- `subscriptionZoneId`: The ID of the zone to subscribe to (the function automatically retrieves the moderation process ID for this zone)
 - `subscriptionType` (optional): The type of subscription (e.g., "default", "spam"). Defaults to "default"
 
 </details>
