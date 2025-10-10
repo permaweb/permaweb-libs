@@ -223,6 +223,20 @@ export type DefaultGQLResponseType = {
 
 export type BatchAGQLResponseType = { [queryKey: string]: DefaultGQLResponseType };
 
+export type ModerationStatusType = 'blocked' | 'allowed';
+
+export type ModerationTargetType = 'comment' | 'profile';
+
+export type ModerationEntryType = {
+	targetId: string;
+	status: ModerationStatusType;
+	targetContext?: string;
+	reason?: string;
+	moderator: string;
+	dateCreated: number;
+	metadata?: any;
+};
+
 export type TagType = { name: string; value: string };
 
 export type TagFilterType = { name: string; values: string[]; match?: string };
