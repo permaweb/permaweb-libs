@@ -224,7 +224,7 @@ export function removeModerationEntryWith(deps: DependencyType) {
 export function addModerationSubscriptionWith(deps: DependencyType) {
   return async (
     zoneId: string,
-    subscriptionZoneId: string,
+    moderationId: string,
     subscriptionType?: string
   ): Promise<string | null> => {
     try {
@@ -233,14 +233,9 @@ export function addModerationSubscriptionWith(deps: DependencyType) {
         throw new Error('No moderation process found for this zone');
       }
 
-      const targetModerationProcessId = await getModerationProcessId(deps, subscriptionZoneId);
-      if (!targetModerationProcessId) {
-        throw new Error('No moderation process found for the subscription zone');
-      }
-
       const tags = [
-        { name: 'Zone-Id', value: subscriptionZoneId },
-        { name: 'Moderation-Process-Id', value: targetModerationProcessId }
+        { name: 'Zone-Id', value: moderationId },
+        { name: 'Moderation-Process-Id', value: moderationId }
       ];
       if (subscriptionType) {
         tags.push({ name: 'Subscription-Type', value: subscriptionType });
@@ -263,7 +258,7 @@ export function addModerationSubscriptionWith(deps: DependencyType) {
 export function removeModerationSubscriptionWith(deps: DependencyType) {
   return async (
     zoneId: string,
-    subscriptionZoneId: string
+    moderationId: string
   ): Promise<string | null> => {
     try {
       const moderationProcessId = await getModerationProcessId(deps, zoneId);
@@ -274,7 +269,7 @@ export function removeModerationSubscriptionWith(deps: DependencyType) {
       return await aoSend(deps, {
         processId: moderationProcessId,
         action: 'Remove-Moderation-Subscription',
-        tags: [{ name: 'Zone-Id', value: subscriptionZoneId }]
+        tags: [{ name: 'Zone-Id', value: moderationId }]
       });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error removing moderation subscription');

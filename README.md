@@ -944,7 +944,7 @@ ModerationRemoveId;
 ```typescript
 const subscriptionId = await permaweb.addModerationSubscription(
   zoneId,
-  "SubscribedZoneId",
+  "ModerationProcessId",
   "default"
 );
 ```
@@ -952,8 +952,8 @@ const subscriptionId = await permaweb.addModerationSubscription(
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `zoneId`: The ID of the zone that will subscribe to another zone's moderation list
-- `subscriptionZoneId`: The ID of the zone to subscribe to (the function automatically retrieves the moderation process ID for this zone)
+- `zoneId`: The ID of the zone that will subscribe to another moderation list
+- `moderationId`: The ID of the moderation process to subscribe to
 - `subscriptionType` (optional): The type of subscription (e.g., "default", "spam"). Defaults to "default"
 
 </details>
@@ -970,14 +970,14 @@ ModerationSubscriptionId;
 ##### `removeModerationSubscription`
 
 ```typescript
-const removeId = await permaweb.removeModerationSubscription(zoneId, "SubscribedZoneId");
+const removeId = await permaweb.removeModerationSubscription(zoneId, "ModerationProcessId");
 ```
 
 <details>
   <summary><strong>Parameters</strong></summary>
 
 - `zoneId`: The ID of the zone to remove the subscription from
-- `subscriptionZoneId`: The ID of the zone to unsubscribe from
+- `moderationId`: The ID of the moderation process to unsubscribe from
 
 </details>
 
