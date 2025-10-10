@@ -30,7 +30,7 @@ function init(deps: Helpers.DependencyType) {
 		/* Assets */
 		createAtomicAsset: Services.createAtomicAssetWith(deps),
 		getAtomicAsset: Services.getAtomicAssetWith(deps),
-		getAtomicAssets: Services.getAtomicAssets,    
+		getAtomicAssets: Services.getAtomicAssets,
   
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
