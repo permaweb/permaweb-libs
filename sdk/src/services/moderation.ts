@@ -1,9 +1,20 @@
+import { aoSend, readProcess } from '../common/ao';
 import { DependencyType, ModerationEntryType, ModerationStatusType, ModerationTargetType } from 'helpers/types';
-import { addToZoneWith, getZoneWith } from './zones';
+import { getZoneWith } from './zones';
 
+/**
+ * Get the moderation process ID for a zone
+ */
+async function getModerationProcessId(deps: DependencyType, zoneId: string): Promise<string | null> {
+  const getZone = getZoneWith(deps);
+  const zone = await getZone(zoneId);
+  return zone?.Moderation || null;
+}
+
+/**
+ * Add a moderation entry to the moderation process
+ */
 export function addModerationEntryWith(deps: DependencyType) {
-  const addToZone = addToZoneWith(deps);
-
   return async (
     zoneId: string,
     targetType: ModerationTargetType,
@@ -17,34 +28,42 @@ export function addModerationEntryWith(deps: DependencyType) {
     }
   ): Promise<string | null> => {
     try {
-      const moderationEntry: ModerationEntryType = {
-        targetId: entry.targetId,
-        status: entry.status,
-        moderator: entry.moderator,
-        dateCreated: Date.now(),
-        ...(entry.targetContext && { targetContext: entry.targetContext }),
-        ...(entry.reason && { reason: entry.reason }),
-        ...(entry.metadata && { metadata: entry.metadata })
-      };
+      const moderationProcessId = await getModerationProcessId(deps, zoneId);
+      if (!moderationProcessId) {
+        throw new Error('No moderation process found for this zone');
+      }
 
-      const path = targetType === 'comment' ? 'Moderation.Comments' : 'Moderation.Profiles';
+      const tags = [
+        { name: 'Target-Type', value: targetType },
+        { name: 'Target-Id', value: entry.targetId },
+        { name: 'Status', value: entry.status },
+      ];
 
-      return await addToZone(
-        {
-          path,
-          data: moderationEntry
-        },
-        zoneId
-      );
+      if (entry.targetContext) {
+        tags.push({ name: 'Target-Context', value: entry.targetContext });
+      }
+      if (entry.reason) {
+        tags.push({ name: 'Reason', value: entry.reason });
+      }
+
+      const data = entry.metadata ? JSON.stringify(entry.metadata) : undefined;
+
+      return await aoSend(deps, {
+        processId: moderationProcessId,
+        action: 'Add-Moderation-Entry',
+        tags,
+        data
+      });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error adding moderation entry');
     }
   };
 }
 
+/**
+ * Get moderation entries from the moderation process
+ */
 export function getModerationEntriesWith(deps: DependencyType) {
-  const getZone = getZoneWith(deps);
-
   return async (
     zoneId: string,
     targetType: ModerationTargetType,
@@ -56,36 +75,60 @@ export function getModerationEntriesWith(deps: DependencyType) {
     }
   ): Promise<ModerationEntryType[] | null> => {
     try {
-      const zone = await getZone(zoneId);
-      const path = targetType === 'comment' ? 'Comments' : 'Profiles';
-      let moderationEntries = zone?.Moderation?.[path] || [];
+      const moderationProcessId = await getModerationProcessId(deps, zoneId);
+      if (!moderationProcessId) {
+        return [];
+      }
+
+      const tags = [
+        { name: 'Target-Type', value: targetType }
+      ];
 
       if (filters) {
         if (filters.targetId) {
-          moderationEntries = moderationEntries.filter((m: ModerationEntryType) => m.targetId === filters.targetId);
+          tags.push({ name: 'Target-Id', value: filters.targetId });
         }
         if (filters.status) {
-          moderationEntries = moderationEntries.filter((m: ModerationEntryType) => m.status === filters.status);
+          tags.push({ name: 'Status', value: filters.status });
         }
         if (filters.targetContext) {
-          moderationEntries = moderationEntries.filter((m: ModerationEntryType) => m.targetContext === filters.targetContext);
+          tags.push({ name: 'Target-Context', value: filters.targetContext });
         }
         if (filters.moderator) {
-          moderationEntries = moderationEntries.filter((m: ModerationEntryType) => m.moderator === filters.moderator);
+          tags.push({ name: 'Moderator', value: filters.moderator });
         }
       }
 
-      return moderationEntries;
+      const result = await readProcess(deps, {
+        processId: moderationProcessId,
+        action: 'Get-Moderation-Entries',
+        tags
+      });
+
+      if (!result) {
+        return [];
+      }
+
+      // Parse the result if it's a string
+      if (typeof result === 'string') {
+        try {
+          return JSON.parse(result);
+        } catch {
+          return [];
+        }
+      }
+
+      return result;
     } catch (e: any) {
       throw new Error(e.message ?? 'Error getting moderation entries');
     }
   };
 }
 
+/**
+ * Update a moderation entry in the moderation process
+ */
 export function updateModerationEntryWith(deps: DependencyType) {
-  const getZone = getZoneWith(deps);
-  const addToZone = addToZoneWith(deps);
-
   return async (
     zoneId: string,
     targetType: ModerationTargetType,
@@ -97,139 +140,213 @@ export function updateModerationEntryWith(deps: DependencyType) {
     }
   ): Promise<string | null> => {
     try {
-      const zone = await getZone(zoneId);
-      const path = targetType === 'comment' ? 'Moderation.Comments' : 'Moderation.Profiles';
-      const entries = zone?.Moderation?.[targetType === 'comment' ? 'Comments' : 'Profiles'] || [];
-
-      const existingIndex = entries.findIndex((m: ModerationEntryType) => m.targetId === targetId);
-
-      const moderationEntry: ModerationEntryType = {
-        targetId,
-        status: update.status,
-        moderator: update.moderator,
-        dateCreated: existingIndex >= 0 ? entries[existingIndex].dateCreated : Date.now(),
-        ...(entries[existingIndex]?.targetContext && { targetContext: entries[existingIndex].targetContext }),
-        ...(update.reason && { reason: update.reason }),
-        ...(entries[existingIndex]?.metadata && { metadata: entries[existingIndex].metadata })
-      };
-
-      if (existingIndex >= 0) {
-        entries[existingIndex] = moderationEntry;
-      } else {
-        entries.push(moderationEntry);
+      const moderationProcessId = await getModerationProcessId(deps, zoneId);
+      if (!moderationProcessId) {
+        throw new Error('No moderation process found for this zone');
       }
 
-      return await addToZone(
-        {
-          path,
-          data: entries,
-          replace: true
-        },
-        zoneId
-      );
+      // First, check if entry exists by getting entries
+      const getModerationEntries = getModerationEntriesWith(deps);
+      const entries = await getModerationEntries(zoneId, targetType, { targetId });
+
+      if (!entries || entries.length === 0) {
+        // Create new entry if doesn't exist
+        const addModerationEntry = addModerationEntryWith(deps);
+        return await addModerationEntry(zoneId, targetType, {
+          targetId,
+          status: update.status,
+          moderator: update.moderator,
+          reason: update.reason
+        });
+      }
+
+      // Update existing entry
+      const entryId = entries[0].Id;
+      const tags = [
+        { name: 'Entry-Id', value: entryId },
+        { name: 'Status', value: update.status },
+      ];
+
+      if (update.reason) {
+        tags.push({ name: 'Reason', value: update.reason });
+      }
+
+      return await aoSend(deps, {
+        processId: moderationProcessId,
+        action: 'Update-Moderation-Entry',
+        tags
+      });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error updating moderation entry');
     }
   };
 }
 
+/**
+ * Remove a moderation entry from the moderation process
+ */
 export function removeModerationEntryWith(deps: DependencyType) {
-  const getZone = getZoneWith(deps);
-  const addToZone = addToZoneWith(deps);
-
   return async (
     zoneId: string,
     targetType: ModerationTargetType,
     targetId: string
   ): Promise<string | null> => {
     try {
-      const zone = await getZone(zoneId);
-      const path = targetType === 'comment' ? 'Moderation.Comments' : 'Moderation.Profiles';
-      const entries = zone?.Moderation?.[targetType === 'comment' ? 'Comments' : 'Profiles'] || [];
+      const moderationProcessId = await getModerationProcessId(deps, zoneId);
+      if (!moderationProcessId) {
+        throw new Error('No moderation process found for this zone');
+      }
 
-      const filteredEntries = entries.filter((m: ModerationEntryType) => m.targetId !== targetId);
+      // Get the entry to find its ID
+      const getModerationEntries = getModerationEntriesWith(deps);
+      const entries = await getModerationEntries(zoneId, targetType, { targetId });
 
-      return await addToZone(
-        {
-          path,
-          data: filteredEntries,
-          replace: true
-        },
-        zoneId
-      );
+      if (!entries || entries.length === 0) {
+        throw new Error('Moderation entry not found');
+      }
+
+      const entryId = entries[0].Id;
+
+      return await aoSend(deps, {
+        processId: moderationProcessId,
+        action: 'Remove-Moderation-Entry',
+        tags: [{ name: 'Entry-Id', value: entryId }]
+      });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error removing moderation entry');
     }
   };
 }
 
+/**
+ * Add a moderation subscription to the moderation process
+ */
 export function addModerationSubscriptionWith(deps: DependencyType) {
-  const getZone = getZoneWith(deps);
-  const addToZone = addToZoneWith(deps);
-
   return async (
     zoneId: string,
-    subscriptionZoneId: string
+    subscriptionZoneId: string,
+    subscriptionType?: string
   ): Promise<string | null> => {
     try {
-      const zone = await getZone(zoneId);
-      const subscriptions = zone?.Moderation?.Subscriptions || [];
-
-      if (!subscriptions.includes(subscriptionZoneId)) {
-        subscriptions.push(subscriptionZoneId);
+      const moderationProcessId = await getModerationProcessId(deps, zoneId);
+      if (!moderationProcessId) {
+        throw new Error('No moderation process found for this zone');
       }
 
-      return await addToZone(
-        {
-          path: 'Moderation.Subscriptions',
-          data: subscriptions,
-          replace: true
-        },
-        zoneId
-      );
+      const tags = [{ name: 'Zone-Id', value: subscriptionZoneId }];
+      if (subscriptionType) {
+        tags.push({ name: 'Subscription-Type', value: subscriptionType });
+      }
+
+      return await aoSend(deps, {
+        processId: moderationProcessId,
+        action: 'Add-Moderation-Subscription',
+        tags
+      });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error adding moderation subscription');
     }
   };
 }
 
+/**
+ * Remove a moderation subscription from the moderation process
+ */
 export function removeModerationSubscriptionWith(deps: DependencyType) {
-  const getZone = getZoneWith(deps);
-  const addToZone = addToZoneWith(deps);
-
   return async (
     zoneId: string,
     subscriptionZoneId: string
   ): Promise<string | null> => {
     try {
-      const zone = await getZone(zoneId);
-      const subscriptions = zone?.Moderation?.Subscriptions || [];
+      const moderationProcessId = await getModerationProcessId(deps, zoneId);
+      if (!moderationProcessId) {
+        throw new Error('No moderation process found for this zone');
+      }
 
-      const filteredSubscriptions = subscriptions.filter((id: string) => id !== subscriptionZoneId);
-
-      return await addToZone(
-        {
-          path: 'Moderation.Subscriptions',
-          data: filteredSubscriptions,
-          replace: true
-        },
-        zoneId
-      );
+      return await aoSend(deps, {
+        processId: moderationProcessId,
+        action: 'Remove-Moderation-Subscription',
+        tags: [{ name: 'Zone-Id', value: subscriptionZoneId }]
+      });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error removing moderation subscription');
     }
   };
 }
 
+/**
+ * Get moderation subscriptions from the moderation process
+ */
 export function getModerationSubscriptionsWith(deps: DependencyType) {
-  const getZone = getZoneWith(deps);
-
   return async (zoneId: string): Promise<string[] | null> => {
     try {
-      const zone = await getZone(zoneId);
-      return zone?.Moderation?.Subscriptions || [];
+      const moderationProcessId = await getModerationProcessId(deps, zoneId);
+      if (!moderationProcessId) {
+        return [];
+      }
+
+      const result = await readProcess(deps, {
+        processId: moderationProcessId,
+        action: 'Get-Moderation-Subscriptions'
+      });
+
+      if (!result) {
+        return [];
+      }
+
+      // Parse the result if it's a string
+      if (typeof result === 'string') {
+        try {
+          return JSON.parse(result);
+        } catch {
+          return [];
+        }
+      }
+
+      return result;
     } catch (e: any) {
       throw new Error(e.message ?? 'Error getting moderation subscriptions');
+    }
+  };
+}
+
+/**
+ * Bulk add moderation entries to the moderation process
+ */
+export function bulkAddModerationEntriesWith(deps: DependencyType) {
+  return async (
+    zoneId: string,
+    entries: Array<{
+      targetType: ModerationTargetType;
+      targetId: string;
+      status: ModerationStatusType;
+      targetContext?: string;
+      reason?: string;
+      metadata?: any;
+    }>
+  ): Promise<string | null> => {
+    try {
+      const moderationProcessId = await getModerationProcessId(deps, zoneId);
+      if (!moderationProcessId) {
+        throw new Error('No moderation process found for this zone');
+      }
+
+      const formattedEntries = entries.map(entry => ({
+        TargetType: entry.targetType,
+        TargetId: entry.targetId,
+        Status: entry.status,
+        TargetContext: entry.targetContext,
+        Reason: entry.reason,
+        Metadata: entry.metadata
+      }));
+
+      return await aoSend(deps, {
+        processId: moderationProcessId,
+        action: 'Bulk-Add-Moderation-Entries',
+        data: formattedEntries
+      });
+    } catch (e: any) {
+      throw new Error(e.message ?? 'Error bulk adding moderation entries');
     }
   };
 }

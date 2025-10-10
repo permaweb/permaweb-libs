@@ -7,6 +7,7 @@ export const AO = {
 		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
 		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
 		comments: 'RvozS-4Mbcmq66gPapsNOyERkg3LrpR0vSRKz8wIi4k',
+		moderation: 'VbdpCJOTlU32rALztqRYWl_vBFpPovaVD-_IRx2KOsI',
 		zone: {
 			id: 'qh8L94J0ZT4h-Gv3mLH8kDb-IhmJo_aIL1j7vtr-jF0',
 			version: '0.0.2',

@@ -942,7 +942,11 @@ ModerationRemoveId;
 ##### `addModerationSubscription`
 
 ```typescript
-const subscriptionId = await permaweb.addModerationSubscription(zoneId, "SubscribedZoneId");
+const subscriptionId = await permaweb.addModerationSubscription(
+  zoneId,
+  "SubscribedZoneId",
+  "default"
+);
 ```
 
 <details>
@@ -950,6 +954,7 @@ const subscriptionId = await permaweb.addModerationSubscription(zoneId, "Subscri
 
 - `zoneId`: The ID of the zone that will subscribe to another zone's moderation list
 - `subscriptionZoneId`: The ID of the zone to subscribe to
+- `subscriptionType` (optional): The type of subscription (e.g., "default", "spam"). Defaults to "default"
 
 </details>
 
