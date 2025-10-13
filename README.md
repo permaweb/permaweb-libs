@@ -35,6 +35,14 @@ This SDK provides a set of libraries designed as foundational building blocks fo
     - [updateCollectionAssets](#updatecollectionassets)
     - [getCollection](#getcollection)
     - [getCollections](#getcollections)
+  - [Moderation](#moderation)
+    - [addModerationEntry](#addmoderationentry)
+    - [getModerationEntries](#getmoderationentries)
+    - [updateModerationEntry](#updatemoderationentry)
+    - [removeModerationEntry](#removemoderationentry)
+    - [addModerationSubscription](#addmoderationsubscription)
+    - [removeModerationSubscription](#removemoderationsubscription)
+    - [getModerationSubscriptions](#getmoderationsubscriptions)
 - [Examples](#examples)
 - [Resources](#resources)
 
@@ -804,6 +812,202 @@ const collections = await permaweb.getCollections();
     assets: ["AssetId1", "AssetId2", "AssetId3"],
   },
 ];
+```
+
+</details>
+
+### Moderation
+
+Moderation entries are stored in a Zone under separate paths for comments and profiles, tracking which entities are blocked or allowed. Zones can also subscribe to other zones' moderation lists.
+
+##### `addModerationEntry`
+
+```typescript
+const moderationId = await permaweb.addModerationEntry(zoneId, "comment", {
+  targetId: "CommentId",
+  status: "blocked",
+  targetContext: "CommentsProcessId",
+  moderator: "ModeratorAddress",
+  reason: "Spam content"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone where moderation entries are stored
+- `targetType`: Type of entity being moderated ('comment' | 'profile')
+- `entry`: Object containing moderation details, including `targetId`, `status` ('blocked' | 'allowed'), `targetContext (optional)`, `moderator`, `reason (optional)`, and `metadata (optional)`
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationEntryId;
+```
+
+</details>
+
+##### `getModerationEntries`
+
+```typescript
+const moderationEntries = await permaweb.getModerationEntries(zoneId, "comment", {
+  status: "blocked",
+  targetContext: "CommentsProcessId"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to fetch moderation entries from
+- `targetType`: Type of entity ('comment' | 'profile')
+- `filters` (optional): Object to filter results by `targetId`, `status`, `targetContext`, or `moderator`
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+[
+  {
+    targetId: "CommentId",
+    status: "blocked",
+    targetContext: "CommentsProcessId",
+    moderator: "ModeratorAddress",
+    dateCreated: 1234567890000,
+    reason: "Spam content"
+  }
+];
+```
+
+</details>
+
+##### `updateModerationEntry`
+
+```typescript
+const updateId = await permaweb.updateModerationEntry(zoneId, "comment", "CommentId", {
+  status: "allowed",
+  moderator: "ModeratorAddress",
+  reason: "False positive, content is acceptable"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone where moderation entries are stored
+- `targetType`: Type of entity being moderated ('comment' | 'profile')
+- `targetId`: The ID of the entity to update
+- `update`: Object containing new `status`, `moderator`, and optional `reason`
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationUpdateId;
+```
+
+</details>
+
+##### `removeModerationEntry`
+
+```typescript
+const removeId = await permaweb.removeModerationEntry(zoneId, "comment", "CommentId");
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone where moderation entries are stored
+- `targetType`: Type of entity being moderated ('comment' | 'profile')
+- `targetId`: The ID of the entity to remove from moderation
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationRemoveId;
+```
+
+</details>
+
+##### `addModerationSubscription`
+
+```typescript
+const subscriptionId = await permaweb.addModerationSubscription(
+  zoneId,
+  "ModerationProcessId",
+  "default"
+);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone that will subscribe to another moderation list
+- `moderationId`: The ID of the moderation process to subscribe to
+- `subscriptionType` (optional): The type of subscription (e.g., "default", "spam"). Defaults to "default"
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationSubscriptionId;
+```
+
+</details>
+
+##### `removeModerationSubscription`
+
+```typescript
+const removeId = await permaweb.removeModerationSubscription(zoneId, "ModerationProcessId");
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to remove the subscription from
+- `moderationId`: The ID of the moderation process to unsubscribe from
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationUnsubscribeId;
+```
+
+</details>
+
+##### `getModerationSubscriptions`
+
+```typescript
+const subscriptions = await permaweb.getModerationSubscriptions(zoneId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to fetch subscriptions from
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+["ZoneId1", "ZoneId2", "ZoneId3"];
 ```
 
 </details>
