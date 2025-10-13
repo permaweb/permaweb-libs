@@ -1,6 +1,6 @@
-import { aoSend, readProcess } from '../common/ao';
-import { DependencyType, ModerationEntryType, ModerationStatusType, ModerationTargetType } from 'helpers/types';
-import { getZoneWith } from './zones';
+import { aoSend, readProcess } from '../common/ao.ts';
+import { DependencyType, ModerationEntryType, ModerationStatusType, ModerationTargetType } from '../helpers/types.ts';
+import { getZoneWith } from './zones.ts';
 
 /**
  * Get the moderation process ID for a zone
