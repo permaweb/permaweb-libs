@@ -10,6 +10,7 @@ export function createCommentWith(deps: DependencyType) {
 
 			const tags = [];
 			if (args.parentId) tags.push({ name: 'Parent-Id', value: args.parentId });
+			if (args.metadata) tags.push({ name: 'Metadata', value: JSON.stringify(args.metadata) });
 
 			const commentsUpdateId = await aoSend(deps, {
 				processId: args.commentsId,
@@ -165,4 +166,3 @@ export function unpinCommentWith(deps: DependencyType) {
 		}
 	};
 }
-

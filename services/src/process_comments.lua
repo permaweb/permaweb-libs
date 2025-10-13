@@ -253,7 +253,7 @@ Handlers.add("Add-Comment", "Add-Comment", function(msg)
 		ParentId = parentId,
 		Depth = depth,
 		ChildrenCount = 0,
-		Metadata = {},
+		Metadata = msg.Metadata or {},
 	}
 
 	table.insert(Comments, newComment)

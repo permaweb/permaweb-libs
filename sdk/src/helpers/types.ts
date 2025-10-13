@@ -2,7 +2,7 @@ export type DependencyType = {
 	ao: any;
 	signer?: any;
 	arweave?: any;
-	node?: { url: string, scheduler: string, authority: string };
+	node?: { url: string; scheduler: string; authority: string };
 };
 
 export type ProcessReadType = {
@@ -133,6 +133,7 @@ export type CommentCreateArgType = {
 	parentId?: string;
 	rootId?: string;
 	tags?: TagType[];
+	metadata?: object;
 };
 
 export type CollectionManifestType = {
