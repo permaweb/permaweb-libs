@@ -80,7 +80,7 @@ export function getModerationEntriesWith(deps: DependencyType) {
         return [];
       }
 
-      const tags = [
+      const tags: { name: string; value: string }[] = [
         { name: 'Target-Type', value: targetType }
       ];
 
@@ -101,8 +101,8 @@ export function getModerationEntriesWith(deps: DependencyType) {
 
       const result = await readProcess(deps, {
         processId: moderationProcessId,
-        action: 'Get-Moderation-Entries',
-        tags
+        path: 'moderation/entries',
+        fallbackAction: 'Get-Moderation-Entries'
       });
 
       if (!result) {
@@ -160,10 +160,10 @@ export function updateModerationEntryWith(deps: DependencyType) {
         });
       }
 
-      // Update existing entry
-      const entryId = entries[0].Id;
+      // Update existing entry - use targetId as identifier
+      const entryId = entries[0].targetId;
       const tags = [
-        { name: 'Entry-Id', value: entryId },
+        { name: 'Target-Id', value: entryId },
         { name: 'Status', value: update.status },
       ];
 
@@ -205,12 +205,12 @@ export function removeModerationEntryWith(deps: DependencyType) {
         throw new Error('Moderation entry not found');
       }
 
-      const entryId = entries[0].Id;
+      const entryId = entries[0].targetId;
 
       return await aoSend(deps, {
         processId: moderationProcessId,
         action: 'Remove-Moderation-Entry',
-        tags: [{ name: 'Entry-Id', value: entryId }]
+        tags: [{ name: 'Target-Id', value: entryId }]
       });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error removing moderation entry');
@@ -290,7 +290,8 @@ export function getModerationSubscriptionsWith(deps: DependencyType) {
 
       const result = await readProcess(deps, {
         processId: moderationProcessId,
-        action: 'Get-Moderation-Subscriptions'
+        path: 'moderation/subscriptions',
+        fallbackAction: 'Get-Moderation-Subscriptions'
       });
 
       if (!result) {
