@@ -85,7 +85,7 @@ export function getModerationEntriesWith(deps: DependencyType) {
 
       const result = await readProcess(deps, {
         processId: args.moderationId,
-        path: 'moderationEntries',
+        path: 'moderation/entries',
         fallbackAction: 'Get-Moderation-Entries',
         tags
       });
