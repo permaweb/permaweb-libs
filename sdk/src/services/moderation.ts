@@ -1,55 +1,44 @@
 import { aoSend, readProcess } from '../common/ao.ts';
 import { DependencyType, ModerationEntryType, ModerationStatusType, ModerationTargetType } from '../helpers/types.ts';
-import { getZoneWith } from './zones.ts';
-
-/**
- * Get the moderation process ID for a zone
- */
-async function getModerationProcessId(deps: DependencyType, zoneId: string): Promise<string | null> {
-  const getZone = getZoneWith(deps);
-  const zone = await getZone(zoneId);
-  return zone?.Moderation || null;
-}
 
 /**
  * Add a moderation entry to the moderation process
  */
 export function addModerationEntryWith(deps: DependencyType) {
-  return async (
-    zoneId: string,
-    targetType: ModerationTargetType,
-    entry: {
-      targetId: string;
-      status: ModerationStatusType;
-      targetContext?: string;
-      moderator: string;
-      reason?: string;
-      metadata?: any;
-    }
-  ): Promise<string | null> => {
+  return async (args: {
+    moderationId: string;
+    targetType: ModerationTargetType;
+    targetId: string;
+    status: ModerationStatusType;
+    targetContext?: string;
+    moderator: string;
+    reason?: string;
+    metadata?: any;
+  }): Promise<string | null> => {
     try {
-      const moderationProcessId = await getModerationProcessId(deps, zoneId);
-      if (!moderationProcessId) {
-        throw new Error('No moderation process found for this zone');
-      }
+      if (!args.moderationId) throw new Error('Must provide moderationId');
+      if (!args.targetId) throw new Error('Must provide targetId');
+      if (!args.status) throw new Error('Must provide status');
+      if (!args.moderator) throw new Error('Must provide moderator');
 
       const tags = [
-        { name: 'Target-Type', value: targetType },
-        { name: 'Target-Id', value: entry.targetId },
-        { name: 'Status', value: entry.status },
+        { name: 'Target-Type', value: args.targetType },
+        { name: 'Target-Id', value: args.targetId },
+        { name: 'Status', value: args.status },
+        { name: 'Moderator', value: args.moderator },
       ];
 
-      if (entry.targetContext) {
-        tags.push({ name: 'Target-Context', value: entry.targetContext });
+      if (args.targetContext) {
+        tags.push({ name: 'Target-Context', value: args.targetContext });
       }
-      if (entry.reason) {
-        tags.push({ name: 'Reason', value: entry.reason });
+      if (args.reason) {
+        tags.push({ name: 'Reason', value: args.reason });
       }
 
-      const data = entry.metadata ? JSON.stringify(entry.metadata) : undefined;
+      const data = args.metadata ? JSON.stringify(args.metadata) : undefined;
 
       return await aoSend(deps, {
-        processId: moderationProcessId,
+        processId: args.moderationId,
         action: 'Add-Moderation-Entry',
         tags,
         data
@@ -64,43 +53,37 @@ export function addModerationEntryWith(deps: DependencyType) {
  * Get moderation entries from the moderation process
  */
 export function getModerationEntriesWith(deps: DependencyType) {
-  return async (
-    zoneId: string,
-    targetType: ModerationTargetType,
-    filters?: {
-      targetId?: string;
-      status?: ModerationStatusType;
-      targetContext?: string;
-      moderator?: string;
-    }
-  ): Promise<ModerationEntryType[] | null> => {
+  return async (args: {
+    moderationId: string;
+    targetType: ModerationTargetType;
+    targetId?: string;
+    status?: ModerationStatusType;
+    targetContext?: string;
+    moderator?: string;
+  }): Promise<ModerationEntryType[] | null> => {
     try {
-      const moderationProcessId = await getModerationProcessId(deps, zoneId);
-      if (!moderationProcessId) {
-        return [];
-      }
+      if (!args.moderationId) throw new Error('Must provide moderationId');
+      if (!args.targetType) throw new Error('Must provide targetType');
 
       const tags: { name: string; value: string }[] = [
-        { name: 'Target-Type', value: targetType }
+        { name: 'Target-Type', value: args.targetType }
       ];
 
-      if (filters) {
-        if (filters.targetId) {
-          tags.push({ name: 'Target-Id', value: filters.targetId });
-        }
-        if (filters.status) {
-          tags.push({ name: 'Status', value: filters.status });
-        }
-        if (filters.targetContext) {
-          tags.push({ name: 'Target-Context', value: filters.targetContext });
-        }
-        if (filters.moderator) {
-          tags.push({ name: 'Moderator', value: filters.moderator });
-        }
+      if (args.targetId) {
+        tags.push({ name: 'Target-Id', value: args.targetId });
+      }
+      if (args.status) {
+        tags.push({ name: 'Status', value: args.status });
+      }
+      if (args.targetContext) {
+        tags.push({ name: 'Target-Context', value: args.targetContext });
+      }
+      if (args.moderator) {
+        tags.push({ name: 'Moderator', value: args.moderator });
       }
 
       const result = await readProcess(deps, {
-        processId: moderationProcessId,
+        processId: args.moderationId,
         path: 'moderation/entries',
         fallbackAction: 'Get-Moderation-Entries'
       });
@@ -129,34 +112,38 @@ export function getModerationEntriesWith(deps: DependencyType) {
  * Update a moderation entry in the moderation process
  */
 export function updateModerationEntryWith(deps: DependencyType) {
-  return async (
-    zoneId: string,
-    targetType: ModerationTargetType,
-    targetId: string,
-    update: {
-      status: ModerationStatusType;
-      moderator: string;
-      reason?: string;
-    }
-  ): Promise<string | null> => {
+  return async (args: {
+    moderationId: string;
+    targetType: ModerationTargetType;
+    targetId: string;
+    status: ModerationStatusType;
+    moderator: string;
+    reason?: string;
+  }): Promise<string | null> => {
     try {
-      const moderationProcessId = await getModerationProcessId(deps, zoneId);
-      if (!moderationProcessId) {
-        throw new Error('No moderation process found for this zone');
-      }
+      if (!args.moderationId) throw new Error('Must provide moderationId');
+      if (!args.targetId) throw new Error('Must provide targetId');
+      if (!args.status) throw new Error('Must provide status');
+      if (!args.moderator) throw new Error('Must provide moderator');
 
       // First, check if entry exists by getting entries
       const getModerationEntries = getModerationEntriesWith(deps);
-      const entries = await getModerationEntries(zoneId, targetType, { targetId });
+      const entries = await getModerationEntries({
+        moderationId: args.moderationId,
+        targetType: args.targetType,
+        targetId: args.targetId
+      });
 
       if (!entries || entries.length === 0) {
         // Create new entry if doesn't exist
         const addModerationEntry = addModerationEntryWith(deps);
-        return await addModerationEntry(zoneId, targetType, {
-          targetId,
-          status: update.status,
-          moderator: update.moderator,
-          reason: update.reason
+        return await addModerationEntry({
+          moderationId: args.moderationId,
+          targetType: args.targetType,
+          targetId: args.targetId,
+          status: args.status,
+          moderator: args.moderator,
+          reason: args.reason
         });
       }
 
@@ -164,15 +151,16 @@ export function updateModerationEntryWith(deps: DependencyType) {
       const entryId = entries[0].targetId;
       const tags = [
         { name: 'Target-Id', value: entryId },
-        { name: 'Status', value: update.status },
+        { name: 'Status', value: args.status },
+        { name: 'Moderator', value: args.moderator },
       ];
 
-      if (update.reason) {
-        tags.push({ name: 'Reason', value: update.reason });
+      if (args.reason) {
+        tags.push({ name: 'Reason', value: args.reason });
       }
 
       return await aoSend(deps, {
-        processId: moderationProcessId,
+        processId: args.moderationId,
         action: 'Update-Moderation-Entry',
         tags
       });
@@ -186,20 +174,22 @@ export function updateModerationEntryWith(deps: DependencyType) {
  * Remove a moderation entry from the moderation process
  */
 export function removeModerationEntryWith(deps: DependencyType) {
-  return async (
-    zoneId: string,
-    targetType: ModerationTargetType,
-    targetId: string
-  ): Promise<string | null> => {
+  return async (args: {
+    moderationId: string;
+    targetType: ModerationTargetType;
+    targetId: string;
+  }): Promise<string | null> => {
     try {
-      const moderationProcessId = await getModerationProcessId(deps, zoneId);
-      if (!moderationProcessId) {
-        throw new Error('No moderation process found for this zone');
-      }
+      if (!args.moderationId) throw new Error('Must provide moderationId');
+      if (!args.targetId) throw new Error('Must provide targetId');
 
       // Get the entry to find its ID
       const getModerationEntries = getModerationEntriesWith(deps);
-      const entries = await getModerationEntries(zoneId, targetType, { targetId });
+      const entries = await getModerationEntries({
+        moderationId: args.moderationId,
+        targetType: args.targetType,
+        targetId: args.targetId
+      });
 
       if (!entries || entries.length === 0) {
         throw new Error('Moderation entry not found');
@@ -208,7 +198,7 @@ export function removeModerationEntryWith(deps: DependencyType) {
       const entryId = entries[0].targetId;
 
       return await aoSend(deps, {
-        processId: moderationProcessId,
+        processId: args.moderationId,
         action: 'Remove-Moderation-Entry',
         tags: [{ name: 'Target-Id', value: entryId }]
       });
@@ -222,27 +212,25 @@ export function removeModerationEntryWith(deps: DependencyType) {
  * Add a moderation subscription to the moderation process
  */
 export function addModerationSubscriptionWith(deps: DependencyType) {
-  return async (
-    zoneId: string,
-    moderationId: string,
-    subscriptionType?: string
-  ): Promise<string | null> => {
+  return async (args: {
+    moderationId: string;
+    originPortal: string;
+    subscriptionType?: string;
+  }): Promise<string | null> => {
     try {
-      const moderationProcessId = await getModerationProcessId(deps, zoneId);
-      if (!moderationProcessId) {
-        throw new Error('No moderation process found for this zone');
-      }
+      if (!args.moderationId) throw new Error('Must provide moderationId');
+      if (!args.originPortal) throw new Error('Must provide originPortal');
 
       const tags = [
-        { name: 'Zone-Id', value: moderationId },
-        { name: 'Moderation-Process-Id', value: moderationId }
+        { name: 'Zone-Id', value: args.originPortal },
+        { name: 'Moderation-Process-Id', value: args.moderationId }
       ];
-      if (subscriptionType) {
-        tags.push({ name: 'Subscription-Type', value: subscriptionType });
+      if (args.subscriptionType) {
+        tags.push({ name: 'Subscription-Type', value: args.subscriptionType });
       }
 
       return await aoSend(deps, {
-        processId: moderationProcessId,
+        processId: args.moderationId,
         action: 'Add-Moderation-Subscription',
         tags
       });
@@ -256,20 +244,18 @@ export function addModerationSubscriptionWith(deps: DependencyType) {
  * Remove a moderation subscription from the moderation process
  */
 export function removeModerationSubscriptionWith(deps: DependencyType) {
-  return async (
-    zoneId: string,
-    moderationId: string
-  ): Promise<string | null> => {
+  return async (args: {
+    moderationId: string;
+    originPortal: string;
+  }): Promise<string | null> => {
     try {
-      const moderationProcessId = await getModerationProcessId(deps, zoneId);
-      if (!moderationProcessId) {
-        throw new Error('No moderation process found for this zone');
-      }
+      if (!args.moderationId) throw new Error('Must provide moderationId');
+      if (!args.originPortal) throw new Error('Must provide originPortal');
 
       return await aoSend(deps, {
-        processId: moderationProcessId,
+        processId: args.moderationId,
         action: 'Remove-Moderation-Subscription',
-        tags: [{ name: 'Zone-Id', value: moderationId }]
+        tags: [{ name: 'Zone-Id', value: args.originPortal }]
       });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error removing moderation subscription');
@@ -281,15 +267,12 @@ export function removeModerationSubscriptionWith(deps: DependencyType) {
  * Get moderation subscriptions from the moderation process
  */
 export function getModerationSubscriptionsWith(deps: DependencyType) {
-  return async (zoneId: string): Promise<string[] | null> => {
+  return async (args: { moderationId: string }): Promise<string[] | null> => {
     try {
-      const moderationProcessId = await getModerationProcessId(deps, zoneId);
-      if (!moderationProcessId) {
-        return [];
-      }
+      if (!args.moderationId) throw new Error('Must provide moderationId');
 
       const result = await readProcess(deps, {
-        processId: moderationProcessId,
+        processId: args.moderationId,
         path: 'moderation/subscriptions',
         fallbackAction: 'Get-Moderation-Subscriptions'
       });
@@ -318,8 +301,8 @@ export function getModerationSubscriptionsWith(deps: DependencyType) {
  * Bulk add moderation entries to the moderation process
  */
 export function bulkAddModerationEntriesWith(deps: DependencyType) {
-  return async (
-    zoneId: string,
+  return async (args: {
+    moderationId: string;
     entries: Array<{
       targetType: ModerationTargetType;
       targetId: string;
@@ -327,15 +310,13 @@ export function bulkAddModerationEntriesWith(deps: DependencyType) {
       targetContext?: string;
       reason?: string;
       metadata?: any;
-    }>
-  ): Promise<string | null> => {
+    }>;
+  }): Promise<string | null> => {
     try {
-      const moderationProcessId = await getModerationProcessId(deps, zoneId);
-      if (!moderationProcessId) {
-        throw new Error('No moderation process found for this zone');
-      }
+      if (!args.moderationId) throw new Error('Must provide moderationId');
+      if (!args.entries || args.entries.length === 0) throw new Error('Must provide entries');
 
-      const formattedEntries = entries.map(entry => ({
+      const formattedEntries = args.entries.map(entry => ({
         TargetType: entry.targetType,
         TargetId: entry.targetId,
         Status: entry.status,
@@ -345,7 +326,7 @@ export function bulkAddModerationEntriesWith(deps: DependencyType) {
       }));
 
       return await aoSend(deps, {
-        processId: moderationProcessId,
+        processId: args.moderationId,
         action: 'Bulk-Add-Moderation-Entries',
         data: formattedEntries
       });

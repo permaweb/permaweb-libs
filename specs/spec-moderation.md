@@ -123,27 +123,82 @@ The process maintains several indices for efficient lookups:
 ### Integration
 
 #### Zone Integration
-Zones can spawn a moderation process during creation:
+Zones can optionally spawn a moderation process during creation by setting the `spawnModeration` flag:
 ```typescript
-await permaweb.createZone({
+const zoneId = await permaweb.createZone({
   spawnModeration: true,
-  authUsers: ["user1", "user2"]
+  authUsers: ["user-address-1", "user-address-2"]
 });
 ```
 
-The moderation process ID is stored in the zone's state and can be accessed via:
+The moderation process ID is stored in the zone's state and can be accessed:
+```typescript
+const zone = await permaweb.getZone(zoneId);
+const moderationId = zone.moderation; // Moderation process ID (if spawned)
+```
+
+In Lua, the process ID is available as:
 ```lua
-Zone.Moderation -- Process ID of the moderation process
+Zone.Moderation -- Process ID of the moderation process (if spawned)
+```
+
+#### Using Moderation Functions
+All moderation functions follow the same pattern as comments, taking the `moderationId` directly:
+```typescript
+// Add a moderation entry
+await permaweb.addModerationEntry({
+  moderationId: moderationId,
+  targetType: "comment",
+  targetId: "comment-123",
+  status: "blocked",
+  moderator: "moderator-address",
+  reason: "Spam content"
+});
+
+// Get moderation entries
+const entries = await permaweb.getModerationEntries({
+  moderationId: moderationId,
+  targetType: "comment",
+  status: "blocked"
+});
+
+// Update a moderation entry
+await permaweb.updateModerationEntry({
+  moderationId: moderationId,
+  targetType: "comment",
+  targetId: "comment-123",
+  status: "allowed",
+  moderator: "moderator-address",
+  reason: "False positive"
+});
+
+// Remove a moderation entry
+await permaweb.removeModerationEntry({
+  moderationId: moderationId,
+  targetType: "comment",
+  targetId: "comment-123"
+});
 ```
 
 #### Cross-Zone Subscriptions
-Zones can subscribe to other zones' moderation lists:
+Zones can subscribe to other zones' moderation lists using the `originPortal` parameter:
 ```typescript
-await permaweb.addModerationSubscription(
-  zoneId,
-  "SubscribedZoneId",
-  "zone"
-);
+await permaweb.addModerationSubscription({
+  moderationId: moderationId,
+  originPortal: "other-zone-id",
+  subscriptionType: "default"
+});
+
+// Get subscriptions
+const subscriptions = await permaweb.getModerationSubscriptions({
+  moderationId: moderationId
+});
+
+// Remove subscription
+await permaweb.removeModerationSubscription({
+  moderationId: moderationId,
+  originPortal: "other-zone-id"
+});
 ```
 
 ### Use Cases
