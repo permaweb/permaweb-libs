@@ -10,6 +10,7 @@ export type ProcessReadType = {
 	path: string;
 	fallbackAction: string;
 	serialize?: boolean;
+	tags?: TagType[];
 };
 
 export type ProcessSpawnType = {
@@ -229,12 +230,15 @@ export type ModerationStatusType = 'blocked' | 'allowed';
 export type ModerationTargetType = 'comment' | 'profile';
 
 export type ModerationEntryType = {
+	id: string;
 	targetId: string;
+	targetType: ModerationTargetType;
 	status: ModerationStatusType;
 	targetContext?: string;
 	reason?: string;
 	moderator: string;
 	dateCreated: number;
+	updatedAt?: number;
 	metadata?: any;
 };
 

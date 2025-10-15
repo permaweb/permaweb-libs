@@ -87,7 +87,7 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 
 	} catch (e: any) {
 		if (args.fallbackAction) {
-			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction });
+			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction, tags: args.tags });
 			return result;
 		}
 		throw e;

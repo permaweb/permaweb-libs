@@ -1,5 +1,6 @@
 import { aoSend, readProcess } from '../common/ao.ts';
 import { DependencyType, ModerationEntryType, ModerationStatusType, ModerationTargetType } from '../helpers/types.ts';
+import { mapFromProcessCase } from '../helpers/utils.ts';
 
 /**
  * Add a moderation entry to the moderation process
@@ -84,24 +85,16 @@ export function getModerationEntriesWith(deps: DependencyType) {
 
       const result = await readProcess(deps, {
         processId: args.moderationId,
-        path: 'moderation/entries',
-        fallbackAction: 'Get-Moderation-Entries'
+        path: 'moderationEntries',
+        fallbackAction: 'Get-Moderation-Entries',
+        tags
       });
 
       if (!result) {
         return [];
       }
 
-      // Parse the result if it's a string
-      if (typeof result === 'string') {
-        try {
-          return JSON.parse(result);
-        } catch {
-          return [];
-        }
-      }
-
-      return result;
+      return mapFromProcessCase(result);
     } catch (e: any) {
       throw new Error(e.message ?? 'Error getting moderation entries');
     }
@@ -147,10 +140,9 @@ export function updateModerationEntryWith(deps: DependencyType) {
         });
       }
 
-      // Update existing entry - use targetId as identifier
-      const entryId = entries[0].targetId;
+      const entryId = entries[0].id;
       const tags = [
-        { name: 'Target-Id', value: entryId },
+        { name: 'Entry-Id', value: entryId },
         { name: 'Status', value: args.status },
         { name: 'Moderator', value: args.moderator },
       ];
@@ -195,12 +187,12 @@ export function removeModerationEntryWith(deps: DependencyType) {
         throw new Error('Moderation entry not found');
       }
 
-      const entryId = entries[0].targetId;
+      const entryId = entries[0].id;
 
       return await aoSend(deps, {
         processId: args.moderationId,
         action: 'Remove-Moderation-Entry',
-        tags: [{ name: 'Target-Id', value: entryId }]
+        tags: [{ name: 'Entry-Id', value: entryId }]
       });
     } catch (e: any) {
       throw new Error(e.message ?? 'Error removing moderation entry');
