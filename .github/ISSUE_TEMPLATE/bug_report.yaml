@@ -1,0 +1,50 @@
+name: 🐞 Bug Report
+description: Report a problem with the SDK
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please include as much detail as possible so we can reproduce and fix it.
+  - type: input
+    id: sdk-version
+    attributes:
+      label: SDK Version
+      description: What version of the SDK are you using?
+      placeholder: e.g. 1.3.2
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node or browser environment?
+      placeholder: e.g. Node.js 22.0.0 or Chrome 120
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: What went wrong?
+      placeholder: e.g. The SDK fails to initialize when calling `createClient()`
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Please describe how to reproduce the issue
+      placeholder: |
+        1. Import SDK
+        2. Call `init()`
+        3. Observe the error in console
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      placeholder: The SDK should connect and return a valid response.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or Stack Trace
+      description: Paste relevant error logs or stack traces
+      render: shell
