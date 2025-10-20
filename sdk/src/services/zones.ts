@@ -4,7 +4,10 @@ import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
-	return async (args: { data?: any; tags?: TagType[]; spawnModeration?: boolean; authUsers?: string[] }, callback?: (status: any) => void): Promise<string | null> => {
+	return async (
+		args: { data?: any; tags?: TagType[]; spawnModeration?: boolean; authUsers?: string[] },
+		callback?: (status: any) => void,
+	): Promise<string | null> => {
 		try {
 			let moderationId = null;
 
@@ -20,9 +23,12 @@ export function createZoneWith(deps: DependencyType) {
 					}
 
 					const aoCreateProcess = aoCreateProcessWith(deps);
-					moderationId = await aoCreateProcess({
-						tags: moderationTags
-					}, callback ? (status: any) => callback(status) : undefined);
+					moderationId = await aoCreateProcess(
+						{
+							tags: moderationTags,
+						},
+						callback ? (status: any) => callback(status) : undefined,
+					);
 
 					globalLog(`Moderation Process ID: ${moderationId}`);
 					await new Promise((r) => setTimeout(r, 500));
@@ -196,7 +202,7 @@ export function updateZoneVersionWith(deps: DependencyType) {
 }
 
 export function updateZoneAuthoritiesWith(deps: DependencyType) {
-	return async (args: { zoneId: string, authorityId: string }): Promise<string | null> => {
+	return async (args: { zoneId: string; authorityId: string }): Promise<string | null> => {
 		try {
 			globalLog(`Adding authority ${args.authorityId} to process ${args.zoneId}`);
 
@@ -220,6 +226,37 @@ export function getZoneWith(deps: DependencyType) {
 			return mapFromProcessCase(processInfo);
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error getting zone');
+		}
+	};
+}
+
+export function transferZoneOwnershipWith(deps: DependencyType) {
+	return async (args: {
+		zoneId: string;
+		op: 'Invite' | 'Accept' | 'Reject' | 'Cancel';
+		to?: string;
+	}): Promise<string | null> => {
+		const { zoneId, op, to } = args;
+
+		// basic validations
+		if (!checkValidAddress(zoneId)) throw new Error('Invalid zone address');
+		if (op === 'Invite' || op === 'Cancel') {
+			if (!to || !checkValidAddress(to)) throw new Error('Invalid or missing "to" address');
+		}
+
+		try {
+			const tags: TagType[] = [{ name: 'Update-Type', value: op }];
+			if (to) tags.push({ name: 'To', value: to });
+
+			const txId = await aoSend(deps, {
+				processId: zoneId,
+				action: 'Zone-Transfer-Ownership',
+				tags,
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(e?.message ?? e ?? 'Error sending transfer ownership request');
 		}
 	};
 }

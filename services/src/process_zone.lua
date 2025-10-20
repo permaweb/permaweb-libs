@@ -106,6 +106,11 @@ Permissions = {
 			Zone.RoleOptions.Admin,
 		},
 	},
+	[Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP] = {
+		Roles = {
+			Zone.RoleOptions.Admin,
+		},
+	},
 }
 
 Zone.Data = Zone.Data or { KV = KV.new({ BatchPlugin }), AssetManager = AssetManager.new() }
