@@ -49,7 +49,6 @@ Zone.Constants = {
 }
 
 Zone.RoleOptions = {
-	["SuperAdmin"] = "Super Admin",
 	["Admin"] = "Admin",
 	["Moderator"] = "Moderator",
 	["Contributor"] = "Contributor",
@@ -60,29 +59,24 @@ Permissions = {
 	[Zone.Constants.H_ZONE_UPDATE] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
-			Zone.RoleOptions.SuperAdmin,
 		},
 	},
 	[Zone.Constants.H_ZONE_ROLE_SET] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
-			Zone.RoleOptions.SuperAdmin,
 		},
 	},
 	[Zone.Constants.H_ZONE_ADD_UPLOAD] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
-			Zone.RoleOptions.SuperAdmin,
 		},
 	},
 	[Zone.Constants.H_ZONE_RUN_ACTION] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
-			Zone.RoleOptions.SuperAdmin,
 		},
 		ForwardActions = {
 			["Update-Asset"] = {
-				Zone.RoleOptions.SuperAdmin,
 				Zone.RoleOptions.Admin,
 				Zone.RoleOptions.Moderator,
 				Zone.RoleOptions.Contributor,
@@ -91,13 +85,11 @@ Permissions = {
 	},
 	[Zone.Constants.H_ZONE_ADD_INDEX_ID] = {
 		Roles = {
-			Zone.RoleOptions.SuperAdmin,
 			Zone.RoleOptions.Admin,
 		},
 	},
 	[Zone.Constants.H_ZONE_ADD_INDEX_REQUEST] = {
 		Roles = {
-			Zone.RoleOptions.SuperAdmin,
 			Zone.RoleOptions.Admin,
 			Zone.RoleOptions.Contributor,
 			Zone.RoleOptions.ExternalContributor,
@@ -105,14 +97,12 @@ Permissions = {
 	},
 	[Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST] = {
 		Roles = {
-			Zone.RoleOptions.SuperAdmin,
 			Zone.RoleOptions.Admin,
 			Zone.RoleOptions.Moderator,
 		},
 	},
 	[Zone.Constants.H_ZONE_UPDATE_PATCH_MAP] = {
 		Roles = {
-			Zone.RoleOptions.SuperAdmin,
 			Zone.RoleOptions.Admin,
 		},
 	},
@@ -129,6 +119,8 @@ Zone.Roles = Zone.Roles or {}
 -- Invites: { <Id>, <Name>, <Logo> }
 Zone.Invites = Zone.Invites or {}
 
+Zone.Transfers = Zone.Transfers or {}
+
 Zone.Version = "0.0.1"
 
 function GetFullState()
@@ -140,6 +132,7 @@ function GetFullState()
 		RoleOptions = Zone.RoleOptions,
 		Permissions = Permissions,
 		Invites = Zone.Invites,
+		Transfers = Zone.Transfers,
 		Version = Zone.Version,
 		Authorities = ao.authorities,
 	}
@@ -288,6 +281,11 @@ function Zone.Functions.extractChangedFields(msg)
 		or msg.Action == Zone.Constants.H_ZONE_DEBIT_NOTICE
 	then
 		table.insert(changedFields, "Assets")
+	end
+
+	if msg.Action == Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP then
+		table.insert(changedFields, "Transfers")
+		table.insert(changedFields, "Owner")
 	end
 
 	return changedFields
@@ -948,44 +946,135 @@ function Zone.Functions.removeHandler(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
-function Zone.functions.transferOwnership(msg)
-	if msg.From ~= Owner then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
-		return
+function Zone.Functions.transferOwnership(msg)
+	local authorized, message = Zone.Functions.isAuthorized(msg)
+	if not authorized then
+		return Zone.Functions.sendError(msg.From, "Not Authorized " .. (message or ""))
 	end
 
-	if not msg["New-Owner"] then
-		Zone.Functions.sendError(msg.From, "Invalid Data: New-Owner required")
-		return
+	local op = msg["Update-Type"]
+	local toAddr = msg["To"]
+
+	local function findTransferByTo(to)
+		for i, t in ipairs(Zone.Transfers) do
+			if t.To == to then
+				return i, t
+			end
+		end
+		return -1, nil
 	end
 
-	-- check if new owner is a valid address
-	if not check_valid_address(msg["New-Owner"]) then
-		Zone.Functions.sendError(msg.From, "Invalid Data: New-Owner must be a valid address")
-		return
+	local function ensureAdmin(id)
+		local roles = Zone.Functions.getActorRoles(id)
+		return roles and Zone.Functions.rolesHasValue(roles, Zone.RoleOptions.Admin) or false
 	end
 
-	-- only admins can become SuperAdmin
-	if not Zone.Functions.actorHasRole(msg["New-Owner"], Zone.RoleOptions.Admin) then
-		Zone.Functions.sendError(msg.From, "Invalid Data: New-Owner must have Admin role to become SuperAdmin")
-		return
+	if not op or (op ~= "Invite" and op ~= "Accept" and op ~= "Reject" and op ~= "Cancel") then
+		return Zone.Functions.sendError(msg.From, "Invalid Update-Type. Use Invite | Accept | Reject | Cancel")
 	end
 
-	Owner = msg["New-Owner"]
+	if op == "Invite" then
+		if msg.From ~= Owner then
+			return Zone.Functions.sendError(msg.From, "Only Owner can invite a new owner")
+		end
+		if not toAddr or not check_valid_address(toAddr) then
+			return Zone.Functions.sendError(msg.From, "Invalid or missing To address")
+		end
+		if not ensureAdmin(toAddr) then
+			return Zone.Functions.sendError(msg.From, "Invitee must currently have Admin role")
+		end
 
-	-- set the new owner as SuperAdmin
-	Zone.Roles[Owner] = {
-		Roles = { Zone.RoleOptions.SuperAdmin },
-		Type = "wallet",
-	}
+		local idx, existing = findTransferByTo(toAddr)
+		if idx > -1 and existing.State == "pending" then
+			return Zone.Functions.sendError(msg.From, "A pending transfer already exists for this address")
+		end
 
-	ao.send({
-		Target = msg.From,
-		Action = "Ownership-Transferred",
-	})
+		for _, t in ipairs(Zone.Transfers) do
+			if t.State == "pending" then
+				t.State = "cancelled"
+				t.UpdatedAt = msg.Timestamp
+			end
+		end
 
-	SyncState(msg)
-	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+		table.insert(Zone.Transfers, {
+			To = toAddr,
+			From = Owner,
+			State = "pending",
+			CreatedAt = msg.Timestamp,
+			UpdatedAt = msg.Timestamp,
+		})
+
+		SyncState(msg)
+		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+	end
+
+	if op == "Accept" then
+		local idx, invite = findTransferByTo(msg.From)
+		if idx == -1 then
+			return Zone.Functions.sendError(msg.From, "No transfer invite found for this actor")
+		end
+		if invite.State ~= "pending" then
+			return Zone.Functions.sendError(msg.From, "Transfer is not in pending state")
+		end
+		if not ensureAdmin(msg.From) then
+			return Zone.Functions.sendError(msg.From, "Accepting actor must be an Admin")
+		end
+
+		Owner = msg.From
+		invite.State = "accepted"
+		invite.AcceptedAt = msg.Timestamp
+		invite.UpdatedAt = msg.Timestamp
+
+		for _, t in ipairs(Zone.Transfers) do
+			if t ~= invite and t.State == "pending" then
+				t.State = "cancelled"
+				t.UpdatedAt = msg.Timestamp
+			end
+		end
+
+		SyncState(msg)
+		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+	end
+
+	if op == "Reject" then
+		local idx, invite = findTransferByTo(msg.From)
+		if idx == -1 then
+			return Zone.Functions.sendError(msg.From, "No transfer invite found for this actor")
+		end
+		if invite.State ~= "pending" then
+			return Zone.Functions.sendError(msg.From, "Transfer is not in pending state")
+		end
+
+		invite.State = "rejected"
+		invite.RejectedAt = msg.Timestamp
+		invite.UpdatedAt = msg.Timestamp
+
+		SyncState(msg)
+		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+	end
+
+	if op == "Cancel" then
+		if msg.From ~= Owner then
+			return Zone.Functions.sendError(msg.From, "Only Owner can cancel a transfer invite")
+		end
+		if not toAddr or not check_valid_address(toAddr) then
+			return Zone.Functions.sendError(msg.From, "Invalid or missing To address")
+		end
+		local idx, invite = findTransferByTo(toAddr)
+		if idx == -1 then
+			return Zone.Functions.sendError(msg.From, "No transfer invite found for this address")
+		end
+		if invite.State ~= "pending" then
+			return Zone.Functions.sendError(msg.From, "Only pending invites can be cancelled")
+		end
+
+		invite.State = "cancelled"
+		invite.CancelledAt = msg.Timestamp
+		invite.UpdatedAt = msg.Timestamp
+
+		SyncState(msg)
+		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+	end
 end
 
 Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
