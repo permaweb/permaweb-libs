@@ -11,6 +11,7 @@ export type ProcessReadType = {
 	path: string;
 	fallbackAction: string;
 	serialize?: boolean;
+	tags?: TagType[];
 };
 
 export type ProcessSpawnType = {
@@ -134,6 +135,7 @@ export type CommentCreateArgType = {
 	parentId?: string;
 	rootId?: string;
 	tags?: TagType[];
+	metadata?: object;
 };
 
 export type CollectionManifestType = {
@@ -223,6 +225,23 @@ export type DefaultGQLResponseType = {
 } & GQLResponseType;
 
 export type BatchAGQLResponseType = { [queryKey: string]: DefaultGQLResponseType };
+
+export type ModerationStatusType = 'blocked' | 'allowed';
+
+export type ModerationTargetType = 'comment' | 'profile';
+
+export type ModerationEntryType = {
+	id: string;
+	targetId: string;
+	targetType: ModerationTargetType;
+	status: ModerationStatusType;
+	targetContext?: string;
+	reason?: string;
+	moderator: string;
+	dateCreated: number;
+	updatedAt?: number;
+	metadata?: any;
+};
 
 export type TagType = { name: string; value: string };
 

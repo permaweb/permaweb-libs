@@ -35,6 +35,14 @@ This SDK provides a set of libraries designed as foundational building blocks fo
     - [updateCollectionAssets](#updatecollectionassets)
     - [getCollection](#getcollection)
     - [getCollections](#getcollections)
+  - [Moderation](#moderation)
+    - [addModerationEntry](#addmoderationentry)
+    - [getModerationEntries](#getmoderationentries)
+    - [updateModerationEntry](#updatemoderationentry)
+    - [removeModerationEntry](#removemoderationentry)
+    - [addModerationSubscription](#addmoderationsubscription)
+    - [removeModerationSubscription](#removemoderationsubscription)
+    - [getModerationSubscriptions](#getmoderationsubscriptions)
 - [Examples](#examples)
 - [Resources](#resources)
 
@@ -185,13 +193,21 @@ Zones are representations of entities on the permaweb that contain relevant info
 ##### `createZone`
 
 ```typescript
-const zoneId = await permaweb.createZone();
+const zoneId = await permaweb.createZone({
+  spawnModeration: true,
+  authUsers: ["user-address-1", "user-address-2"]
+});
 ```
 
 <details>
   <summary><strong>Parameters</strong></summary>
 
-- `tags (optional)`: Additional tags
+- `args (optional)`: Object containing:
+  - `data` (optional): Initial zone data
+  - `tags` (optional): Additional tags
+  - `spawnModeration` (optional): Whether to spawn a moderation process (default: false)
+  - `authUsers` (optional): Array of authorized user addresses for the moderation process
+- `callback (optional)`: Callback function for client use
 
 </details>
 
@@ -804,6 +820,236 @@ const collections = await permaweb.getCollections();
     assets: ["AssetId1", "AssetId2", "AssetId3"],
   },
 ];
+```
+
+</details>
+
+### Moderation
+
+Moderation provides content moderation capabilities through dedicated moderation processes. Similar to comments, moderation functions require the moderation process ID directly.
+
+##### `addModerationEntry`
+
+```typescript
+const moderationEntryId = await permaweb.addModerationEntry({
+  moderationId: moderationProcessId,
+  targetType: "comment",
+  targetId: "CommentId",
+  status: "blocked",
+  targetContext: "CommentsProcessId",
+  moderator: "ModeratorAddress",
+  reason: "Spam content",
+  metadata: { /* optional metadata */ }
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `targetType`: Type of entity being moderated ('comment' | 'profile' | string)
+  - `targetId`: The ID of the entity to moderate
+  - `status`: Moderation status ('active' | 'inactive' | 'removed' | 'flagged' | 'approved')
+  - `moderator`: Address of the moderator
+  - `targetContext` (optional): Context ID for the moderation
+  - `reason` (optional): Reason for moderation
+  - `metadata` (optional): Additional metadata
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationEntryId;
+```
+
+</details>
+
+##### `getModerationEntries`
+
+```typescript
+const moderationEntries = await permaweb.getModerationEntries({
+  moderationId: moderationProcessId,
+  targetType: "comment",
+  status: "blocked",
+  targetContext: "CommentsProcessId"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `targetType`: Type of entity ('comment' | 'profile' | string)
+  - `targetId` (optional): Filter by specific target ID
+  - `status` (optional): Filter by status
+  - `targetContext` (optional): Filter by context
+  - `moderator` (optional): Filter by moderator address
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+[
+  {
+    targetId: "CommentId",
+    status: "blocked",
+    targetContext: "CommentsProcessId",
+    moderator: "ModeratorAddress",
+    dateCreated: 1234567890000,
+    reason: "Spam content"
+  }
+];
+```
+
+</details>
+
+##### `updateModerationEntry`
+
+```typescript
+const updateId = await permaweb.updateModerationEntry({
+  moderationId: moderationProcessId,
+  targetType: "comment",
+  targetId: "CommentId",
+  status: "allowed",
+  moderator: "ModeratorAddress",
+  reason: "False positive, content is acceptable"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `targetType`: Type of entity being moderated
+  - `targetId`: The ID of the entity to update
+  - `status`: New moderation status
+  - `moderator`: Address of the moderator
+  - `reason` (optional): Reason for the update
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationUpdateId;
+```
+
+</details>
+
+##### `removeModerationEntry`
+
+```typescript
+const removeId = await permaweb.removeModerationEntry({
+  moderationId: moderationProcessId,
+  targetType: "comment",
+  targetId: "CommentId"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `targetType`: Type of entity being moderated
+  - `targetId`: The ID of the entity to remove from moderation
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationRemoveId;
+```
+
+</details>
+
+##### `addModerationSubscription`
+
+```typescript
+const subscriptionId = await permaweb.addModerationSubscription({
+  moderationId: moderationProcessId,
+  originPortal: "OriginPortalId",
+  subscriptionType: "default"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `originPortal`: The ID of the portal/zone to subscribe to
+  - `subscriptionType` (optional): Type of subscription (e.g., "default", "spam")
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationSubscriptionId;
+```
+
+</details>
+
+##### `removeModerationSubscription`
+
+```typescript
+const removeId = await permaweb.removeModerationSubscription({
+  moderationId: moderationProcessId,
+  originPortal: "OriginPortalId"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `originPortal`: The ID of the portal/zone to unsubscribe from
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationUnsubscribeId;
+```
+
+</details>
+
+##### `getModerationSubscriptions`
+
+```typescript
+const subscriptions = await permaweb.getModerationSubscriptions({
+  moderationId: moderationProcessId
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+["PortalId1", "PortalId2", "PortalId3"];
 ```
 
 </details>

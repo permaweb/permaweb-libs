@@ -31,18 +31,31 @@ function init(deps: Helpers.DependencyType) {
 		createAtomicAsset: Services.createAtomicAssetWith(deps),
 		getAtomicAsset: Services.getAtomicAssetWith(deps),
 		getAtomicAssets: Services.getAtomicAssets,
-
+  
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
 		getComments: Services.getCommentsWith(deps),
 		updateCommentStatus: Services.updateCommentStatusWith(deps),
 		removeComment: Services.removeCommentWith(deps),
+		updateCommentContent: Services.updateCommentContentWith(deps),
+		userRemoveComment: Services.removeUserCommentWith(deps),
+		pinComment: Services.pinCommentWith(deps),
+		unpinComment: Services.unpinCommentWith(deps),
 
 		/* Collections */
 		createCollection: Services.createCollectionWith(deps),
 		updateCollectionAssets: Services.updateCollectionAssetsWith(deps),
 		getCollection: Services.getCollectionWith(deps),
 		getCollections: Services.getCollectionsWith(deps),
+
+    /* Moderation */
+    addModerationEntry: Services.addModerationEntryWith(deps),
+    getModerationEntries: Services.getModerationEntriesWith(deps),
+    updateModerationEntry: Services.updateModerationEntryWith(deps),
+    removeModerationEntry: Services.removeModerationEntryWith(deps),
+    addModerationSubscription: Services.addModerationSubscriptionWith(deps),
+    removeModerationSubscription: Services.removeModerationSubscriptionWith(deps),
+    getModerationSubscriptions: Services.getModerationSubscriptionsWith(deps),
 
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),
@@ -56,6 +69,7 @@ function init(deps: Helpers.DependencyType) {
 		/* Utils */
 		mapFromProcessCase: Helpers.mapFromProcessCase,
 		mapToProcessCase: Helpers.mapToProcessCase,
+    
 	};
 }
 

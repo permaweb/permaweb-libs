@@ -4,9 +4,38 @@ import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
-	return async (args: { data?: any; tags?: TagType[] }, callback?: (status: any) => void): Promise<string | null> => {
+	return async (args: { data?: any; tags?: TagType[]; spawnModeration?: boolean; authUsers?: string[] }, callback?: (status: any) => void): Promise<string | null> => {
 		try {
+			let moderationId = null;
+
+			if (args.spawnModeration) {
+				try {
+					const moderationTags = [
+						{ name: TAGS.keys.onBoot, value: AO.src.moderation },
+						{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
+					];
+
+					if (args.authUsers) {
+						moderationTags.push({ name: 'Auth-Users', value: JSON.stringify(args.authUsers) });
+					}
+
+					const aoCreateProcess = aoCreateProcessWith(deps);
+					moderationId = await aoCreateProcess({
+						tags: moderationTags
+					}, callback ? (status: any) => callback(status) : undefined);
+
+					globalLog(`Moderation Process ID: ${moderationId}`);
+					await new Promise((r) => setTimeout(r, 500));
+				} catch (e: any) {
+					console.error('Error creating moderation process:', e);
+				}
+			}
+
 			const tags = [{ name: TAGS.keys.onBoot, value: AO.src.zone.id }];
+			if (moderationId) {
+				tags.push({ name: 'Bootloader-Moderation', value: moderationId });
+			}
+
 			if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
 
 			const aoCreateProcess = aoCreateProcessWith(deps);
@@ -153,6 +182,7 @@ export function updateZoneVersionWith(deps: DependencyType) {
 					local patchData = Zone.Functions.getPatchData('overview')
             		Send({ device = 'patch@1.0', overview = require('json').encode(patchData) })
 				else
+					local json = require('json')
 					SyncState(nil)
 				end
 				`,
