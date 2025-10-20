@@ -13,6 +13,13 @@ if not AssetManager then
 	error("AssetManager not found, install it")
 end
 
+local function check_valid_address(address)
+	if not address or type(address) ~= "string" then
+		return false
+	end
+	return string.match(address, "^[%w%-_]+$") ~= nil and #address == 43
+end
+
 Zone = Zone or {}
 
 Zone.Functions = Zone.Functions or {}
@@ -38,6 +45,7 @@ Zone.Constants = {
 	H_ZONE_REMOVE = "Zone-Remove",
 	H_ZONE_UPDATE_PATCH_MAP = "Zone-Update-Patch-Map",
 	H_ZONE_ADD_UPLOAD = "Add-Uploaded-Asset",
+	H_ZONE_TRANSFER_OWNERSHIP = "Zone-Transfer-Ownership",
 }
 
 Zone.RoleOptions = {
@@ -525,13 +533,6 @@ end
 
 function Zone.Functions.zoneRoleSet(msg)
 	-- Data: { Id=<id>, Roles=<{ <role>, <role>, Type=<wallet> | <process> }> }[]
-	local function check_valid_address(address)
-		if not address or type(address) ~= "string" then
-			return false
-		end
-		return string.match(address, "^[%w%-_]+$") ~= nil and #address == 43
-	end
-
 	local function check_valid_roles(roles)
 		if not roles then
 			return true
@@ -543,6 +544,9 @@ function Zone.Functions.zoneRoleSet(msg)
 
 		for _, role in ipairs(roles) do
 			if type(role) ~= "string" then
+				return false
+			end
+			if role == Zone.RoleOptions["Admin"] and msg.From ~= Owner then -- only SuperAdmin can assign Admin role
 				return false
 			end
 		end
@@ -944,6 +948,46 @@ function Zone.Functions.removeHandler(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
+function Zone.functions.transferOwnership(msg)
+	if msg.From ~= Owner then
+		Zone.Functions.sendError(msg.From, "Not Authorized")
+		return
+	end
+
+	if not msg["New-Owner"] then
+		Zone.Functions.sendError(msg.From, "Invalid Data: New-Owner required")
+		return
+	end
+
+	-- check if new owner is a valid address
+	if not check_valid_address(msg["New-Owner"]) then
+		Zone.Functions.sendError(msg.From, "Invalid Data: New-Owner must be a valid address")
+		return
+	end
+
+	-- only admins can become SuperAdmin
+	if not Zone.Functions.actorHasRole(msg["New-Owner"], Zone.RoleOptions.Admin) then
+		Zone.Functions.sendError(msg.From, "Invalid Data: New-Owner must have Admin role to become SuperAdmin")
+		return
+	end
+
+	Owner = msg["New-Owner"]
+
+	-- set the new owner as SuperAdmin
+	Zone.Roles[Owner] = {
+		Roles = { Zone.RoleOptions.SuperAdmin },
+		Type = "wallet",
+	}
+
+	ao.send({
+		Target = msg.From,
+		Action = "Ownership-Transferred",
+	})
+
+	SyncState(msg)
+	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+end
+
 Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
 Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functions.keysHandler)
 Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
@@ -974,7 +1018,11 @@ Handlers.add(
 	Zone.Constants.H_ZONE_UPDATE_PATCH_MAP,
 	Zone.Functions.updatePatchMap
 )
-
+Handlers.add(
+	Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP,
+	Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP,
+	Zone.Functions.transferOwnership
+)
 --------------------------------------------------------------------------------
 -- Helper function: setStoreValue
 -- This function takes a dot-notated key and a value, then sets it in the
