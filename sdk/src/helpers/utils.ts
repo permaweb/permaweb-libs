@@ -1,4 +1,5 @@
 import { TAGS } from './config.ts';
+import { TagType } from './types.ts';
 
 declare const InstallTrigger: any;
 
@@ -284,3 +285,9 @@ export function isValidMediaData(data: any) {
 	return checkValidAddress(data) || data.startsWith('data');
 }
 
+export function cleanTagValues(tags: TagType[]): TagType[] {
+	return tags.map((tag) => ({
+		...tag,
+		value: tag.value.replace(/\r?\n/g, ' '),
+	}));
+}

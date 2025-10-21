@@ -4,31 +4,36 @@ import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
-	return async (args: { data?: any; tags?: TagType[]; spawnModeration?: boolean; authUsers?: string[] }, callback?: (status: any) => void): Promise<string | null> => {
+	return async (
+		args: { data?: any; tags?: TagType[]; authUsers?: string[] },
+		callback?: (status: any) => void,
+	): Promise<string | null> => {
 		try {
 			let moderationId = null;
 
-			if (args.spawnModeration) {
-				try {
-					const moderationTags = [
-						{ name: TAGS.keys.onBoot, value: AO.src.moderation },
-						{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
-					];
+			try {
+				const moderationTags = [
+					{ name: TAGS.keys.onBoot, value: AO.src.moderation },
+					{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
+				];
 
-					if (args.authUsers) {
-						moderationTags.push({ name: 'Auth-Users', value: JSON.stringify(args.authUsers) });
-					}
-
-					const aoCreateProcess = aoCreateProcessWith(deps);
-					moderationId = await aoCreateProcess({
-						tags: moderationTags
-					}, callback ? (status: any) => callback(status) : undefined);
-
-					globalLog(`Moderation Process ID: ${moderationId}`);
-					await new Promise((r) => setTimeout(r, 500));
-				} catch (e: any) {
-					console.error('Error creating moderation process:', e);
+				if (args.authUsers) {
+					moderationTags.push({ name: 'Auth-Users', value: JSON.stringify(args.authUsers) });
 				}
+
+				const aoCreateProcess = aoCreateProcessWith(deps);
+				moderationId = await aoCreateProcess(
+					{
+						tags: moderationTags,
+					},
+					callback ? (status: any) => callback(status) : undefined,
+				);
+
+				globalLog(`Moderation Process ID: ${moderationId}`);
+				await new Promise((r) => setTimeout(r, 500));
+			} catch (e: any) {
+				console.error('Error creating moderation process:', e);
+				throw new Error(`Failed to create mandatory moderation process: ${e.message}`);
 			}
 
 			const tags = [{ name: TAGS.keys.onBoot, value: AO.src.zone.id }];
@@ -196,7 +201,7 @@ export function updateZoneVersionWith(deps: DependencyType) {
 }
 
 export function updateZoneAuthoritiesWith(deps: DependencyType) {
-	return async (args: { zoneId: string, authorityId: string }): Promise<string | null> => {
+	return async (args: { zoneId: string; authorityId: string }): Promise<string | null> => {
 		try {
 			globalLog(`Adding authority ${args.authorityId} to process ${args.zoneId}`);
 

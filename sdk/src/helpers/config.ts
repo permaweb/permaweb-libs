@@ -10,7 +10,7 @@ export const AO = {
 		moderation: '-33uBfOgyXkQIwIv-XbfP-Bx74KYl--h2Cnk4TTiiLA',
 		zone: {
 			id: 'eDZu7f4RKNT0TawGluj0Uo-qN-rQqleWR-rIgF26A5A',
-			version: '0.0.4'
+			version: '0.0.4',
 		},
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
