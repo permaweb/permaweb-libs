@@ -4,7 +4,10 @@ import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
-	return async (args: { data?: any; tags?: TagType[]; authUsers?: string[] }, callback?: (status: any) => void): Promise<string | null> => {
+	return async (
+		args: { data?: any; tags?: TagType[]; authUsers?: string[] },
+		callback?: (status: any) => void,
+	): Promise<string | null> => {
 		try {
 			let moderationId = null;
 
@@ -19,9 +22,12 @@ export function createZoneWith(deps: DependencyType) {
 				}
 
 				const aoCreateProcess = aoCreateProcessWith(deps);
-				moderationId = await aoCreateProcess({
-					tags: moderationTags
-				}, callback ? (status: any) => callback(status) : undefined);
+				moderationId = await aoCreateProcess(
+					{
+						tags: moderationTags,
+					},
+					callback ? (status: any) => callback(status) : undefined,
+				);
 
 				globalLog(`Moderation Process ID: ${moderationId}`);
 				await new Promise((r) => setTimeout(r, 500));
@@ -195,7 +201,7 @@ export function updateZoneVersionWith(deps: DependencyType) {
 }
 
 export function updateZoneAuthoritiesWith(deps: DependencyType) {
-	return async (args: { zoneId: string, authorityId: string }): Promise<string | null> => {
+	return async (args: { zoneId: string; authorityId: string }): Promise<string | null> => {
 		try {
 			globalLog(`Adding authority ${args.authorityId} to process ${args.zoneId}`);
 

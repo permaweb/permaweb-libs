@@ -61,7 +61,7 @@ async function build() {
 	try {
 		for (let i = 0; i < buildConfigs.length; i++) {
 			const cfg = buildConfigs[i];
-			console.log(`Building configuration ${i + 1}: ${cfg.outfile}`);
+			console.log(`Building configuration ${i + 1}: ${cfg.outfile}...`);
 			await esbuild.build(cfg);
 			console.log(`Finished building configuration ${i + 1}: ${cfg.outfile}`);
 		}

@@ -11,7 +11,6 @@ EntriesByType = EntriesByType or {}
 Subscriptions = Subscriptions or {}
 SubscriptionsById = SubscriptionsById or {}
 
--- Helper functions
 local function addToTargetIndex(targetId, id)
 	EntriesByTarget[targetId] = EntriesByTarget[targetId] or {}
 	table.insert(EntriesByTarget[targetId], id)
@@ -20,18 +19,6 @@ end
 local function addToTypeIndex(targetType, id)
 	EntriesByType[targetType] = EntriesByType[targetType] or {}
 	table.insert(EntriesByType[targetType], id)
-end
-
-local function isAuthorized(addr)
-	if not addr then
-		return false
-	end
-	for _, v in ipairs(AuthUsers) do
-		if v == addr then
-			return true
-		end
-	end
-	return false
 end
 
 local function getTag(msg, name)
@@ -51,7 +38,7 @@ local function normalizeStatus(s)
 		return nil
 	end
 	s = string.lower(s)
-	if s == "active" or s == "inactive" or s == "removed" or s == "flagged" or s == "approved" then
+	if s == "active" or s == "inactive" or s == "removed" or s == "flagged" or s == "approved" or s == "blocked" then
 		return s
 	end
 	return nil
@@ -83,8 +70,6 @@ function GetState()
 		AuthUsers = AuthUsers
 	}
 end
-
--- Handlers
 
 Handlers.add("Get-Moderation-State", "Get-Moderation-State", function(msg)
 	Send({ Target = msg.From, Data = json.encode(GetState()) })
@@ -128,10 +113,6 @@ Handlers.add("Get-Moderation-Entries", "Get-Moderation-Entries", function(msg)
 end)
 
 Handlers.add("Add-Moderation-Entry", "Add-Moderation-Entry", function(msg)
-	if not isAuthorized(msg.From) then
-		Send({ Target = msg.From, Action = "Add-Moderation-Entry-Error", Error = "Unauthorized" })
-		return
-	end
 
 	local targetType = getTag(msg, "Target-Type")
 	local targetId = getTag(msg, "Target-Id")
@@ -150,18 +131,15 @@ Handlers.add("Add-Moderation-Entry", "Add-Moderation-Entry", function(msg)
 
 	local id = getTag(msg, "Entry-Id") or msg.Id
 
-	-- Check for duplicate
 	if EntriesById[id] then
 		Send({ Target = msg.From, Action = "Add-Moderation-Entry-Error", Error = "Duplicate Entry-Id" })
 		return
 	end
 
-	-- Check if entry already exists for this target
 	local existingEntries = EntriesByTarget[targetId] or {}
 	for _, entryId in ipairs(existingEntries) do
 		local entry = EntriesById[entryId]
 		if entry and entry.TargetContext == targetContext then
-			-- Update existing entry instead
 			entry.Status = status
 			entry.Moderator = msg.From
 			entry.UpdatedAt = msg.Timestamp
@@ -174,7 +152,6 @@ Handlers.add("Add-Moderation-Entry", "Add-Moderation-Entry", function(msg)
 		end
 	end
 
-	-- Create new entry
 	local newEntry = {
 		Id = id,
 		TargetType = targetType,
@@ -188,7 +165,6 @@ Handlers.add("Add-Moderation-Entry", "Add-Moderation-Entry", function(msg)
 		Metadata = {}
 	}
 
-	-- Parse metadata from Data if provided
 	if msg.Data and msg.Data ~= "" then
 		local status, metadata = pcall(json.decode, msg.Data)
 		if status and type(metadata) == "table" then
@@ -210,10 +186,6 @@ Handlers.add("Add-Moderation-Entry", "Add-Moderation-Entry", function(msg)
 end)
 
 Handlers.add("Update-Moderation-Entry", "Update-Moderation-Entry", function(msg)
-	if not isAuthorized(msg.From) then
-		Send({ Target = msg.From, Action = "Update-Moderation-Entry-Error", Error = "Unauthorized" })
-		return
-	end
 
 	local id = getTag(msg, "Entry-Id")
 	local entry = id and EntriesById[id]
@@ -241,7 +213,6 @@ Handlers.add("Update-Moderation-Entry", "Update-Moderation-Entry", function(msg)
 	entry.Moderator = msg.From
 	entry.UpdatedAt = msg.Timestamp
 
-	-- Update metadata if provided
 	if msg.Data and msg.Data ~= "" then
 		local success, metadata = pcall(json.decode, msg.Data)
 		if success and type(metadata) == "table" then
@@ -258,10 +229,6 @@ Handlers.add("Update-Moderation-Entry", "Update-Moderation-Entry", function(msg)
 end)
 
 Handlers.add("Remove-Moderation-Entry", "Remove-Moderation-Entry", function(msg)
-	if not isAuthorized(msg.From) then
-		Send({ Target = msg.From, Action = "Remove-Moderation-Entry-Error", Error = "Unauthorized" })
-		return
-	end
 
 	local id = getTag(msg, "Entry-Id")
 	local entry = id and EntriesById[id]
@@ -271,7 +238,6 @@ Handlers.add("Remove-Moderation-Entry", "Remove-Moderation-Entry", function(msg)
 		return
 	end
 
-	-- Remove from indices
 	local targetEntries = EntriesByTarget[entry.TargetId] or {}
 	for i, entryId in ipairs(targetEntries) do
 		if entryId == id then
@@ -288,7 +254,6 @@ Handlers.add("Remove-Moderation-Entry", "Remove-Moderation-Entry", function(msg)
 		end
 	end
 
-	-- Remove from main storage
 	for i, e in ipairs(ModerationEntries) do
 		if e.Id == id then
 			table.remove(ModerationEntries, i)
@@ -306,12 +271,7 @@ Handlers.add("Remove-Moderation-Entry", "Remove-Moderation-Entry", function(msg)
 	Send({ Target = msg.From, Action = "Remove-Moderation-Entry-Success", Id = id })
 end)
 
--- Subscription Management
 Handlers.add("Add-Moderation-Subscription", "Add-Moderation-Subscription", function(msg)
-	if not isAuthorized(msg.From) then
-		Send({ Target = msg.From, Action = "Add-Subscription-Error", Error = "Unauthorized" })
-		return
-	end
 
 	local zoneId = getTag(msg, "Zone-Id")
 	local moderationProcessId = getTag(msg, "Moderation-Process-Id")
@@ -327,7 +287,6 @@ Handlers.add("Add-Moderation-Subscription", "Add-Moderation-Subscription", funct
 		return
 	end
 
-	-- Check if already subscribed
 	if SubscriptionsById[zoneId] then
 		Send({ Target = msg.From, Action = "Add-Subscription-Error", Error = "Already subscribed" })
 		return
@@ -349,10 +308,6 @@ Handlers.add("Add-Moderation-Subscription", "Add-Moderation-Subscription", funct
 end)
 
 Handlers.add("Remove-Moderation-Subscription", "Remove-Moderation-Subscription", function(msg)
-	if not isAuthorized(msg.From) then
-		Send({ Target = msg.From, Action = "Remove-Subscription-Error", Error = "Unauthorized" })
-		return
-	end
 
 	local zoneId = getTag(msg, "Zone-Id")
 	if not zoneId then
@@ -366,7 +321,6 @@ Handlers.add("Remove-Moderation-Subscription", "Remove-Moderation-Subscription",
 		return
 	end
 
-	-- Remove from array
 	for i, sub in ipairs(Subscriptions) do
 		if sub.Id == zoneId then
 			table.remove(Subscriptions, i)
@@ -374,7 +328,6 @@ Handlers.add("Remove-Moderation-Subscription", "Remove-Moderation-Subscription",
 		end
 	end
 
-	-- Remove from index
 	SubscriptionsById[zoneId] = nil
 
 	SyncDynamicState("subscriptions", Subscriptions, { jsonEncode = true })
@@ -386,12 +339,7 @@ Handlers.add("Get-Moderation-Subscriptions", "Get-Moderation-Subscriptions", fun
 	Send({ Target = msg.From, Data = json.encode(Subscriptions) })
 end)
 
--- Bulk operations for efficiency
 Handlers.add("Bulk-Add-Moderation-Entries", "Bulk-Add-Moderation-Entries", function(msg)
-	if not isAuthorized(msg.From) then
-		Send({ Target = msg.From, Action = "Bulk-Add-Error", Error = "Unauthorized" })
-		return
-	end
 
 	if not msg.Data or msg.Data == "" then
 		Send({ Target = msg.From, Action = "Bulk-Add-Error", Error = "Data required" })
@@ -409,14 +357,12 @@ Handlers.add("Bulk-Add-Moderation-Entries", "Bulk-Add-Moderation-Entries", funct
 
 	for _, entry in ipairs(entries) do
 		if entry.TargetId and entry.TargetType then
-			-- Check if entry exists
 			local existingEntries = EntriesByTarget[entry.TargetId] or {}
 			local updated = false
 
 			for _, entryId in ipairs(existingEntries) do
 				local existing = EntriesById[entryId]
 				if existing and existing.TargetContext == entry.TargetContext then
-					-- Update existing
 					existing.Status = entry.Status or existing.Status
 					existing.Moderator = msg.From
 					existing.UpdatedAt = msg.Timestamp
@@ -428,7 +374,6 @@ Handlers.add("Bulk-Add-Moderation-Entries", "Bulk-Add-Moderation-Entries", funct
 			end
 
 			if not updated then
-				-- Add new
 				local id = entry.Id or (msg.Id .. "-" .. tostring(addedCount))
 				local newEntry = {
 					Id = id,
@@ -465,12 +410,10 @@ Handlers.add("Bulk-Add-Moderation-Entries", "Bulk-Add-Moderation-Entries", funct
 	})
 end)
 
--- Get Auth Users handler
 Handlers.add("Get-Auth-Users", "Get-Auth-Users", function(msg)
 	Send({ Target = msg.From, Data = json.encode(AuthUsers) })
 end)
 
--- Initialize from boot message
 local isInitialized = false
 
 if not isInitialized and #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then

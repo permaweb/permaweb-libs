@@ -79,10 +79,7 @@ export function createCollectionWith(deps: DependencyType) {
 
 		try {
 			const aoCreateProcess = aoCreateProcessWith(deps);
-			const collectionId = await aoCreateProcess(
-				{ tags: tags },
-				callback ? (status) => callback(status) : undefined,
-			);
+			const collectionId = await aoCreateProcess({ tags: tags }, callback ? (status) => callback(status) : undefined);
 
 			globalLog('Sending eval message to collection...');
 			if (callback) callback('Sending eval message to collection...');
