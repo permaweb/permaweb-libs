@@ -9,7 +9,7 @@ export const AO = {
 		comments: 'RvozS-4Mbcmq66gPapsNOyERkg3LrpR0vSRKz8wIi4k',
 		moderation: '-33uBfOgyXkQIwIv-XbfP-Bx74KYl--h2Cnk4TTiiLA',
 		zone: {
-			id: 'd1XYU4osSYaiWv59Er3zTbEhhSX3wwlbdrAGvksukLk',
+			id: '7LOQqqyUKjWAls-VvuqbUMYHBFIjhwX8BNXWUhXNDVI',
 			version: '0.0.5',
 		},
 	},
