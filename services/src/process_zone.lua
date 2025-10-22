@@ -961,7 +961,8 @@ function Zone.Functions.transferOwnership(msg)
 	local toAddr = msg["To"]
 
 	local function findTransferByTo(to)
-		for i, t in ipairs(Zone.Transfers) do
+		for i = #Zone.Transfers, 1, -1 do
+			local t = Zone.Transfers[i]
 			if t.To == to then
 				return i, t
 			end
