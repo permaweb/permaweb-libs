@@ -95,9 +95,33 @@ export async function runUpload(
 ): Promise<any> {
 	const { apiUrl, token, chunkSize, batchSize = 3 } = uploadOpts;
 
+	const nonce = crypto.randomUUID();
+	const msg = new TextEncoder().encode(nonce);
+
 	let signer = new ArconnectSigner(window.arweaveWallet);
 	const pubKey = await (signer as any).signer.getActivePublicKey();
 	signer.publicKey = Buffer.from(pubKey, 'base64');
+
+	const sigAB = await new ArconnectSigner(window.arweaveWallet).sign(msg);
+	const toB64Url = (buf: ArrayBuffer) =>
+		btoa(String.fromCharCode(...new Uint8Array(buf)))
+			.replace(/\+/g, '-')
+			.replace(/\//g, '_')
+			.replace(/=+$/, '');
+
+	const signature = toB64Url(sigAB);
+	const turboBalanceRes = await fetch('https://payment.ardrive.io/v1/balance', {
+		headers: {
+			'x-nonce': nonce,
+			'x-signature': signature,
+			'x-public-key': pubKey,
+		},
+	});
+
+	const turboBalance = await turboBalanceRes.json();
+
+	// 2. Extract all paying addresses
+	const paidByArray = (turboBalance.receivedApprovals || []).map((a: any) => a.payingAddress);
 
 	const rawFile = new Uint8Array(await fileBlob.arrayBuffer());
 	const dataItem = createData(rawFile, signer, {
@@ -122,7 +146,7 @@ export async function runUpload(
 		type: 'application/octet-stream',
 	});
 
-	const commonHeaders = { 'x-chunking-version': '2' };
+	const commonHeaders = { 'x-chunking-version': '2', 'x-paid-by': paidByArray.join(',') };
 	let infoRes = await fetch(`${apiUrl}/chunks/${token}/-1/-1`, { headers: commonHeaders });
 	if (!infoRes.ok) {
 		throw new Error(`Failed to get upload ID: ${infoRes.status} ${await infoRes.text()}`);
