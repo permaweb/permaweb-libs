@@ -19,6 +19,7 @@ function init(deps: Helpers.DependencyType) {
 		updateZonePatchMap: Services.updateZonePatchMapWith(deps),
 		updateZoneVersion: Services.updateZoneVersionWith(deps),
 		updateZoneAuthorities: Services.updateZoneAuthoritiesWith(deps),
+		transferZoneOwnership: Services.transferZoneOwnershipWith(deps),
 
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),

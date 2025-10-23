@@ -228,3 +228,34 @@ export function getZoneWith(deps: DependencyType) {
 		}
 	};
 }
+
+export function transferZoneOwnershipWith(deps: DependencyType) {
+	return async (args: {
+		zoneId: string;
+		op: 'Invite' | 'Accept' | 'Reject' | 'Cancel';
+		to?: string;
+	}): Promise<string | null> => {
+		const { zoneId, op, to } = args;
+
+		// basic validations
+		if (!checkValidAddress(zoneId)) throw new Error('Invalid zone address');
+		if (op === 'Invite' || op === 'Cancel') {
+			if (!to || !checkValidAddress(to)) throw new Error('Invalid or missing "to" address');
+		}
+
+		try {
+			const tags: TagType[] = [{ name: 'Update-Type', value: op }];
+			if (to) tags.push({ name: 'To', value: to });
+
+			const txId = await aoSend(deps, {
+				processId: zoneId,
+				action: 'Zone-Transfer-Ownership',
+				tags,
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(e?.message ?? e ?? 'Error sending transfer ownership request');
+		}
+	};
+}
