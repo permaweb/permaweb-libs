@@ -35,6 +35,7 @@ Zone.Constants = {
 	H_ZONE_ADD_INDEX_ID = "Add-Index-Id",
 	H_ZONE_ADD_INDEX_REQUEST = "Add-Index-Request",
 	H_ZONE_UPDATE_INDEX_REQUEST = "Update-Index-Request",
+	H_ZONE_UPDATE_STATUS_INDEX_REQUEST = "Update-Status-Index-Request",
 	H_ZONE_INDEX_NOTICE = "Index-Notice",
 	H_ZONE_UPDATE = "Zone-Update",
 	H_ZONE_ROLE_SET = "Role-Set",
@@ -96,6 +97,12 @@ Permissions = {
 		},
 	},
 	[Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST] = {
+		Roles = {
+			Zone.RoleOptions.Admin,
+			Zone.RoleOptions.Moderator,
+		},
+	},
+	[Zone.Constants.H_ZONE_UPDATE_STATUS_INDEX_REQUEST] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
 			Zone.RoleOptions.Moderator,
@@ -802,10 +809,38 @@ function Zone.Functions.addIndexRequest(msg)
 		end
 	end
 
-	table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg["Index-Id"] })
+	table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg["Index-Id"], Status = "Pending" })
 
 	SyncState(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+end
+
+function Zone.Functions.updateStatusIndexRequest(msg)
+	if not Zone.Functions.isAuthorized(msg) then
+		Zone.Functions.sendError(msg.From, "Not Authorized")
+		return
+	end
+
+	if not msg["Index-Id"] or not msg["Status"] then
+		Zone.Functions.sendError(msg.From, "Invalid Data")
+		return
+	end
+
+	local entry = nil
+	for _, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
+		if reqEntry.Id == msg["Index-Id"] then
+			entry = reqEntry
+			break
+		end
+	end
+
+	if entry then
+		entry.Status = msg["Status"]
+		SyncState(msg)
+		msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+	else
+		Zone.Functions.sendError(msg.From, "Entry not found")
+	end
 end
 
 function Zone.Functions.updateIndexRequest(msg)
@@ -831,6 +866,10 @@ function Zone.Functions.updateIndexRequest(msg)
 	end
 
 	if entryIndex > -1 then
+		if entry["Status"] ~= "Pending" then
+			Zone.Functions.sendError(msg.From, "Only Pending requests can be updated")
+			return
+		end
 		if msg["Update-Type"] == "Approve" then
 			table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
 
@@ -1100,6 +1139,11 @@ Handlers.add(
 	Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST,
 	Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST,
 	Zone.Functions.updateIndexRequest
+)
+Handlers.add(
+	Zone.Constants.H_ZONE_UPDATE_STATUS_INDEX_REQUEST,
+	Zone.Constants.H_ZONE_UPDATE_STATUS_INDEX_REQUEST,
+	Zone.Functions.updateStatusIndexRequest
 )
 Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
 Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
