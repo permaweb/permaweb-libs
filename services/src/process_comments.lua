@@ -214,6 +214,14 @@ end)
 Handlers.add("Add-Comment", "Add-Comment", function(msg)
 	local parentId = getTag(msg, "Parent-Id")
 	local content = msg.Data
+
+	if content and type(content) == "string" then
+		local success, decoded = pcall(json.decode, content)
+		if success and type(decoded) == "string" then
+			content = decoded
+		end
+	end
+
 	if not content or content == "" then
 		Send({ Target = msg.From, Action = "Add-Comment-Error", Error = "Empty content" })
 		return
