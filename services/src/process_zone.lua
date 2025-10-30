@@ -20,6 +20,18 @@ local function check_valid_address(address)
 	return string.match(address, "^[%w%-_]+$") ~= nil and #address == 43
 end
 
+-- Helper: is this asset (or id) already published?
+local function isAlreadyIndexed(entry)
+	local idx = Zone.Data.KV.Store.Index or {}
+	for _, e in ipairs(idx) do
+		-- Prefer AssetId match if present, else fall back to Id
+		if (entry.AssetId and e.AssetId and e.AssetId == entry.AssetId) or (e.Id and entry.Id and e.Id == entry.Id) then
+			return true
+		end
+	end
+	return false
+end
+
 Zone = Zone or {}
 
 Zone.Functions = Zone.Functions or {}
@@ -38,6 +50,7 @@ Zone.Constants = {
 	H_ZONE_UPDATE_STATUS_INDEX_REQUEST = "Update-Status-Index-Request",
 	H_ZONE_INDEX_NOTICE = "Index-Notice",
 	H_ZONE_UPDATE = "Zone-Update",
+	H_ZONE_UPDATE_ASSET = "Update-Asset-Through-Zone",
 	H_ZONE_ROLE_SET = "Role-Set",
 	H_ZONE_SET = "Zone-Set",
 	H_ZONE_JOIN = "Zone-Join",
@@ -84,6 +97,13 @@ Permissions = {
 			},
 		},
 	},
+	[Zone.Constants.H_ZONE_UPDATE_ASSET] = {
+		Roles = {
+			Zone.RoleOptions.Admin,
+			Zone.RoleOptions.Contributor,
+			Zone.RoleOptions.ExternalContributor,
+		},
+	},
 	[Zone.Constants.H_ZONE_ADD_INDEX_ID] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
@@ -106,6 +126,7 @@ Permissions = {
 		Roles = {
 			Zone.RoleOptions.Admin,
 			Zone.RoleOptions.Moderator,
+			Zone.RoleOptions.Contributor,
 		},
 	},
 	[Zone.Constants.H_ZONE_UPDATE_PATCH_MAP] = {
@@ -256,6 +277,8 @@ function Zone.Functions.extractChangedFields(msg)
 	if
 		msg.Action == Zone.Constants.H_ZONE_ADD_INDEX_REQUEST
 		or msg.Action == Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST
+		or msg.Action == Zone.Constants.H_ZONE_UPDATE_STATUS_INDEX_REQUEST
+		or msg.Action == Zone.Constants.H_ZONE_UPDATE_ASSET
 	then
 		table.insert(changedFields, "Store.IndexRequests")
 	end
@@ -484,6 +507,84 @@ function Zone.Functions.runAction(msg)
 	end
 
 	ao.send(messageToSend)
+end
+
+function Zone.Functions.updateAsset(msg)
+	local authorized, message = Zone.Functions.isAuthorized(msg)
+	if not authorized then
+		return Zone.Functions.sendError(msg.From, "Not Authorized " .. (message or ""))
+	end
+
+	local forwardTo = msg["Forward-To"]
+	local forwardAct = msg["Forward-Action"]
+	local excludeIdx = msg["Exclude-Index"]
+
+	if not forwardTo or not forwardAct then
+		return Zone.Functions.sendError(msg.From, "Missing Forward-To or Forward-Action")
+	end
+
+	local decodeRes = Zone.Functions.decodeMessageData(msg.Data)
+	local inputTable = decodeRes.success and decodeRes.data and decodeRes.data.Input or nil
+
+	local isAdmin = (msg.From == Owner) or Zone.Functions.actorHasRole(msg.From, Zone.RoleOptions.Admin)
+
+	-- Admins: forward immediately
+	if isAdmin then
+		local out = { Target = forwardTo, Action = forwardAct, Tags = {} }
+		if excludeIdx ~= nil then
+			out.Tags["Exclude-Index"] = excludeIdx
+		end
+		if inputTable ~= nil then
+			out.Data = json.encode(inputTable)
+		end
+		ao.send(out)
+		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+	end
+
+	-- Non-admins: update or add IndexRequest
+	local store = Zone.Data.KV.Store
+	store.IndexRequests = store.IndexRequests or {}
+
+	local assetId = tostring(forwardTo)
+	local now = msg.Timestamp or os.time()
+	local found = false
+
+	for i, req in ipairs(store.IndexRequests) do
+		if req.AssetId == assetId then
+			-- Update in-place
+			req.Status = "Pending"
+			req.ForwardAction = forwardAct
+			req.ExcludeIndex = excludeIdx
+			req.Payload = { Input = inputTable }
+			req.UpdatedAt = now
+			store.IndexRequests[i] = req
+			found = true
+			break
+		end
+	end
+
+	if not found then
+		table.insert(store.IndexRequests, {
+			Id = assetId,
+			Type = "AssetUpdate",
+			Status = "Pending",
+			AssetId = assetId,
+			ForwardAction = forwardAct,
+			ExcludeIndex = excludeIdx,
+			Payload = { Input = inputTable },
+			SubmittedBy = msg.From,
+			CreatedAt = now,
+			UpdatedAt = now,
+		})
+	end
+
+	SyncState(msg)
+
+	return msg.reply({
+		Target = msg.From,
+		Action = Zone.Constants.H_ZONE_SUCCESS,
+		Data = { RequestId = assetId, Status = "Pending", Updated = found, Created = not found },
+	})
 end
 
 function Zone.Functions.zoneGet(msg)
@@ -826,16 +927,16 @@ function Zone.Functions.updateStatusIndexRequest(msg)
 		return
 	end
 
-	local entry = nil
-	for _, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
+	local entryIndex = nil
+	for i, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
 		if reqEntry.Id == msg["Index-Id"] then
-			entry = reqEntry
+			entryIndex = i
 			break
 		end
 	end
 
-	if entry then
-		entry.Status = msg["Status"]
+	if entryIndex then
+		Zone.Data.KV.Store.IndexRequests[entryIndex].Status = msg["Status"]
 		SyncState(msg)
 		msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 	else
@@ -871,13 +972,33 @@ function Zone.Functions.updateIndexRequest(msg)
 			return
 		end
 		if msg["Update-Type"] == "Approve" then
-			table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
+			local shouldForward = (entry["Type"] == "AssetUpdate") or isAlreadyIndexed(entry)
+			if shouldForward then
+				local target = entry["AssetId"]
+				local action = entry["ForwardAction"]
 
-			if not Zone.Data.KV.Store.Index then
-				Zone.Data.KV.Store.Index = {}
+				if not target or not action then
+					Zone.Functions.sendError(msg.From, "Cannot forward: missing target or action")
+					return
+				end
+
+				local out = { Target = target, Action = action, Tags = {} }
+
+				if entry["ExcludeIndex"] ~= nil then
+					out.Tags["Exclude-Index"] = entry["ExcludeIndex"]
+				end
+
+				if entry["Payload"] and entry["Payload"]["Input"] ~= nil then
+					out.Data = json.encode(entry["Payload"]["Input"])
+				end
+
+				ao.send(out)
+				table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
+			else
+				table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
+				Zone.Data.KV.Store.Index = Zone.Data.KV.Store.Index or {}
+				table.insert(Zone.Data.KV.Store.Index, entry)
 			end
-
-			table.insert(Zone.Data.KV.Store.Index, entry)
 		elseif msg["Update-Type"] == "Reject" then
 			table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
 		else
@@ -1129,6 +1250,7 @@ Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOT
 Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
 Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
 Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
+Handlers.add(Zone.Constants.H_ZONE_UPDATE_ASSET, Zone.Constants.H_ZONE_UPDATE_ASSET, Zone.Functions.updateAsset)
 Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Functions.addIndexId)
 Handlers.add(
 	Zone.Constants.H_ZONE_ADD_INDEX_REQUEST,

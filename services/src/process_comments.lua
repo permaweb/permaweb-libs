@@ -397,7 +397,6 @@ Handlers.add("Pin-Comment", "Pin-Comment", function(msg)
 		c.Metadata.PinnedOriginalDepth = c.Metadata.PinnedOriginalDepth or c.Depth -- NEW
 		c.Depth = -1
 		c.Metadata.PinnedAt = msg.Timestamp
-		c.UpdatedAt = msg.Timestamp
 	end
 
 	SyncDynamicState("comments", Comments, { jsonEncode = true })
@@ -444,7 +443,6 @@ Handlers.add("Unpin-Comment", "Unpin-Comment", function(msg)
 		c.Depth = c.Metadata.PinnedOriginalDepth or 0 -- restore
 		c.Metadata.PinnedOriginalDepth = nil -- clear
 		c.Metadata.PinnedAt = nil -- clear
-		c.UpdatedAt = msg.Timestamp
 	end
 
 	SyncDynamicState("comments", Comments, { jsonEncode = true })
