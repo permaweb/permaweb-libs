@@ -967,8 +967,8 @@ function Zone.Functions.updateIndexRequest(msg)
 	end
 
 	if entryIndex > -1 then
-		if entry["Status"] ~= "Pending" then
-			Zone.Functions.sendError(msg.From, "Only Pending requests can be updated")
+		if entry["Status"] == "Pending" then
+			Zone.Functions.sendError(msg.From, "Only Non Pending requests can be updated")
 			return
 		end
 		if msg["Update-Type"] == "Approve" then
