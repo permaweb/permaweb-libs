@@ -94,6 +94,8 @@ export function addToZoneWith(deps: DependencyType) {
 export function updateZonePatchMapWith(deps: DependencyType) {
 	return async (args: object, zoneId: string): Promise<string | null> => {
 		try {
+			globalLog(`Updating zone patch map in process ${zoneId}`);
+
 			const zonePatchMapUpdateId = await aoSend(deps, {
 				processId: zoneId,
 				action: 'Zone-Update-Patch-Map',
@@ -236,8 +238,7 @@ export function transferZoneOwnershipWith(deps: DependencyType) {
 		to?: string;
 	}): Promise<string | null> => {
 		const { zoneId, op, to } = args;
-
-		// basic validations
+		
 		if (!checkValidAddress(zoneId)) throw new Error('Invalid zone address');
 		if (op === 'Invite' || op === 'Cancel') {
 			if (!to || !checkValidAddress(to)) throw new Error('Invalid or missing "to" address');
