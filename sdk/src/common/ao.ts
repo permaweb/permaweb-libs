@@ -10,7 +10,7 @@ import {
 	ProcessSpawnType,
 	TagType,
 } from '../helpers/types.ts';
-import { cleanTagValues,getTagValue, globalLog } from '../helpers/utils.ts';
+import { cleanTagValues, getTagValue, globalLog } from '../helpers/utils.ts';
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
 	const tags = [
@@ -86,10 +86,9 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 	try {
 		const headers: HeadersInit = {};
 
-		if (!args.path) {
-			headers['require-codec'] = 'application/json';
-			headers['accept-bundle'] = 'true';
-		}
+		headers['require-codec'] = 'application/json';
+		headers['accept-bundle'] = 'true';
+
 
 		const res = await fetch(url, { headers });
 		if (res.ok) return res.json();

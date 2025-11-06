@@ -331,7 +331,6 @@ function Zone.Functions.extractChangedFields(msg)
 end
 
 function SendPatch(patchKey, patchData)
-	-- Send({ device = "patch@1.0", [patchKey] = json.encode(patchData) })
 	Send({ device = "patch@1.0", [patchKey] = patchData })
 end
 
@@ -349,22 +348,18 @@ function SyncState(msg)
 				for _, patchKey in ipairs(patchKeys) do
 					local patchData = Zone.Functions.getPatchData(patchKey)
 					SendPatch(patchKey, patchData)
-					-- Send({ device = "patch@1.0", [patchKey] = json.encode(patchData) })
 				end
 			else
 				-- If no specific patch keys match, send full zone update
 				SendPatch('zone', GetFullState())
-				-- Send({ device = "patch@1.0", zone = json.encode(GetFullState()) })
 			end
 		else
 			-- If no changed fields detected, send full zone update
 			SendPatch('zone', GetFullState())
-			-- Send({ device = "patch@1.0", zone = json.encode(GetFullState()) })
 		end
 	else
 		-- If no patch map or no message context, send full zone update
 		SendPatch('zone', GetFullState())
-		-- Send({ device = "patch@1.0", zone = json.encode(GetFullState()) })
 	end
 end
 
@@ -1519,7 +1514,6 @@ if not ZoneInitCompleted then
 		-- Send individual patch messages for each configured patch key
 		for patchKey, _ in pairs(Zone.PatchMap) do
 			local patchData = Zone.Functions.getPatchData(patchKey)
-			-- Send({ device = "patch@1.0", [patchKey] = json.encode(patchData) })
 			SendPatch(patchKey, patchData)
 		end
 	else

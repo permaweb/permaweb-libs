@@ -105,7 +105,7 @@ local function normalizeStatus(s)
 end
 
 function SyncState()
-	Send({ device = "patch@1.0", zone = json.encode(GetState()) })
+	Send({ device = "patch@1.0", zone = GetState() })
 end
 
 function SyncDynamicState(key, value, opts)
@@ -272,9 +272,9 @@ Handlers.add("Add-Comment", "Add-Comment", function(msg)
 		updateParentChildCount(parentId, 1)
 	end
 
-	SyncDynamicState("comments", Comments, { jsonEncode = true })
-	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
-	SyncDynamicState("byParent", ByParent, { jsonEncode = true })
+	SyncDynamicState("comments", Comments)
+	SyncDynamicState("commentsById", CommentsById)
+	SyncDynamicState("byParent", ByParent)
 	Send({ Target = msg.From, Action = "Add-Comment-Success", Id = id })
 end)
 
@@ -313,8 +313,8 @@ Handlers.add("Update-Comment-Status", "Update-Comment-Status", function(msg)
 	end
 	c.Status = desired
 	c.UpdatedAt = msg.Timestamp
-	SyncDynamicState("comments", Comments, { jsonEncode = true })
-	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	SyncDynamicState("comments", Comments)
+	SyncDynamicState("commentsById", CommentsById)
 
 	Send({ Target = msg.From, Action = "Update-Comment-Status-Success", Id = id, Status = desired })
 end)
@@ -344,8 +344,8 @@ Handlers.add("Update-Comment-Content", "Update-Comment-Content", function(msg)
 	comment.Metadata = comment.Metadata or {}
 	comment.Metadata.EditedAt = msg.Timestamp
 
-	SyncDynamicState("comments", Comments, { jsonEncode = true })
-	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	SyncDynamicState("comments", Comments)
+	SyncDynamicState("commentsById", CommentsById)
 	Send({ Target = msg.From, Action = "Update-Comment-Content-Success", Id = id })
 end)
 
@@ -368,8 +368,8 @@ Handlers.add("Remove-Comment", "Remove-Comment", function(msg)
 	c.UpdatedAt = msg.Timestamp
 	c.Content = ""
 
-	SyncDynamicState("comments", Comments, { jsonEncode = true })
-	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	SyncDynamicState("comments", Comments)
+	SyncDynamicState("commentsById", CommentsById)
 	Send({ Target = msg.From, Action = "Remove-Comment-Success", Id = id })
 end)
 
@@ -399,8 +399,8 @@ Handlers.add("Pin-Comment", "Pin-Comment", function(msg)
 		c.Metadata.PinnedAt = msg.Timestamp
 	end
 
-	SyncDynamicState("comments", Comments, { jsonEncode = true })
-	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	SyncDynamicState("comments", Comments)
+	SyncDynamicState("commentsById", CommentsById)
 	Send({ Target = msg.From, Action = "Pin-Comment-Success", Id = id })
 end)
 
@@ -421,8 +421,8 @@ Handlers.add("Remove-Own-Comment", "Remove-Own-Comment", function(msg)
 	c.Status = "inactive"
 	c.UpdatedAt = msg.Timestamp
 	c.Content = ""
-	SyncDynamicState("comments", Comments, { jsonEncode = true })
-	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	SyncDynamicState("comments", Comments)
+	SyncDynamicState("commentsById", CommentsById)
 	Send({ Target = msg.From, Action = "Remove-Own-Comment-Success", Id = id })
 end)
 
@@ -445,8 +445,8 @@ Handlers.add("Unpin-Comment", "Unpin-Comment", function(msg)
 		c.Metadata.PinnedAt = nil -- clear
 	end
 
-	SyncDynamicState("comments", Comments, { jsonEncode = true })
-	SyncDynamicState("commentsById", CommentsById, { jsonEncode = true })
+	SyncDynamicState("comments", Comments)
+	SyncDynamicState("commentsById", CommentsById)
 	Send({ Target = msg.From, Action = "Unpin-Comment-Success", Id = id })
 end)
 
@@ -465,5 +465,5 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
 		end
 	end
 
-	SyncDynamicState("users", AuthUsers, { jsonEncode = true })
+	SyncDynamicState("users", AuthUsers)
 end
