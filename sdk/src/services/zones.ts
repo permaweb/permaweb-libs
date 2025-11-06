@@ -222,9 +222,17 @@ export function updateZoneAuthoritiesWith(deps: DependencyType) {
 export function getZoneWith(deps: DependencyType) {
 	return async (zoneId: string): Promise<any | null> => {
 		try {
-			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', fallbackAction: 'Info' });
+			const processInfo = await readProcess(deps, { processId: zoneId, fallbackAction: 'Info' });
 
-			return mapFromProcessCase(processInfo);
+			if (processInfo?.zone) {
+				const zoneData = {
+					...processInfo.zone,
+					...processInfo.zone.Store ?? {}
+				}
+
+				return mapFromProcessCase(zoneData);
+			}
+			else throw new Error('Zone data not found in process');
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error getting zone');
 		}
@@ -238,7 +246,7 @@ export function transferZoneOwnershipWith(deps: DependencyType) {
 		to?: string;
 	}): Promise<string | null> => {
 		const { zoneId, op, to } = args;
-		
+
 		if (!checkValidAddress(zoneId)) throw new Error('Invalid zone address');
 		if (op === 'Invite' || op === 'Cancel') {
 			if (!to || !checkValidAddress(to)) throw new Error('Invalid or missing "to" address');
