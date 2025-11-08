@@ -1,6 +1,6 @@
 import { aoCreateProcessWith, aoSend, handleProcessEval, readProcess } from '../common/ao.ts';
 import { AO, TAGS } from '../helpers/config.ts';
-import { DependencyType, TagType } from '../helpers/types.ts';
+import { DependencyType, ReadOptsType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
@@ -220,13 +220,34 @@ export function updateZoneAuthoritiesWith(deps: DependencyType) {
 }
 
 export function getZoneWith(deps: DependencyType) {
-	return async (zoneId: string): Promise<any | null> => {
-		try {
-			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', fallbackAction: 'Info' });
+	return async (zoneId: string, opts?: ReadOptsType): Promise<any | null> => {
+		const fallbackRead = async () => {
+			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', hydrate: opts?.hydrate, fallbackAction: 'Info' });
+			if (processInfo.body) {
+				return mapFromProcessCase(JSON.parse(processInfo.body));
+			}
+			throw new Error('Zone data not found in process');
+		};
 
-			return mapFromProcessCase(processInfo);
+		try {
+			const processInfo = await readProcess(deps, { processId: zoneId, hydrate: opts?.hydrate });
+
+			if (processInfo?.zone) {
+				const zoneData = {
+					...processInfo.zone,
+					...processInfo.zone.Store ?? {}
+				};
+
+				return mapFromProcessCase(zoneData);
+			}
+
+			return await fallbackRead();
 		} catch (e: any) {
-			throw new Error(e.message ?? 'Error getting zone');
+			try {
+				return await fallbackRead();
+			} catch (fallbackError: any) {
+				throw new Error(fallbackError.message ?? 'Error getting zone');
+			}
 		}
 	};
 }
@@ -238,7 +259,7 @@ export function transferZoneOwnershipWith(deps: DependencyType) {
 		to?: string;
 	}): Promise<string | null> => {
 		const { zoneId, op, to } = args;
-		
+
 		if (!checkValidAddress(zoneId)) throw new Error('Invalid zone address');
 		if (op === 'Invite' || op === 'Cancel') {
 			if (!to || !checkValidAddress(to)) throw new Error('Invalid or missing "to" address');

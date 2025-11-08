@@ -45,7 +45,7 @@ local function normalizeStatus(s)
 end
 
 function SyncState()
-	Send({ device = "patch@1.0", moderation = json.encode(GetState()) })
+	Send({ device = "patch@1.0", moderation = GetState() })
 end
 
 function SyncDynamicState(key, value, opts)
@@ -145,8 +145,8 @@ Handlers.add("Add-Moderation-Entry", "Add-Moderation-Entry", function(msg)
 			entry.UpdatedAt = msg.Timestamp
 			entry.Reason = reason
 
-			SyncDynamicState("moderationEntries", ModerationEntries, { jsonEncode = true })
-			SyncDynamicState("entriesById", EntriesById, { jsonEncode = true })
+			SyncDynamicState("moderationEntries", ModerationEntries)
+			SyncDynamicState("entriesById", EntriesById)
 			Send({ Target = msg.From, Action = "Update-Moderation-Entry-Success", Id = entryId })
 			return
 		end
@@ -177,10 +177,10 @@ Handlers.add("Add-Moderation-Entry", "Add-Moderation-Entry", function(msg)
 	addToTargetIndex(targetId, id)
 	addToTypeIndex(targetType, id)
 
-	SyncDynamicState("moderationEntries", ModerationEntries, { jsonEncode = true })
-	SyncDynamicState("entriesById", EntriesById, { jsonEncode = true })
-	SyncDynamicState("entriesByTarget", EntriesByTarget, { jsonEncode = true })
-	SyncDynamicState("entriesByType", EntriesByType, { jsonEncode = true })
+	SyncDynamicState("moderationEntries", ModerationEntries)
+	SyncDynamicState("entriesById", EntriesById)
+	SyncDynamicState("entriesByTarget", EntriesByTarget)
+	SyncDynamicState("entriesByType", EntriesByType)
 
 	Send({ Target = msg.From, Action = "Add-Moderation-Entry-Success", Id = id })
 end)
@@ -222,8 +222,8 @@ Handlers.add("Update-Moderation-Entry", "Update-Moderation-Entry", function(msg)
 		end
 	end
 
-	SyncDynamicState("moderationEntries", ModerationEntries, { jsonEncode = true })
-	SyncDynamicState("entriesById", EntriesById, { jsonEncode = true })
+	SyncDynamicState("moderationEntries", ModerationEntries)
+	SyncDynamicState("entriesById", EntriesById)
 
 	Send({ Target = msg.From, Action = "Update-Moderation-Entry-Success", Id = id })
 end)
@@ -263,10 +263,10 @@ Handlers.add("Remove-Moderation-Entry", "Remove-Moderation-Entry", function(msg)
 
 	EntriesById[id] = nil
 
-	SyncDynamicState("moderationEntries", ModerationEntries, { jsonEncode = true })
-	SyncDynamicState("entriesById", EntriesById, { jsonEncode = true })
-	SyncDynamicState("entriesByTarget", EntriesByTarget, { jsonEncode = true })
-	SyncDynamicState("entriesByType", EntriesByType, { jsonEncode = true })
+	SyncDynamicState("moderationEntries", ModerationEntries)
+	SyncDynamicState("entriesById", EntriesById)
+	SyncDynamicState("entriesByTarget", EntriesByTarget)
+	SyncDynamicState("entriesByType", EntriesByType)
 
 	Send({ Target = msg.From, Action = "Remove-Moderation-Entry-Success", Id = id })
 end)
@@ -302,8 +302,8 @@ Handlers.add("Add-Moderation-Subscription", "Add-Moderation-Subscription", funct
 	table.insert(Subscriptions, subscription)
 	SubscriptionsById[zoneId] = subscription
 
-	SyncDynamicState("subscriptions", Subscriptions, { jsonEncode = true })
-	SyncDynamicState("subscriptionsById", SubscriptionsById, { jsonEncode = true })
+	SyncDynamicState("subscriptions", Subscriptions)
+	SyncDynamicState("subscriptionsById", SubscriptionsById)
 	Send({ Target = msg.From, Action = "Add-Subscription-Success", ZoneId = zoneId })
 end)
 
@@ -330,8 +330,8 @@ Handlers.add("Remove-Moderation-Subscription", "Remove-Moderation-Subscription",
 
 	SubscriptionsById[zoneId] = nil
 
-	SyncDynamicState("subscriptions", Subscriptions, { jsonEncode = true })
-	SyncDynamicState("subscriptionsById", SubscriptionsById, { jsonEncode = true })
+	SyncDynamicState("subscriptions", Subscriptions)
+	SyncDynamicState("subscriptionsById", SubscriptionsById)
 	Send({ Target = msg.From, Action = "Remove-Subscription-Success", ZoneId = zoneId })
 end)
 
@@ -397,10 +397,10 @@ Handlers.add("Bulk-Add-Moderation-Entries", "Bulk-Add-Moderation-Entries", funct
 		end
 	end
 
-	SyncDynamicState("moderationEntries", ModerationEntries, { jsonEncode = true })
-	SyncDynamicState("entriesById", EntriesById, { jsonEncode = true })
-	SyncDynamicState("entriesByTarget", EntriesByTarget, { jsonEncode = true })
-	SyncDynamicState("entriesByType", EntriesByType, { jsonEncode = true })
+	SyncDynamicState("moderationEntries", ModerationEntries)
+	SyncDynamicState("entriesById", EntriesById)
+	SyncDynamicState("entriesByTarget", EntriesByTarget)
+	SyncDynamicState("entriesByType", EntriesByType)
 
 	Send({
 		Target = msg.From,
@@ -428,5 +428,5 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
 		end
 	end
 
-	SyncDynamicState("authUsers", AuthUsers, { jsonEncode = true })
+	SyncDynamicState("authUsers", AuthUsers)
 end

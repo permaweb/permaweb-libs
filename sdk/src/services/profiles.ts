@@ -2,7 +2,7 @@ import { GATEWAYS, TAGS } from 'helpers/config.ts';
 
 import { resolveTransactionWith } from '../common/arweave.ts';
 import { getGQLData } from '../common/gql.ts';
-import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
+import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType, ReadOptsType } from '../helpers/types.ts';
 import { getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
 import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
@@ -100,9 +100,9 @@ export function updateProfileVersionWith(deps: DependencyType) {
 export function getProfileByIdWith(deps: DependencyType) {
 	const getZone = getZoneWith(deps);
 
-	return async (profileId: string): Promise<ProfileType | null> => {
+	return async (profileId: string, opts?: ReadOptsType): Promise<ProfileType | null> => {
 		try {
-			const zone = await getZone(profileId);
+			const zone = await getZone(profileId, opts);
 			if (!zone) {
 				throw new Error('Error fetching profile - Not found');
 			}

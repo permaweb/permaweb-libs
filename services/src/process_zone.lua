@@ -13,14 +13,13 @@ if not AssetManager then
 	error("AssetManager not found, install it")
 end
 
-local function check_valid_address(address)
+local function checkValidAddress(address)
 	if not address or type(address) ~= "string" then
 		return false
 	end
 	return string.match(address, "^[%w%-_]+$") ~= nil and #address == 43
 end
 
--- Helper: is this asset (or id) already published?
 local function isAlreadyIndexed(entry)
 	local idx = Zone.Data.KV.Store.Index or {}
 	for _, e in ipairs(idx) do
@@ -168,6 +167,7 @@ function GetFullState()
 		Transfers = Zone.Transfers,
 		Version = Zone.Version,
 		Authorities = ao.authorities,
+		PatchMap = Zone.PatchMap
 	}
 end
 
@@ -323,7 +323,15 @@ function Zone.Functions.extractChangedFields(msg)
 		table.insert(changedFields, "Owner")
 	end
 
+	if msg.Action == Zone.Constants.H_ZONE_UPDATE_PATCH_MAP then
+		table.insert(changedFields, "PatchMap")
+	end
+
 	return changedFields
+end
+
+function SendPatch(patchKey, patchData)
+	Send({ device = "patch@1.0", [patchKey] = patchData })
 end
 
 function SyncState(msg)
@@ -339,19 +347,19 @@ function SyncState(msg)
 				-- Send targeted patch messages for each matched patch key
 				for _, patchKey in ipairs(patchKeys) do
 					local patchData = Zone.Functions.getPatchData(patchKey)
-					Send({ device = "patch@1.0", [patchKey] = json.encode(patchData) })
+					SendPatch(patchKey, patchData)
 				end
 			else
 				-- If no specific patch keys match, send full zone update
-				Send({ device = "patch@1.0", zone = json.encode(GetFullState()) })
+				SendPatch('zone', GetFullState())
 			end
 		else
 			-- If no changed fields detected, send full zone update
-			Send({ device = "patch@1.0", zone = json.encode(GetFullState()) })
+			SendPatch('zone', GetFullState())
 		end
 	else
 		-- If no patch map or no message context, send full zone update
-		Send({ device = "patch@1.0", zone = json.encode(GetFullState()) })
+		SendPatch('zone', GetFullState())
 	end
 end
 
@@ -687,13 +695,14 @@ function Zone.Functions.zoneRoleSet(msg)
 					Action = "Input-Error",
 					Tags = {
 						Status = "Error",
-						Message = "Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data",
+						Message =
+						"Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data",
 					},
 				})
 				return
 			end
 
-			if not check_valid_address(actorId) then
+			if not checkValidAddress(actorId) then
 				Zone.Functions.sendError(msg.From, "Id must be a valid address")
 				return
 			end
@@ -810,6 +819,8 @@ function Zone.Functions.updatePatchMap(msg)
 	if decodeResult.success and decodeResult.data then
 		Zone.PatchMap = decodeResult.data
 		ao.send({ Target = msg.From, Action = "Patch-Map-Updated" })
+
+		SyncState(msg)
 	else
 		Zone.Functions.sendError(
 			msg.From,
@@ -966,7 +977,7 @@ function Zone.Functions.updateIndexRequest(msg)
 		end
 	end
 
-	if entryIndex > -1 then
+	if entry and entryIndex > -1 then
 		if entry["Status"] == "Pending" then
 			Zone.Functions.sendError(msg.From, "Only Non Pending requests can be updated")
 			return
@@ -1143,7 +1154,7 @@ function Zone.Functions.transferOwnership(msg)
 		if msg.From ~= Owner then
 			return Zone.Functions.sendError(msg.From, "Only Owner can invite a new owner")
 		end
-		if not toAddr or not check_valid_address(toAddr) then
+		if not toAddr or not checkValidAddress(toAddr) then
 			return Zone.Functions.sendError(msg.From, "Invalid or missing To address")
 		end
 		if not ensureAdmin(toAddr) then
@@ -1151,7 +1162,7 @@ function Zone.Functions.transferOwnership(msg)
 		end
 
 		local idx, existing = findTransferByTo(toAddr)
-		if idx > -1 and existing.State == "pending" then
+		if idx > -1 and existing and existing.State == "pending" then
 			return Zone.Functions.sendError(msg.From, "A pending transfer already exists for this address")
 		end
 
@@ -1179,7 +1190,7 @@ function Zone.Functions.transferOwnership(msg)
 		if idx == -1 then
 			return Zone.Functions.sendError(msg.From, "No transfer invite found for this actor")
 		end
-		if invite.State ~= "pending" then
+		if invite and invite.State ~= "pending" then
 			return Zone.Functions.sendError(msg.From, "Transfer is not in pending state")
 		end
 		if not ensureAdmin(msg.From) then
@@ -1207,7 +1218,7 @@ function Zone.Functions.transferOwnership(msg)
 		if idx == -1 then
 			return Zone.Functions.sendError(msg.From, "No transfer invite found for this actor")
 		end
-		if invite.State ~= "pending" then
+		if invite and invite.State ~= "pending" then
 			return Zone.Functions.sendError(msg.From, "Transfer is not in pending state")
 		end
 
@@ -1223,14 +1234,14 @@ function Zone.Functions.transferOwnership(msg)
 		if msg.From ~= Owner then
 			return Zone.Functions.sendError(msg.From, "Only Owner can cancel a transfer invite")
 		end
-		if not toAddr or not check_valid_address(toAddr) then
+		if not toAddr or not checkValidAddress(toAddr) then
 			return Zone.Functions.sendError(msg.From, "Invalid or missing To address")
 		end
 		local idx, invite = findTransferByTo(toAddr)
 		if idx == -1 then
 			return Zone.Functions.sendError(msg.From, "No transfer invite found for this address")
 		end
-		if invite.State ~= "pending" then
+		if invite and invite.State ~= "pending" then
 			return Zone.Functions.sendError(msg.From, "Only pending invites can be cancelled")
 		end
 
@@ -1243,47 +1254,132 @@ function Zone.Functions.transferOwnership(msg)
 	end
 end
 
-Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
-Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functions.keysHandler)
-Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
-Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
-Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
-Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
-Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
-Handlers.add(Zone.Constants.H_ZONE_UPDATE_ASSET, Zone.Constants.H_ZONE_UPDATE_ASSET, Zone.Functions.updateAsset)
-Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Functions.addIndexId)
+Handlers.add(
+	Zone.Constants.H_ZONE_GET,
+	Zone.Constants.H_ZONE_GET,
+	Zone.Functions.zoneGet
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_KEYS,
+	Zone.Constants.H_ZONE_KEYS,
+	Zone.Functions.keysHandler
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_CREDIT_NOTICE,
+	Zone.Constants.H_ZONE_CREDIT_NOTICE,
+	Zone.Functions.creditNotice
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_DEBIT_NOTICE,
+	Zone.Constants.H_ZONE_DEBIT_NOTICE,
+	Zone.Functions.debitNotice
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_UPDATE,
+	Zone.Constants.H_ZONE_UPDATE,
+	Zone.Functions.zoneUpdate
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_ADD_UPLOAD,
+	Zone.Constants.H_ZONE_ADD_UPLOAD,
+	Zone.Functions.addUpload
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_RUN_ACTION,
+	Zone.Constants.H_ZONE_RUN_ACTION,
+	Zone.Functions.runAction
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_UPDATE_ASSET,
+	Zone.Constants.H_ZONE_UPDATE_ASSET,
+	Zone.Functions.updateAsset
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_ADD_INDEX_ID,
+	Zone.Constants.H_ZONE_ADD_INDEX_ID,
+	Zone.Functions.addIndexId
+)
+
 Handlers.add(
 	Zone.Constants.H_ZONE_ADD_INDEX_REQUEST,
 	Zone.Constants.H_ZONE_ADD_INDEX_REQUEST,
 	Zone.Functions.addIndexRequest
 )
+
 Handlers.add(
 	Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST,
 	Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST,
 	Zone.Functions.updateIndexRequest
 )
+
 Handlers.add(
 	Zone.Constants.H_ZONE_UPDATE_STATUS_INDEX_REQUEST,
 	Zone.Constants.H_ZONE_UPDATE_STATUS_INDEX_REQUEST,
 	Zone.Functions.updateStatusIndexRequest
 )
-Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
-Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
-Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
-Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
-Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zone.Functions.zoneRoleSet)
-Handlers.add(Zone.Constants.H_ZONE_JOIN, Zone.Constants.H_ZONE_JOIN, Zone.Functions.joinZone)
-Handlers.add(Zone.Constants.H_ZONE_ADD_INVITE, Zone.Constants.H_ZONE_ADD_INVITE, Zone.Functions.addZoneInvite)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_INDEX_NOTICE,
+	Zone.Constants.H_ZONE_INDEX_NOTICE,
+	Zone.Functions.indexNotice
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_SET,
+	Zone.Constants.H_ZONE_SET,
+	Zone.Functions.setHandler
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_APPEND,
+	Zone.Constants.H_ZONE_APPEND,
+	Zone.Functions.appendHandler
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_REMOVE,
+	Zone.Constants.H_ZONE_REMOVE,
+	Zone.Functions.removeHandler
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_ROLE_SET,
+	Zone.Constants.H_ZONE_ROLE_SET,
+	Zone.Functions.zoneRoleSet
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_JOIN,
+	Zone.Constants.H_ZONE_JOIN,
+	Zone.Functions.joinZone
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_ADD_INVITE,
+	Zone.Constants.H_ZONE_ADD_INVITE,
+	Zone.Functions.addZoneInvite
+)
+
 Handlers.add(
 	Zone.Constants.H_ZONE_UPDATE_PATCH_MAP,
 	Zone.Constants.H_ZONE_UPDATE_PATCH_MAP,
 	Zone.Functions.updatePatchMap
 )
+
 Handlers.add(
 	Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP,
 	Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP,
 	Zone.Functions.transferOwnership
 )
+
 --------------------------------------------------------------------------------
 -- Helper function: setStoreValue
 -- This function takes a dot-notated key and a value, then sets it in the
@@ -1418,7 +1514,7 @@ if not ZoneInitCompleted then
 		-- Send individual patch messages for each configured patch key
 		for patchKey, _ in pairs(Zone.PatchMap) do
 			local patchData = Zone.Functions.getPatchData(patchKey)
-			Send({ device = "patch@1.0", [patchKey] = json.encode(patchData) })
+			SendPatch(patchKey, patchData)
 		end
 	else
 		-- Only send full zone update if no patch map is configured

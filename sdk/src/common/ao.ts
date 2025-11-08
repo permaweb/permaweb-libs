@@ -10,7 +10,7 @@ import {
 	ProcessSpawnType,
 	TagType,
 } from '../helpers/types.ts';
-import { cleanTagValues,getTagValue, globalLog } from '../helpers/utils.ts';
+import { cleanTagValues, getTagValue, globalLog } from '../helpers/utils.ts';
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
 	const tags = [
@@ -80,19 +80,30 @@ export function readProcessWith(deps: DependencyType) {
 
 export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 	const node = deps.node?.url ?? HB.defaultNode;
-	let url = `${node}/${args.processId}~process@1.0/now`;
-	if (args.path) url += `/${args.path}`;
+	const url = `${node}/${args.processId}~process@1.0/${args.hydrate ? 'now' : 'compute'}`;
 
 	try {
 		const headers: HeadersInit = {};
 
-		if (!args.path) {
-			headers['require-codec'] = 'application/json';
-			headers['accept-bundle'] = 'true';
-		}
+		headers['require-codec'] = 'application/json';
+		headers['accept-bundle'] = 'true';
+
 
 		const res = await fetch(url, { headers });
-		if (res.ok) return res.json();
+		if (res.ok) {
+			const body = await res.json();
+
+			if (args.path) {
+				try {
+					return JSON.parse(body[args.path]);
+				}
+				catch {
+					return body[args.path];
+				}
+			}
+
+			return body;
+		}
 
 		throw new Error('Error getting state from HyperBEAM.');
 	} catch (e: any) {
@@ -103,6 +114,31 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 		throw e;
 	}
 }
+
+// export async function readProcess(deps: DependencyType, args: ProcessReadType) {
+// 	const node = deps.node?.url ?? HB.defaultNode;
+// 	let url = `${node}/${args.processId}~process@1.0/now`;
+// 	if (args.path) url += `/${args.path}`;
+
+// 	try {
+// 		const headers: HeadersInit = {};
+
+// 		headers['require-codec'] = 'application/json';
+// 		headers['accept-bundle'] = 'true';
+
+
+// 		const res = await fetch(url, { headers });
+// 		if (res.ok) return res.json();
+
+// 		throw new Error('Error getting state from HyperBEAM.');
+// 	} catch (e: any) {
+// 		if (args.fallbackAction) {
+// 			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction, tags: args.tags });
+// 			return result;
+// 		}
+// 		throw e;
+// 	}
+// }
 
 export function aoDryRunWith(deps: DependencyType) {
 	return async (args: MessageSendType) => {
