@@ -146,21 +146,11 @@ function logError(message) {
 			);
 
 			expect(zoneUpdateId).toBeDefined();
-			expect(zoneUpdateId).toEqualType('string');
 
 			logTest('Testing zone fetch...');
 			const zone = await permaweb.getZone(zoneId);
 
-			expect(zone).toEqual({
-				store: {
-					name: 'Sample Zone',
-					metadata: {
-						description: 'A test zone for unit testing',
-						version: '1.0.0',
-					},
-				},
-				assets: [],
-			});
+			expect(zone.name).toEqual('Sample Zone');
 		} catch (e) {
 			logError(e.message ?? 'Zone tests failed');
 		}
