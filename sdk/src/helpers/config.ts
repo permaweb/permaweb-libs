@@ -3,14 +3,14 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: 'LlyF5s11sJIWvfNbkH-tavR-P7IJfTvkHHOdlwtGIJM',
-		collection: 'EmeE2B70hVDdhr9fWou3i_nKARSb_6LXvxRFTH67qvU',
-		collectionActivity: '8cQtC9TsWURFzboq1aozm8VbzRBc5GGVt7yB80kapfc',
-		comments: 'RvozS-4Mbcmq66gPapsNOyERkg3LrpR0vSRKz8wIi4k',
-		moderation: '-33uBfOgyXkQIwIv-XbfP-Bx74KYl--h2Cnk4TTiiLA',
+		asset: 'dxjWmadfofImttxN6hDbFTtWss-HlcBVoImRgdDg2cE',
+		collection: 'C_nlkbEDbyLyzdxymMAZAAIiz1rhD7txg-LSQQS5Fmo',
+		collectionActivity: 'qjpg3ramJVb2iF6O5BAUfKInQ0UHhi3NqfELh73qKGw',
+		comments: 'C16qIcYR0jC2Tiz7e4wFJLHAMee2zIXBmwxmDzQ0pVI',
+		moderation: 'TGCoo6JDvZ7JY_E5Smz5VQiI9ncc6uXI8tU_snAodl0',
 		zone: {
-			id: 'eDZu7f4RKNT0TawGluj0Uo-qN-rQqleWR-rIgF26A5A',
-			version: '0.0.4'
+			id: 'KGjGAKJ96_-JbOoL5fzmy_QVjlmlgjvg8EptlqocfzE',
+			version: '0.0.10',
 		},
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',

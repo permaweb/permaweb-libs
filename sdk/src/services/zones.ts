@@ -1,34 +1,39 @@
 import { aoCreateProcessWith, aoSend, handleProcessEval, readProcess } from '../common/ao.ts';
 import { AO, TAGS } from '../helpers/config.ts';
-import { DependencyType, TagType } from '../helpers/types.ts';
+import { DependencyType, ReadOptsType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createZoneWith(deps: DependencyType) {
-	return async (args: { data?: any; tags?: TagType[]; spawnModeration?: boolean; authUsers?: string[] }, callback?: (status: any) => void): Promise<string | null> => {
+	return async (
+		args: { data?: any; tags?: TagType[]; authUsers?: string[] },
+		callback?: (status: any) => void,
+	): Promise<string | null> => {
 		try {
 			let moderationId = null;
 
-			if (args.spawnModeration) {
-				try {
-					const moderationTags = [
-						{ name: TAGS.keys.onBoot, value: AO.src.moderation },
-						{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
-					];
+			try {
+				const moderationTags = [
+					{ name: TAGS.keys.onBoot, value: AO.src.moderation },
+					{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
+				];
 
-					if (args.authUsers) {
-						moderationTags.push({ name: 'Auth-Users', value: JSON.stringify(args.authUsers) });
-					}
-
-					const aoCreateProcess = aoCreateProcessWith(deps);
-					moderationId = await aoCreateProcess({
-						tags: moderationTags
-					}, callback ? (status: any) => callback(status) : undefined);
-
-					globalLog(`Moderation Process ID: ${moderationId}`);
-					await new Promise((r) => setTimeout(r, 500));
-				} catch (e: any) {
-					console.error('Error creating moderation process:', e);
+				if (args.authUsers) {
+					moderationTags.push({ name: 'Auth-Users', value: JSON.stringify(args.authUsers) });
 				}
+
+				const aoCreateProcess = aoCreateProcessWith(deps);
+				moderationId = await aoCreateProcess(
+					{
+						tags: moderationTags,
+					},
+					callback ? (status: any) => callback(status) : undefined,
+				);
+
+				globalLog(`Moderation Process ID: ${moderationId}`);
+				await new Promise((r) => setTimeout(r, 500));
+			} catch (e: any) {
+				console.error('Error creating moderation process:', e);
+				throw new Error(`Failed to create mandatory moderation process: ${e.message}`);
 			}
 
 			const tags = [{ name: TAGS.keys.onBoot, value: AO.src.zone.id }];
@@ -89,6 +94,8 @@ export function addToZoneWith(deps: DependencyType) {
 export function updateZonePatchMapWith(deps: DependencyType) {
 	return async (args: object, zoneId: string): Promise<string | null> => {
 		try {
+			globalLog(`Updating zone patch map in process ${zoneId}`);
+
 			const zonePatchMapUpdateId = await aoSend(deps, {
 				processId: zoneId,
 				action: 'Zone-Update-Patch-Map',
@@ -196,7 +203,7 @@ export function updateZoneVersionWith(deps: DependencyType) {
 }
 
 export function updateZoneAuthoritiesWith(deps: DependencyType) {
-	return async (args: { zoneId: string, authorityId: string }): Promise<string | null> => {
+	return async (args: { zoneId: string; authorityId: string }): Promise<string | null> => {
 		try {
 			globalLog(`Adding authority ${args.authorityId} to process ${args.zoneId}`);
 
@@ -213,13 +220,64 @@ export function updateZoneAuthoritiesWith(deps: DependencyType) {
 }
 
 export function getZoneWith(deps: DependencyType) {
-	return async (zoneId: string): Promise<any | null> => {
-		try {
-			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', fallbackAction: 'Info' });
+	return async (zoneId: string, opts?: ReadOptsType): Promise<any | null> => {
+		const fallbackRead = async () => {
+			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', hydrate: opts?.hydrate, fallbackAction: 'Info' });
+			if (processInfo.body) {
+				return mapFromProcessCase(JSON.parse(processInfo.body));
+			}
+			throw new Error('Zone data not found in process');
+		};
 
-			return mapFromProcessCase(processInfo);
+		try {
+			const processInfo = await readProcess(deps, { processId: zoneId, hydrate: opts?.hydrate });
+
+			if (processInfo?.zone) {
+				const zoneData = {
+					...processInfo.zone,
+					...processInfo.zone.Store ?? {}
+				};
+
+				return mapFromProcessCase(zoneData);
+			}
+
+			return await fallbackRead();
 		} catch (e: any) {
-			throw new Error(e.message ?? 'Error getting zone');
+			try {
+				return await fallbackRead();
+			} catch (fallbackError: any) {
+				throw new Error(fallbackError.message ?? 'Error getting zone');
+			}
+		}
+	};
+}
+
+export function transferZoneOwnershipWith(deps: DependencyType) {
+	return async (args: {
+		zoneId: string;
+		op: 'Invite' | 'Accept' | 'Reject' | 'Cancel';
+		to?: string;
+	}): Promise<string | null> => {
+		const { zoneId, op, to } = args;
+
+		if (!checkValidAddress(zoneId)) throw new Error('Invalid zone address');
+		if (op === 'Invite' || op === 'Cancel') {
+			if (!to || !checkValidAddress(to)) throw new Error('Invalid or missing "to" address');
+		}
+
+		try {
+			const tags: TagType[] = [{ name: 'Update-Type', value: op }];
+			if (to) tags.push({ name: 'To', value: to });
+
+			const txId = await aoSend(deps, {
+				processId: zoneId,
+				action: 'Zone-Transfer-Ownership',
+				tags,
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(e?.message ?? e ?? 'Error sending transfer ownership request');
 		}
 	};
 }

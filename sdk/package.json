@@ -1,6 +1,6 @@
 {
 	"name": "@permaweb/libs",
-	"version": "0.0.63",
+	"version": "0.0.69",
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
@@ -38,6 +38,7 @@
 		"./node": "./dist/index.js"
 	},
 	"scripts": {
+		"prepare": "husky install",
 		"clean:install": "rm -rf node_modules package-lock.json || true && npm cache clean --force && npm install",
 		"format": "eslint --fix . && npx prettier --write .",
 		"build": "node build.js"
@@ -60,7 +61,9 @@
 		"eslint": "^8.35.0",
 		"eslint-plugin-import": "^2.27.5",
 		"eslint-plugin-simple-import-sort": "^10.0.0",
+		"husky": "^9.1.7",
 		"os-browserify": "^0.3.0",
+		"prettier": "^3.6.2",
 		"process": "^0.11.10",
 		"stream-browserify": "^3.0.0",
 		"tsc-alias": "^1.8.10",

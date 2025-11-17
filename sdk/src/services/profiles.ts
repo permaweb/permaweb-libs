@@ -2,7 +2,7 @@ import { GATEWAYS, TAGS } from 'helpers/config.ts';
 
 import { resolveTransactionWith } from '../common/arweave.ts';
 import { getGQLData } from '../common/gql.ts';
-import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType } from '../helpers/types.ts';
+import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType, ReadOptsType } from '../helpers/types.ts';
 import { getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
 import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
@@ -15,9 +15,7 @@ export function createProfileWith(deps: DependencyType) {
 	return async (args: ProfileArgsType, callback?: (status: any) => void): Promise<string | null> => {
 		let profileId: string | null = null;
 
-		const tags: { name: string; value: string }[] = [
-			{ name: TAGS.keys.zoneType, value: TAGS.values.user },
-		];
+		const tags: { name: string; value: string }[] = [{ name: TAGS.keys.zoneType, value: TAGS.values.user }];
 
 		const addImageTag = async (imageKey: 'Thumbnail' | 'Banner') => {
 			const key: any = imageKey.toLowerCase();
@@ -67,8 +65,7 @@ export function updateProfileWith(deps: DependencyType) {
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve thumbnail: ${e.message}`);
 				}
-			}
-			else data.Thumbnail = 'None';
+			} else data.Thumbnail = 'None';
 
 			if (args.banner && isValidMediaData(args.banner)) {
 				try {
@@ -76,8 +73,7 @@ export function updateProfileWith(deps: DependencyType) {
 				} catch (e: any) {
 					if (callback) callback(`Failed to resolve banner: ${e.message}`);
 				}
-			}
-			else data.Banner = 'None';
+			} else data.Banner = 'None';
 
 			try {
 				return await updateZone(data, profileId);
@@ -105,9 +101,10 @@ export function updateProfileVersionWith(deps: DependencyType) {
 export function getProfileByIdWith(deps: DependencyType) {
 	const getZone = getZoneWith(deps);
 
-	return async (profileId: string, primaryName?:string): Promise<ProfileType | null> => {
+	return async (profileId: string, opts?: ReadOptsType): Promise<ProfileType | null> => {
+		const { primaryName } = opts || {};
 		try {
-			const zone = await getZone(profileId);
+			const zone = await getZone(profileId, opts);
 			if (!zone) {
 				throw new Error('Error fetching profile - Not found');
 			}
@@ -143,7 +140,7 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 				gateway: GATEWAYS.ao,
 				tags: [
 					{ name: TAGS.keys.dataProtocol, values: [TAGS.values.dataProtocol] },
-					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] }
+					{ name: TAGS.keys.zoneType, values: [TAGS.values.user] },
 				],
 				owners: [walletAddress],
 			});
@@ -162,7 +159,7 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 					primaryName = await getPrimaryName(walletAddress)
 				}
 
-				return await getProfileById(gqlResponse.data[0].node.id, primaryName);
+				return await getProfileById(gqlResponse.data[0].node.id, { primaryName });
 			}
 
 			return { id: null };

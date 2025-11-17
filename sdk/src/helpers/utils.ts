@@ -1,4 +1,5 @@
 import { TAGS } from './config.ts';
+import { TagType } from './types.ts';
 
 declare const InstallTrigger: any;
 
@@ -104,9 +105,8 @@ export function formatDate(dateArg: string | number | null, dateType: 'iso' | 'e
 	}
 
 	return fullTime
-		? `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()} at ${
-				date.getHours() % 12 || 12
-			}:${date.getMinutes().toString().padStart(2, '0')} ${date.getHours() >= 12 ? 'PM' : 'AM'}`
+		? `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()} at ${date.getHours() % 12 || 12
+		}:${date.getMinutes().toString().padStart(2, '0')} ${date.getHours() >= 12 ? 'PM' : 'AM'}`
 		: `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()}`;
 }
 
@@ -261,14 +261,27 @@ function fromProcessCase(str: string) {
 	return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
-/* Maps an object from pascal case to camel case */
+/* Maps an object from pascal case to camel case and removes any 'commitments' key */
 export function mapFromProcessCase(obj: any): any {
 	if (Array.isArray(obj)) {
 		return obj.map(mapFromProcessCase);
-	} else if (obj && typeof obj === 'object') {
+	}
+	if (obj && typeof obj === 'object') {
 		return Object.entries(obj).reduce((acc: any, [key, value]) => {
-			const fromKey = checkValidAddress(key as any) || key.includes('-') ? key : fromProcessCase(key);
-			acc[fromKey] = checkValidAddress(value as any) ? value : mapFromProcessCase(value);
+			// Skip any key named "commitments" (case-insensitive)
+			if (typeof key === 'string' && key.toLowerCase() === 'commitments') {
+				return acc;
+			}
+
+			const fromKey =
+				checkValidAddress(key as any) || key.includes('-')
+					? key
+					: fromProcessCase(key);
+
+			acc[fromKey] = checkValidAddress(value as any)
+				? value
+				: mapFromProcessCase(value);
+
 			return acc;
 		}, {});
 	}
@@ -284,3 +297,9 @@ export function isValidMediaData(data: any) {
 	return checkValidAddress(data) || data.startsWith('data');
 }
 
+export function cleanTagValues(tags: TagType[]): TagType[] {
+	return tags.map((tag) => ({
+		...tag,
+		value: tag.value.replace(/\r?\n/g, ' '),
+	}));
+}

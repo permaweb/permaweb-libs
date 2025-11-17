@@ -157,7 +157,7 @@ local function getState()
 end
 
 local function syncState()
-    Send({ device = 'patch@1.0', asset = json.encode(getState()) })
+    Send({ device = 'patch@1.0', asset = getState() })
 end
 
 Handlers.add('Init', 'Init', function(msg)

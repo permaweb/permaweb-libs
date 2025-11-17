@@ -8,11 +8,16 @@ export type DependencyType = {
 
 export type ProcessReadType = {
 	processId: string;
-	path: string;
-	fallbackAction: string;
-	serialize?: boolean;
+	path?: string;
+	hydrate?: boolean;
+	fallbackAction?: string;
 	tags?: TagType[];
 };
+
+export type ReadOptsType = {
+	hydrate?: boolean;
+	primaryName?: string;
+}
 
 export type ProcessSpawnType = {
 	module: string;

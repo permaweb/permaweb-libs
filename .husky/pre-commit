@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+
+set -euo pipefail
+
+# Make sure we're at repo root
+cd -P "$(git rev-parse --show-toplevel)"
+
+# Load nvm if available to ensure node/npm are in PATH
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+echo "Formatting staged files..."
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$STAGED_FILES" ]; then
+  # Filter for SDK files only
+  STAGED_SDK_FILES=$(echo "$STAGED_FILES" | grep '^sdk/' || true)
+
+  if [ -n "$STAGED_SDK_FILES" ]; then
+    # Lint staged JS/TS files in sdk directory
+    STAGED_JS_FILES=$(echo "$STAGED_SDK_FILES" | grep -E '\.(js|jsx|ts|tsx)$' || true)
+    if [ -n "$STAGED_JS_FILES" ]; then
+      cd sdk
+      echo "$STAGED_JS_FILES" | sed 's|^sdk/||' | xargs npx eslint --fix
+      cd ..
+    fi
+
+    # Format all staged SDK files with prettier
+    cd sdk
+    echo "$STAGED_SDK_FILES" | sed 's|^sdk/||' | xargs npx prettier --write --ignore-unknown
+    cd ..
+
+    # Re-stage the formatted files
+    echo "$STAGED_SDK_FILES" | xargs git add
+  fi
+fi
+
+echo "✅ Pre-commit Checks Complete"

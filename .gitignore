@@ -7,3 +7,4 @@
 **.idea/
 **.npmrc
 **.env
+sdk/*.tgz

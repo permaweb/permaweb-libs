@@ -27,15 +27,17 @@ export function createAtomicAssetWith(deps: DependencyType) {
 				if (args.users) commentTags.push({ name: 'Auth-Users', value: JSON.stringify(args.users) });
 
 				const aoCreateProcess = aoCreateProcessWith(deps);
-				commentsId = await aoCreateProcess({
-					tags: commentTags
-				}, callback ? (status: any) => callback(status) : undefined);
+				commentsId = await aoCreateProcess(
+					{
+						tags: commentTags,
+					},
+					callback ? (status: any) => callback(status) : undefined,
+				);
 
 				globalLog(`Comments ID: ${commentsId}`);
 
 				await new Promise((r) => setTimeout(r, 500));
-			}
-			catch (e: any) {
+			} catch (e: any) {
 				console.error(e);
 			}
 		}
