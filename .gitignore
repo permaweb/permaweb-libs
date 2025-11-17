@@ -6,4 +6,5 @@
 !**/packages/bundler/dist
 **.idea/
 **.npmrc
+**.env
 sdk/*.tgz
