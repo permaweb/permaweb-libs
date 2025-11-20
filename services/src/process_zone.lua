@@ -167,7 +167,7 @@ function GetFullState()
 		Transfers = Zone.Transfers,
 		Version = Zone.Version,
 		Authorities = ao.authorities,
-		PatchMap = Zone.PatchMap
+		PatchMap = Zone.PatchMap,
 	}
 end
 
@@ -351,15 +351,15 @@ function SyncState(msg)
 				end
 			else
 				-- If no specific patch keys match, send full zone update
-				SendPatch('zone', GetFullState())
+				SendPatch("zone", GetFullState())
 			end
 		else
 			-- If no changed fields detected, send full zone update
-			SendPatch('zone', GetFullState())
+			SendPatch("zone", GetFullState())
 		end
 	else
 		-- If no patch map or no message context, send full zone update
-		SendPatch('zone', GetFullState())
+		SendPatch("zone", GetFullState())
 	end
 end
 
@@ -695,8 +695,7 @@ function Zone.Functions.zoneRoleSet(msg)
 					Action = "Input-Error",
 					Tags = {
 						Status = "Error",
-						Message =
-						"Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data",
+						Message = "Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data",
 					},
 				})
 				return
@@ -921,7 +920,9 @@ function Zone.Functions.addIndexRequest(msg)
 		end
 	end
 
-	table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg["Index-Id"], Status = "Pending" })
+	local status = msg["Status"] or "Pending"
+
+	table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg["Index-Id"], Status = status })
 
 	SyncState(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
@@ -1254,59 +1255,23 @@ function Zone.Functions.transferOwnership(msg)
 	end
 end
 
-Handlers.add(
-	Zone.Constants.H_ZONE_GET,
-	Zone.Constants.H_ZONE_GET,
-	Zone.Functions.zoneGet
-)
+Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_KEYS,
-	Zone.Constants.H_ZONE_KEYS,
-	Zone.Functions.keysHandler
-)
+Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functions.keysHandler)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_CREDIT_NOTICE,
-	Zone.Constants.H_ZONE_CREDIT_NOTICE,
-	Zone.Functions.creditNotice
-)
+Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_DEBIT_NOTICE,
-	Zone.Constants.H_ZONE_DEBIT_NOTICE,
-	Zone.Functions.debitNotice
-)
+Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_UPDATE,
-	Zone.Constants.H_ZONE_UPDATE,
-	Zone.Functions.zoneUpdate
-)
+Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_ADD_UPLOAD,
-	Zone.Constants.H_ZONE_ADD_UPLOAD,
-	Zone.Functions.addUpload
-)
+Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_RUN_ACTION,
-	Zone.Constants.H_ZONE_RUN_ACTION,
-	Zone.Functions.runAction
-)
+Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_UPDATE_ASSET,
-	Zone.Constants.H_ZONE_UPDATE_ASSET,
-	Zone.Functions.updateAsset
-)
+Handlers.add(Zone.Constants.H_ZONE_UPDATE_ASSET, Zone.Constants.H_ZONE_UPDATE_ASSET, Zone.Functions.updateAsset)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_ADD_INDEX_ID,
-	Zone.Constants.H_ZONE_ADD_INDEX_ID,
-	Zone.Functions.addIndexId
-)
+Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Functions.addIndexId)
 
 Handlers.add(
 	Zone.Constants.H_ZONE_ADD_INDEX_REQUEST,
@@ -1326,47 +1291,19 @@ Handlers.add(
 	Zone.Functions.updateStatusIndexRequest
 )
 
-Handlers.add(
-	Zone.Constants.H_ZONE_INDEX_NOTICE,
-	Zone.Constants.H_ZONE_INDEX_NOTICE,
-	Zone.Functions.indexNotice
-)
+Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_SET,
-	Zone.Constants.H_ZONE_SET,
-	Zone.Functions.setHandler
-)
+Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_APPEND,
-	Zone.Constants.H_ZONE_APPEND,
-	Zone.Functions.appendHandler
-)
+Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_REMOVE,
-	Zone.Constants.H_ZONE_REMOVE,
-	Zone.Functions.removeHandler
-)
+Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_ROLE_SET,
-	Zone.Constants.H_ZONE_ROLE_SET,
-	Zone.Functions.zoneRoleSet
-)
+Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zone.Functions.zoneRoleSet)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_JOIN,
-	Zone.Constants.H_ZONE_JOIN,
-	Zone.Functions.joinZone
-)
+Handlers.add(Zone.Constants.H_ZONE_JOIN, Zone.Constants.H_ZONE_JOIN, Zone.Functions.joinZone)
 
-Handlers.add(
-	Zone.Constants.H_ZONE_ADD_INVITE,
-	Zone.Constants.H_ZONE_ADD_INVITE,
-	Zone.Functions.addZoneInvite
-)
+Handlers.add(Zone.Constants.H_ZONE_ADD_INVITE, Zone.Constants.H_ZONE_ADD_INVITE, Zone.Functions.addZoneInvite)
 
 Handlers.add(
 	Zone.Constants.H_ZONE_UPDATE_PATCH_MAP,
