@@ -171,7 +171,12 @@ export async function aoDryRun(deps: DependencyType, args: MessageDryRunType): P
 
 		if (response.Messages && response.Messages.length) {
 			if (response.Messages[0].Data) {
-				return JSON.parse(response.Messages[0].Data);
+				const data = response?.Messages?.[0]?.Data;
+				try {
+					return JSON.parse(data);
+				} catch {
+					return data;
+				}
 			} else {
 				if (response.Messages[0].Tags) {
 					return response.Messages[0].Tags.reduce((acc: any, item: any) => {
