@@ -1,16 +1,16 @@
-local json      = require('json')
+local json = require('json')
 
-Name            = Name or '<NAME>'
-Description     = Description or '<DESCRIPTION>'
-Creator         = Creator or '<CREATOR>'
-Banner          = Banner or '<BANNER>'
-Thumbnail       = Thumbnail or '<THUMBNAIL>'
+Name = Name or '<NAME>'
+Description = Description or '<DESCRIPTION>'
+Creator = Creator or '<CREATOR>'
+Banner = Banner or '<BANNER>'
+Thumbnail = Thumbnail or '<THUMBNAIL>'
 
-DateCreated     = DateCreated or '<DATECREATED>'
-LastUpdate      = LastUpdate or '<LASTUPDATE>'
+DateCreated = DateCreated or '<DATECREATED>'
+LastUpdate = LastUpdate or '<LASTUPDATE>'
 
-Assets          = Assets or {}
-ActivityIds     = ActivityIds or {}
+Assets = Assets or {}
+ActivityIds = ActivityIds or {}
 ActivityProcess = ActivityProcess or '<ACTIVITY_ID>'
 
 local function decodeMessageData(data)
@@ -37,7 +37,7 @@ local function checkValidAddress(address)
 		return false
 	end
 
-	return string.match(address, "^[%w%-_]+$") ~= nil and #address == 43
+	return string.match(address, '^[%w%-_]+$') ~= nil and #address == 43
 end
 
 local function getState()
@@ -49,7 +49,7 @@ local function getState()
 		Thumbnail = Thumbnail,
 		DateCreated = DateCreated,
 		Assets = Assets,
-		ActivityProcess = ActivityProcess
+		ActivityProcess = ActivityProcess,
 	}
 end
 
@@ -57,101 +57,120 @@ local function syncState()
 	Send({ device = 'patch@1.0', collection = getState() })
 end
 
-Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
-	ao.send({
-		Target = msg.From,
-		Data = json.encode(getState())
-	})
-end)
-
--- Add or remove assets
-Handlers.add('Update-Assets', Handlers.utils.hasMatchingTag('Action', 'Update-Assets'), function(msg)
-	if msg.From ~= Owner and msg.From ~= ao.id and msg.From ~= Creator then
+Handlers.add(
+	'Info',
+	Handlers.utils.hasMatchingTag('Action', 'Info'),
+	function(msg)
 		ao.send({
 			Target = msg.From,
-			Action = 'Authorization-Error',
-			Tags = {
-				Status = 'Error',
-				Message = 'Unauthorized to access this handler'
-			}
+			Data = json.encode(getState()),
 		})
-		return
 	end
+)
 
-	local decodeCheck, data = decodeMessageData(msg.Data)
-
-	if decodeCheck and data then
-		if not data.AssetIds or type(data.AssetIds) ~= 'table' or #data.AssetIds == 0 then
+-- Add or remove assets
+Handlers.add(
+	'Update-Assets',
+	Handlers.utils.hasMatchingTag('Action', 'Update-Assets'),
+	function(msg)
+		if msg.From ~= Owner and msg.From ~= ao.id and msg.From ~= Creator then
 			ao.send({
 				Target = msg.From,
-				Action = 'Action-Response',
+				Action = 'Authorization-Error',
 				Tags = {
 					Status = 'Error',
-					Message = 'Invalid or empty AssetIds list'
-				}
+					Message = 'Unauthorized to access this handler',
+				},
 			})
 			return
 		end
 
-		if not data.UpdateType or (data.UpdateType ~= 'Add' and data.UpdateType ~= 'Remove') then
-			ao.send({
-				Target = msg.From,
-				Action = 'Action-Response',
-				Tags = {
-					Status = 'Error',
-					Message = 'UpdateType argument required (Add | Remove)'
-				}
-			})
-			return
-		end
+		local decodeCheck, data = decodeMessageData(msg.Data)
 
-		if data.UpdateType == 'Add' then
-			for _, assetId in ipairs(data.AssetIds) do
-				if not assetExists(assetId) then
-					table.insert(Assets, assetId)
-				end
+		if decodeCheck and data then
+			if
+				not data.AssetIds
+				or type(data.AssetIds) ~= 'table'
+				or #data.AssetIds == 0
+			then
+				ao.send({
+					Target = msg.From,
+					Action = 'Action-Response',
+					Tags = {
+						Status = 'Error',
+						Message = 'Invalid or empty AssetIds list',
+					},
+				})
+				return
 			end
-		end
 
-		if data.UpdateType == 'Remove' then
-			for _, assetId in ipairs(data.AssetIds) do
-				for i, id in ipairs(Assets) do
-					if id == assetId then
-						table.remove(Assets, i)
-						break
+			if
+				not data.UpdateType
+				or (data.UpdateType ~= 'Add' and data.UpdateType ~= 'Remove')
+			then
+				ao.send({
+					Target = msg.From,
+					Action = 'Action-Response',
+					Tags = {
+						Status = 'Error',
+						Message = 'UpdateType argument required (Add | Remove)',
+					},
+				})
+				return
+			end
+
+			if data.UpdateType == 'Add' then
+				for _, assetId in ipairs(data.AssetIds) do
+					if not assetExists(assetId) then
+						table.insert(Assets, assetId)
 					end
 				end
 			end
+
+			if data.UpdateType == 'Remove' then
+				for _, assetId in ipairs(data.AssetIds) do
+					for i, id in ipairs(Assets) do
+						if id == assetId then
+							table.remove(Assets, i)
+							break
+						end
+					end
+				end
+			end
+
+			LastUpdate = msg.Timestamp
+
+			ao.send({
+				Target = msg.From,
+				Action = 'Action-Response',
+				Tags = {
+					Status = 'Success',
+					Message = 'Assets updated successfully',
+				},
+			})
+
+			syncState()
+		else
+			ao.send({
+				Target = msg.From,
+				Action = 'Input-Error',
+				Tags = {
+					Status = 'Error',
+					Message = string.format(
+						'Failed to parse data, received: %s. %s',
+						msg.Data,
+						'Data must be an object - { AssetIds: [], UpdateType }'
+					),
+				},
+			})
 		end
-
-		LastUpdate = msg.Timestamp
-
-		ao.send({
-			Target = msg.From,
-			Action = 'Action-Response',
-			Tags = {
-				Status = 'Success',
-				Message = 'Assets updated successfully'
-			}
-		})
-
-		syncState()
-	else
-		ao.send({
-			Target = msg.From,
-			Action = 'Input-Error',
-			Tags = {
-				Status = 'Error',
-				Message = string.format('Failed to parse data, received: %s. %s',
-					msg.Data,
-					'Data must be an object - { AssetIds: [], UpdateType }')
-			}
-		})
 	end
-end)
+)
 
 -- Initialize a request to add a new orderbook to collection activity
-Handlers.add('Update-Collection-Activity', Handlers.utils.hasMatchingTag('Action', 'Update-Collection-Activity'),
+Handlers.add(
+	'Update-Collection-Activity',
+	Handlers.utils.hasMatchingTag('Action', 'Update-Collection-Activity'),
 	function(msg)
 		if msg.From ~= Owner and msg.From ~= Creator and msg.From ~= ao.id then
 			ao.send({
@@ -159,8 +178,8 @@ Handlers.add('Update-Collection-Activity', Handlers.utils.hasMatchingTag('Action
 				Action = 'Authorization-Error',
 				Tags = {
 					Status = 'Error',
-					Message = 'Unauthorized to access this handler'
-				}
+					Message = 'Unauthorized to access this handler',
+				},
 			})
 			return
 		end
@@ -192,22 +211,36 @@ Handlers.add('Update-Collection-Activity', Handlers.utils.hasMatchingTag('Action
 
 			syncState()
 		end
-	end)
+	end
+)
 
-Handlers.add('Forward-Order', Handlers.utils.hasMatchingTag('Action', 'Forward-Order'),
+Handlers.add(
+	'Forward-Order',
+	Handlers.utils.hasMatchingTag('Action', 'Forward-Order'),
 	function(msg)
 		local isAllowed = false
 		for _, allowedActivityId in ipairs(ActivityIds) do
-			if msg.From == allowedActivityId then isAllowed = true end
+			if msg.From == allowedActivityId then
+				isAllowed = true
+			end
 		end
 
-		if not isAllowed then return end
+		if not isAllowed then
+			return
+		end
 
-		ao.send({ Target = ActivityProcess, Action = msg.Tags.UpdateType, Data = msg.Data })
-	end)
+		ao.send({
+			Target = ActivityProcess,
+			Action = msg.Tags.UpdateType,
+			Data = msg.Data,
+		})
+	end
+)
 
 -- Initialize a request to add the collection to a profile
-Handlers.add('Add-Collection-To-Profile', Handlers.utils.hasMatchingTag('Action', 'Add-Collection-To-Profile'),
+Handlers.add(
+	'Add-Collection-To-Profile',
+	Handlers.utils.hasMatchingTag('Action', 'Add-Collection-To-Profile'),
 	function(msg)
 		if msg.From ~= Owner and msg.From ~= Creator and msg.From ~= ao.id then
 			ao.send({
@@ -215,8 +248,8 @@ Handlers.add('Add-Collection-To-Profile', Handlers.utils.hasMatchingTag('Action'
 				Action = 'Authorization-Error',
 				Tags = {
 					Status = 'Error',
-					Message = 'Unauthorized to access this handler'
-				}
+					Message = 'Unauthorized to access this handler',
+				},
 			})
 			return
 		end
@@ -228,11 +261,12 @@ Handlers.add('Add-Collection-To-Profile', Handlers.utils.hasMatchingTag('Action'
 				Action = 'Input-Error',
 				Tags = {
 					Status = 'Error',
-					Message = 'ProfileProcess tag not specified or not a valid Process ID'
-				}
+					Message = 'ProfileProcess tag not specified or not a valid Process ID',
+				},
 			})
 		end
-	end)
+	end
+)
 
 Initialized = Initialized or false
 

@@ -1,30 +1,33 @@
-local KV = require("@permaweb/kv-base")
+local KV = require('@permaweb/kv-base')
 if not KV then
-	error("KV Not found, install it")
+	error('KV Not found, install it')
 end
 
-local BatchPlugin = require("@permaweb/kv-batch")
+local BatchPlugin = require('@permaweb/kv-batch')
 if not BatchPlugin then
-	error("BatchPlugin not found, install it")
+	error('BatchPlugin not found, install it')
 end
 
-local AssetManager = require("@permaweb/asset-manager")
+local AssetManager = require('@permaweb/asset-manager')
 if not AssetManager then
-	error("AssetManager not found, install it")
+	error('AssetManager not found, install it')
 end
 
 local function checkValidAddress(address)
-	if not address or type(address) ~= "string" then
+	if not address or type(address) ~= 'string' then
 		return false
 	end
-	return string.match(address, "^[%w%-_]+$") ~= nil and #address == 43
+	return string.match(address, '^[%w%-_]+$') ~= nil and #address == 43
 end
 
 local function isAlreadyIndexed(entry)
 	local idx = Zone.Data.KV.Store.Index or {}
 	for _, e in ipairs(idx) do
 		-- Prefer AssetId match if present, else fall back to Id
-		if (entry.AssetId and e.AssetId and e.AssetId == entry.AssetId) or (e.Id and entry.Id and e.Id == entry.Id) then
+		if
+			(entry.AssetId and e.AssetId and e.AssetId == entry.AssetId)
+			or (e.Id and entry.Id and e.Id == entry.Id)
+		then
 			return true
 		end
 	end
@@ -36,36 +39,36 @@ Zone = Zone or {}
 Zone.Functions = Zone.Functions or {}
 
 Zone.Constants = {
-	H_ZONE_ERROR = "Zone-Error",
-	H_ZONE_SUCCESS = "Zone-Success",
-	H_ZONE_KEYS = "Zone-Keys",
-	H_ZONE_GET = "Info",
-	H_ZONE_CREDIT_NOTICE = "Credit-Notice",
-	H_ZONE_DEBIT_NOTICE = "Debit-Notice",
-	H_ZONE_RUN_ACTION = "Run-Action",
-	H_ZONE_ADD_INDEX_ID = "Add-Index-Id",
-	H_ZONE_ADD_INDEX_REQUEST = "Add-Index-Request",
-	H_ZONE_UPDATE_INDEX_REQUEST = "Update-Index-Request",
-	H_ZONE_UPDATE_STATUS_INDEX_REQUEST = "Update-Status-Index-Request",
-	H_ZONE_INDEX_NOTICE = "Index-Notice",
-	H_ZONE_UPDATE = "Zone-Update",
-	H_ZONE_UPDATE_ASSET = "Update-Asset-Through-Zone",
-	H_ZONE_ROLE_SET = "Role-Set",
-	H_ZONE_SET = "Zone-Set",
-	H_ZONE_JOIN = "Zone-Join",
-	H_ZONE_ADD_INVITE = "Zone-Add-Invite",
-	H_ZONE_APPEND = "Zone-Append",
-	H_ZONE_REMOVE = "Zone-Remove",
-	H_ZONE_UPDATE_PATCH_MAP = "Zone-Update-Patch-Map",
-	H_ZONE_ADD_UPLOAD = "Add-Uploaded-Asset",
-	H_ZONE_TRANSFER_OWNERSHIP = "Zone-Transfer-Ownership",
+	H_ZONE_ERROR = 'Zone-Error',
+	H_ZONE_SUCCESS = 'Zone-Success',
+	H_ZONE_KEYS = 'Zone-Keys',
+	H_ZONE_GET = 'Info',
+	H_ZONE_CREDIT_NOTICE = 'Credit-Notice',
+	H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
+	H_ZONE_RUN_ACTION = 'Run-Action',
+	H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
+	H_ZONE_ADD_INDEX_REQUEST = 'Add-Index-Request',
+	H_ZONE_UPDATE_INDEX_REQUEST = 'Update-Index-Request',
+	H_ZONE_UPDATE_STATUS_INDEX_REQUEST = 'Update-Status-Index-Request',
+	H_ZONE_INDEX_NOTICE = 'Index-Notice',
+	H_ZONE_UPDATE = 'Zone-Update',
+	H_ZONE_UPDATE_ASSET = 'Update-Asset-Through-Zone',
+	H_ZONE_ROLE_SET = 'Role-Set',
+	H_ZONE_SET = 'Zone-Set',
+	H_ZONE_JOIN = 'Zone-Join',
+	H_ZONE_ADD_INVITE = 'Zone-Add-Invite',
+	H_ZONE_APPEND = 'Zone-Append',
+	H_ZONE_REMOVE = 'Zone-Remove',
+	H_ZONE_UPDATE_PATCH_MAP = 'Zone-Update-Patch-Map',
+	H_ZONE_ADD_UPLOAD = 'Add-Uploaded-Asset',
+	H_ZONE_TRANSFER_OWNERSHIP = 'Zone-Transfer-Ownership',
 }
 
 Zone.RoleOptions = {
-	["Admin"] = "Admin",
-	["Moderator"] = "Moderator",
-	["Contributor"] = "Contributor",
-	["ExternalContributor"] = "ExternalContributor",
+	['Admin'] = 'Admin',
+	['Moderator'] = 'Moderator',
+	['Contributor'] = 'Contributor',
+	['ExternalContributor'] = 'ExternalContributor',
 }
 
 Permissions = {
@@ -89,7 +92,7 @@ Permissions = {
 			Zone.RoleOptions.Admin,
 		},
 		ForwardActions = {
-			["Update-Asset"] = {
+			['Update-Asset'] = {
 				Zone.RoleOptions.Admin,
 				Zone.RoleOptions.Moderator,
 				Zone.RoleOptions.Contributor,
@@ -140,7 +143,8 @@ Permissions = {
 	},
 }
 
-Zone.Data = Zone.Data or { KV = KV.new({ BatchPlugin }), AssetManager = AssetManager.new() }
+Zone.Data = Zone.Data
+	or { KV = KV.new({ BatchPlugin }), AssetManager = AssetManager.new() }
 
 -- PatchMap: { [<PatchKey>]: string = [...] }
 Zone.PatchMap = Zone.PatchMap or {}
@@ -153,7 +157,7 @@ Zone.Invites = Zone.Invites or {}
 
 Zone.Transfers = Zone.Transfers or {}
 
-Zone.Version = "0.0.1"
+Zone.Version = '0.0.1'
 
 function GetFullState()
 	return {
@@ -181,13 +185,13 @@ end
 
 function Zone.Functions.getFieldValue(fullState, fieldPath)
 	local parts = {}
-	for part in string.gmatch(fieldPath, "[^%.]+") do
+	for part in string.gmatch(fieldPath, '[^%.]+') do
 		table.insert(parts, part)
 	end
 
 	local current = fullState
 	for _, part in ipairs(parts) do
-		if current == nil or type(current) ~= "table" then
+		if current == nil or type(current) ~= 'table' then
 			return nil
 		end
 		current = current[part]
@@ -211,7 +215,7 @@ function Zone.Functions.getPatchData(patchKey)
 
 		-- Extract the final field name (after the last dot)
 		local parts = {}
-		for part in string.gmatch(fieldPath, "[^%.]+") do
+		for part in string.gmatch(fieldPath, '[^%.]+') do
 			table.insert(parts, part)
 		end
 
@@ -253,7 +257,7 @@ function Zone.Functions.extractChangedFields(msg)
 		if decodedData.success and decodedData.data then
 			for _, entry in ipairs(decodedData.data) do
 				if entry.key then
-					table.insert(changedFields, "Store." .. entry.key)
+					table.insert(changedFields, 'Store.' .. entry.key)
 				end
 			end
 		end
@@ -261,7 +265,7 @@ function Zone.Functions.extractChangedFields(msg)
 
 	-- Check for role updates
 	if msg.Action == Zone.Constants.H_ZONE_ROLE_SET then
-		table.insert(changedFields, "Roles")
+		table.insert(changedFields, 'Roles')
 	end
 
 	-- Check for index updates
@@ -270,7 +274,7 @@ function Zone.Functions.extractChangedFields(msg)
 		or msg.Action == Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST
 		or msg.Action == Zone.Constants.H_ZONE_INDEX_NOTICE
 	then
-		table.insert(changedFields, "Store.Index")
+		table.insert(changedFields, 'Store.Index')
 	end
 
 	-- Check for index request updates
@@ -280,7 +284,7 @@ function Zone.Functions.extractChangedFields(msg)
 		or msg.Action == Zone.Constants.H_ZONE_UPDATE_STATUS_INDEX_REQUEST
 		or msg.Action == Zone.Constants.H_ZONE_UPDATE_ASSET
 	then
-		table.insert(changedFields, "Store.IndexRequests")
+		table.insert(changedFields, 'Store.IndexRequests')
 	end
 
 	-- Check for zone set/append/remove operations
@@ -289,24 +293,24 @@ function Zone.Functions.extractChangedFields(msg)
 		or msg.Action == Zone.Constants.H_ZONE_APPEND
 		or msg.Action == Zone.Constants.H_ZONE_REMOVE
 	then
-		local path = msg.Tags.Path or ""
-		if path ~= "" then
-			table.insert(changedFields, "Store." .. path)
+		local path = msg.Tags.Path or ''
+		if path ~= '' then
+			table.insert(changedFields, 'Store.' .. path)
 		end
 	end
 
 	-- Check for joined zones updates
 	if msg.Action == Zone.Constants.H_ZONE_JOIN then
-		if msg.Tags["Store-Path"] then
-			table.insert(changedFields, "Store." .. msg.Tags["Store-Path"])
+		if msg.Tags['Store-Path'] then
+			table.insert(changedFields, 'Store.' .. msg.Tags['Store-Path'])
 		else
-			table.insert(changedFields, "Store.JoinedZones")
+			table.insert(changedFields, 'Store.JoinedZones')
 		end
 	end
 
 	-- Check for invite updates
 	if msg.Action == Zone.Constants.H_ZONE_ADD_INVITE then
-		table.insert(changedFields, "Invites")
+		table.insert(changedFields, 'Invites')
 	end
 
 	-- Check for asset updates
@@ -315,23 +319,23 @@ function Zone.Functions.extractChangedFields(msg)
 		or msg.Action == Zone.Constants.H_ZONE_CREDIT_NOTICE
 		or msg.Action == Zone.Constants.H_ZONE_DEBIT_NOTICE
 	then
-		table.insert(changedFields, "Assets")
+		table.insert(changedFields, 'Assets')
 	end
 
 	if msg.Action == Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP then
-		table.insert(changedFields, "Transfers")
-		table.insert(changedFields, "Owner")
+		table.insert(changedFields, 'Transfers')
+		table.insert(changedFields, 'Owner')
 	end
 
 	if msg.Action == Zone.Constants.H_ZONE_UPDATE_PATCH_MAP then
-		table.insert(changedFields, "PatchMap")
+		table.insert(changedFields, 'PatchMap')
 	end
 
 	return changedFields
 end
 
 function SendPatch(patchKey, patchData)
-	Send({ device = "patch@1.0", [patchKey] = patchData })
+	Send({ device = 'patch@1.0', [patchKey] = patchData })
 end
 
 function SyncState(msg)
@@ -341,7 +345,8 @@ function SyncState(msg)
 		local changedFields = Zone.Functions.extractChangedFields(msg)
 
 		if #changedFields > 0 then
-			local patchKeys = Zone.Functions.getPatchKeysForChangedFields(changedFields)
+			local patchKeys =
+				Zone.Functions.getPatchKeysForChangedFields(changedFields)
 
 			if #patchKeys > 0 then
 				-- Send targeted patch messages for each matched patch key
@@ -351,15 +356,15 @@ function SyncState(msg)
 				end
 			else
 				-- If no specific patch keys match, send full zone update
-				SendPatch("zone", GetFullState())
+				SendPatch('zone', GetFullState())
 			end
 		else
 			-- If no changed fields detected, send full zone update
-			SendPatch("zone", GetFullState())
+			SendPatch('zone', GetFullState())
 		end
 	else
 		-- If no patch map or no message context, send full zone update
-		SendPatch("zone", GetFullState())
+		SendPatch('zone', GetFullState())
 	end
 end
 
@@ -390,8 +395,12 @@ function Zone.Functions.actorHasRole(actor, role)
 end
 
 function Zone.Functions.isAuthorized(msg)
-	if msg.From ~= Owner and msg.From ~= ao.id and Zone.Functions.tableLength(Zone.Roles) == 0 then
-		return false, "Not Authorized"
+	if
+		msg.From ~= Owner
+		and msg.From ~= ao.id
+		and Zone.Functions.tableLength(Zone.Roles) == 0
+	then
+		return false, 'Not Authorized'
 	end
 
 	if msg.From == Owner or msg.From == ao.id then
@@ -402,15 +411,22 @@ function Zone.Functions.isAuthorized(msg)
 
 	if not permissions then
 		return msg.From == Owner or false,
-			"AuthRoles: Sender " .. msg.From .. " not Authorized. Only Owner can access the handler " .. msg.Action
+			'AuthRoles: Sender '
+				.. msg.From
+				.. ' not Authorized. Only Owner can access the handler '
+				.. msg.Action
 	end
 
 	-- Check for ForwardActions if present
-	if permissions.ForwardActions and msg["Forward-Action"] then
-		local forwardActionRoles = permissions.ForwardActions[msg["Forward-Action"]]
+	if permissions.ForwardActions and msg['Forward-Action'] then
+		local forwardActionRoles =
+			permissions.ForwardActions[msg['Forward-Action']]
 
 		if not forwardActionRoles then
-			return false, "AuthRoles: Forward-Action " .. msg["Forward-Action"] .. " is not allowed"
+			return false,
+				'AuthRoles: Forward-Action '
+					.. msg['Forward-Action']
+					.. ' is not allowed'
 		end
 
 		local actorRoles = Zone.Functions.getActorRoles(msg.From)
@@ -424,10 +440,14 @@ function Zone.Functions.isAuthorized(msg)
 		end
 
 		if not actorRoles then
-			return false, "AuthRoles: " .. msg.From .. " Not Authorized"
+			return false, 'AuthRoles: ' .. msg.From .. ' Not Authorized'
 		end
 
-		return false, "AuthRoles: Sender " .. msg.From .. " not Authorized for Forward-Action " .. msg["Forward-Action"]
+		return false,
+			'AuthRoles: Sender '
+				.. msg.From
+				.. ' not Authorized for Forward-Action '
+				.. msg['Forward-Action']
 	end
 
 	local rolesForHandler = permissions.Roles
@@ -443,16 +463,16 @@ function Zone.Functions.isAuthorized(msg)
 	end
 
 	if not actorRoles then
-		return false, "AuthRoles: " .. msg.From .. " Not Authorized"
+		return false, 'AuthRoles: ' .. msg.From .. ' Not Authorized'
 	end
 
-	return false, "AuthRoles: Sender " .. msg.From .. " not Authorized."
+	return false, 'AuthRoles: Sender ' .. msg.From .. ' not Authorized.'
 end
 
 -- Utility Functions
 function Zone.Functions.decodeMessageData(data)
 	local status, decodedData = pcall(json.decode, data)
-	if not status or type(decodedData) ~= "table" then
+	if not status or type(decodedData) ~= 'table' then
 		return { success = false, data = nil }
 	end
 
@@ -461,7 +481,7 @@ end
 
 function Zone.Functions.mergeTables(original, updates)
 	for key, value in pairs(updates) do
-		if type(value) == "table" and type(original[key]) == "table" then
+		if type(value) == 'table' and type(original[key]) == 'table' then
 			original[key] = Zone.Functions.mergeTables(original[key], value)
 		else
 			original[key] = value
@@ -475,7 +495,7 @@ function Zone.Functions.sendError(target, errorMessage)
 		Target = target,
 		Action = Zone.H_ZONE_ERROR,
 		Tags = {
-			Status = "Error",
+			Status = 'Error',
 			Message = errorMessage,
 		},
 	})
@@ -483,17 +503,17 @@ end
 
 function Zone.Functions.runAction(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
-	if not msg["Forward-To"] or not msg["Forward-Action"] then
+	if not msg['Forward-To'] or not msg['Forward-Action'] then
 		ao.send({
 			Target = msg.From,
-			Action = "Input-Error",
+			Action = 'Input-Error',
 			Tags = {
-				Status = "Error",
-				Message = "Invalid arguments, required { ForwardTo, ForwardAction }",
+				Status = 'Error',
+				Message = 'Invalid arguments, required { ForwardTo, ForwardAction }',
 			},
 		})
 		return
@@ -505,8 +525,8 @@ function Zone.Functions.runAction(msg)
 	msg.Tags.Action = nil
 
 	local messageToSend = {
-		Target = msg["Forward-To"],
-		Action = msg["Forward-Action"],
+		Target = msg['Forward-To'],
+		Action = msg['Forward-Action'],
 		Tags = msg.Tags,
 	}
 
@@ -520,33 +540,46 @@ end
 function Zone.Functions.updateAsset(msg)
 	local authorized, message = Zone.Functions.isAuthorized(msg)
 	if not authorized then
-		return Zone.Functions.sendError(msg.From, "Not Authorized " .. (message or ""))
+		return Zone.Functions.sendError(
+			msg.From,
+			'Not Authorized ' .. (message or '')
+		)
 	end
 
-	local forwardTo = msg["Forward-To"]
-	local forwardAct = msg["Forward-Action"]
-	local excludeIdx = msg["Exclude-Index"]
+	local forwardTo = msg['Forward-To']
+	local forwardAct = msg['Forward-Action']
+	local excludeIdx = msg['Exclude-Index']
 
 	if not forwardTo or not forwardAct then
-		return Zone.Functions.sendError(msg.From, "Missing Forward-To or Forward-Action")
+		return Zone.Functions.sendError(
+			msg.From,
+			'Missing Forward-To or Forward-Action'
+		)
 	end
 
 	local decodeRes = Zone.Functions.decodeMessageData(msg.Data)
-	local inputTable = decodeRes.success and decodeRes.data and decodeRes.data.Input or nil
+	local inputTable = decodeRes.success
+			and decodeRes.data
+			and decodeRes.data.Input
+		or nil
 
-	local isAdmin = (msg.From == Owner) or Zone.Functions.actorHasRole(msg.From, Zone.RoleOptions.Admin)
+	local isAdmin = (msg.From == Owner)
+		or Zone.Functions.actorHasRole(msg.From, Zone.RoleOptions.Admin)
 
 	-- Admins: forward immediately
 	if isAdmin then
 		local out = { Target = forwardTo, Action = forwardAct, Tags = {} }
 		if excludeIdx ~= nil then
-			out.Tags["Exclude-Index"] = excludeIdx
+			out.Tags['Exclude-Index'] = excludeIdx
 		end
 		if inputTable ~= nil then
 			out.Data = json.encode(inputTable)
 		end
 		ao.send(out)
-		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+		return msg.reply({
+			Target = msg.From,
+			Action = Zone.Constants.H_ZONE_SUCCESS,
+		})
 	end
 
 	-- Non-admins: update or add IndexRequest
@@ -560,7 +593,7 @@ function Zone.Functions.updateAsset(msg)
 	for i, req in ipairs(store.IndexRequests) do
 		if req.AssetId == assetId then
 			-- Update in-place
-			req.Status = "Pending"
+			req.Status = 'Pending'
 			req.ForwardAction = forwardAct
 			req.ExcludeIndex = excludeIdx
 			req.Payload = { Input = inputTable }
@@ -574,8 +607,8 @@ function Zone.Functions.updateAsset(msg)
 	if not found then
 		table.insert(store.IndexRequests, {
 			Id = assetId,
-			Type = "AssetUpdate",
-			Status = "Pending",
+			Type = 'AssetUpdate',
+			Status = 'Pending',
 			AssetId = assetId,
 			ForwardAction = forwardAct,
 			ExcludeIndex = excludeIdx,
@@ -591,7 +624,12 @@ function Zone.Functions.updateAsset(msg)
 	return msg.reply({
 		Target = msg.From,
 		Action = Zone.Constants.H_ZONE_SUCCESS,
-		Data = { RequestId = assetId, Status = "Pending", Updated = found, Created = not found },
+		Data = {
+			RequestId = assetId,
+			Status = 'Pending',
+			Updated = found,
+			Created = not found,
+		},
 	})
 end
 
@@ -604,7 +642,7 @@ end
 
 function Zone.Functions.keysHandler(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
@@ -621,14 +659,14 @@ end
 function Zone.Functions.zoneUpdate(msg)
 	local authorized, message = Zone.Functions.isAuthorized(msg)
 	if not authorized then
-		Zone.Functions.sendError(msg.From, "Not Authorized" .. " " .. message)
+		Zone.Functions.sendError(msg.From, 'Not Authorized' .. ' ' .. message)
 		return
 	end
 
 	local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 
 	if not decodedData.success then
-		Zone.Functions.sendError(msg.From, "Invalid Data")
+		Zone.Functions.sendError(msg.From, 'Invalid Data')
 		return
 	end
 
@@ -636,10 +674,10 @@ function Zone.Functions.zoneUpdate(msg)
 	if entries and #entries then
 		for _, entry in ipairs(entries) do
 			if entry.key and entry.value then
-				local updateType = msg["Update-Type"] or "Add-Or-Update"
-				if updateType == "Add-Or-Update" then
+				local updateType = msg['Update-Type'] or 'Add-Or-Update'
+				if updateType == 'Add-Or-Update' then
 					Zone.Data.KV:set(entry.key, entry.value)
-				elseif updateType == "Remove" then
+				elseif updateType == 'Remove' then
 					Zone.Data.KV:remove(entry.key)
 				end
 			end
@@ -662,10 +700,10 @@ function Zone.Functions.zoneRoleSet(msg)
 		end
 
 		for _, role in ipairs(roles) do
-			if type(role) ~= "string" then
+			if type(role) ~= 'string' then
 				return false
 			end
-			if role == Zone.RoleOptions["Admin"] and msg.From ~= Owner then -- only SuperAdmin can assign Admin role
+			if role == Zone.RoleOptions['Admin'] and msg.From ~= Owner then -- only SuperAdmin can assign Admin role
 				return false
 			end
 		end
@@ -675,7 +713,7 @@ function Zone.Functions.zoneRoleSet(msg)
 
 	local authorized, message = Zone.Functions.isAuthorized(msg)
 	if not authorized then
-		print("Not Authorized", message)
+		print('Not Authorized', message)
 		Zone.Functions.sendError(msg.From, message)
 		return
 	end
@@ -692,22 +730,25 @@ function Zone.Functions.zoneRoleSet(msg)
 			if not actorId then
 				ao.send({
 					Target = msg.From,
-					Action = "Input-Error",
+					Action = 'Input-Error',
 					Tags = {
-						Status = "Error",
-						Message = "Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data",
+						Status = 'Error',
+						Message = 'Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data',
 					},
 				})
 				return
 			end
 
 			if not checkValidAddress(actorId) then
-				Zone.Functions.sendError(msg.From, "Id must be a valid address")
+				Zone.Functions.sendError(msg.From, 'Id must be a valid address')
 				return
 			end
 
 			if not check_valid_roles(roles) then
-				Zone.Functions.sendError(msg.From, "Role must be a table of strings")
+				Zone.Functions.sendError(
+					msg.From,
+					'Role must be a table of strings'
+				)
 				return
 			end
 
@@ -732,8 +773,8 @@ function Zone.Functions.zoneRoleSet(msg)
 			Target = msg.From,
 			Action = Zone.Constants.H_ZONE_SUCCESS,
 			Tags = {
-				Status = "Success",
-				Message = "Roles updated",
+				Status = 'Success',
+				Message = 'Roles updated',
 			},
 		})
 
@@ -742,9 +783,9 @@ function Zone.Functions.zoneRoleSet(msg)
 		Zone.Functions.sendError(
 			msg.From,
 			string.format(
-				"Failed to parse role update data, received: %s. %s.",
+				'Failed to parse role update data, received: %s. %s.',
 				msg.Data,
-				"Data must be an object - { Id, Roles, Type }"
+				'Data must be an object - { Id, Roles, Type }'
 			)
 		)
 	end
@@ -753,7 +794,7 @@ end
 function Zone.Functions.addZoneInvite(msg)
 	for _, invite in ipairs(Zone.Invites) do
 		if invite.Id == msg.From then
-			print("Invite from this zone is already set")
+			print('Invite from this zone is already set')
 			return
 		end
 	end
@@ -766,7 +807,7 @@ function Zone.Functions.addZoneInvite(msg)
 
 	ao.send({
 		Target = msg.From,
-		Action = "Invite-Acknowledged",
+		Action = 'Invite-Acknowledged',
 	})
 
 	SyncState(msg)
@@ -775,7 +816,7 @@ end
 function Zone.Functions.joinZone(msg)
 	local index = -1
 	for i, invite in ipairs(Zone.Invites) do
-		if invite.Id == msg.Tags["Zone-Id"] then
+		if invite.Id == msg.Tags['Zone-Id'] then
 			index = i
 		end
 	end
@@ -784,12 +825,12 @@ function Zone.Functions.joinZone(msg)
 		local store = Zone.Data.KV.Store
 		local storePath = nil
 
-		if msg.Tags["Store-Path"] then
-			if not store[msg.Tags["Store-Path"]] then
-				store[msg.Tags["Store-Path"]] = {}
+		if msg.Tags['Store-Path'] then
+			if not store[msg.Tags['Store-Path']] then
+				store[msg.Tags['Store-Path']] = {}
 			end
 
-			storePath = store[msg.Tags["Store-Path"]]
+			storePath = store[msg.Tags['Store-Path']]
 		else
 			if not store.JoinedZones then
 				store.JoinedZones = {}
@@ -801,7 +842,7 @@ function Zone.Functions.joinZone(msg)
 		table.insert(storePath, Zone.Invites[index])
 		table.remove(Zone.Invites, index)
 
-		ao.send({ Target = msg.From, Action = "Joined-Zone" })
+		ao.send({ Target = msg.From, Action = 'Joined-Zone' })
 
 		SyncState(msg)
 	end
@@ -809,7 +850,7 @@ end
 
 function Zone.Functions.updatePatchMap(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
@@ -817,16 +858,16 @@ function Zone.Functions.updatePatchMap(msg)
 
 	if decodeResult.success and decodeResult.data then
 		Zone.PatchMap = decodeResult.data
-		ao.send({ Target = msg.From, Action = "Patch-Map-Updated" })
+		ao.send({ Target = msg.From, Action = 'Patch-Map-Updated' })
 
 		SyncState(msg)
 	else
 		Zone.Functions.sendError(
 			msg.From,
 			string.format(
-				"Failed to parse role update data, received: %s. %s.",
+				'Failed to parse role update data, received: %s. %s.',
 				msg.Data,
-				"Data must be an object - { [patch-key]: [] }"
+				'Data must be an object - { [patch-key]: [] }'
 			)
 		)
 	end
@@ -834,8 +875,8 @@ end
 
 function Zone.Functions.addUpload(msg)
 	Zone.Data.AssetManager:update({
-		Type = "Add",
-		AssetId = msg["Asset-Id"],
+		Type = 'Add',
+		AssetId = msg['Asset-Id'],
 		Timestamp = msg.Timestamp,
 		AssetType = msg.AssetType,
 		ContentType = msg.ContentType,
@@ -848,7 +889,7 @@ end
 
 function Zone.Functions.creditNotice(msg)
 	Zone.Data.AssetManager:update({
-		Type = "Add",
+		Type = 'Add',
 		AssetId = msg.From,
 		Timestamp = msg.Timestamp,
 		Quantity = msg.Quantity,
@@ -860,7 +901,7 @@ end
 
 function Zone.Functions.debitNotice(msg)
 	Zone.Data.AssetManager:update({
-		Type = "Remove",
+		Type = 'Remove',
 		AssetId = msg.From,
 		Timestamp = msg.Timestamp,
 		Quantity = msg.Quantity,
@@ -872,12 +913,12 @@ end
 
 function Zone.Functions.addIndexId(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
-	if not msg["Index-Id"] then
-		Zone.Functions.sendError(msg.From, "Invalid Data")
+	if not msg['Index-Id'] then
+		Zone.Functions.sendError(msg.From, 'Invalid Data')
 		return
 	end
 
@@ -886,13 +927,13 @@ function Zone.Functions.addIndexId(msg)
 	end
 
 	for _, index in ipairs(Zone.Data.KV.Store.Index) do
-		if index.Id == msg["Index-Id"] then
-			Zone.Functions.sendError(msg.From, "Id already exists")
+		if index.Id == msg['Index-Id'] then
+			Zone.Functions.sendError(msg.From, 'Id already exists')
 			return
 		end
 	end
 
-	table.insert(Zone.Data.KV.Store.Index, { Id = msg["Index-Id"] })
+	table.insert(Zone.Data.KV.Store.Index, { Id = msg['Index-Id'] })
 
 	SyncState(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
@@ -900,12 +941,12 @@ end
 
 function Zone.Functions.addIndexRequest(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
-	if not msg["Index-Id"] then
-		Zone.Functions.sendError(msg.From, "Invalid Data")
+	if not msg['Index-Id'] then
+		Zone.Functions.sendError(msg.From, 'Invalid Data')
 		return
 	end
 
@@ -914,15 +955,18 @@ function Zone.Functions.addIndexRequest(msg)
 	end
 
 	for _, index in ipairs(Zone.Data.KV.Store.IndexRequests) do
-		if index.Id == msg["Index-Id"] then
-			Zone.Functions.sendError(msg.From, "Id already exists")
+		if index.Id == msg['Index-Id'] then
+			Zone.Functions.sendError(msg.From, 'Id already exists')
 			return
 		end
 	end
 
-	local status = msg["Status"] or "Pending"
+	local status = msg['Status'] or 'Pending'
 
-	table.insert(Zone.Data.KV.Store.IndexRequests, { Id = msg["Index-Id"], Status = status })
+	table.insert(
+		Zone.Data.KV.Store.IndexRequests,
+		{ Id = msg['Index-Id'], Status = status }
+	)
 
 	SyncState(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
@@ -930,40 +974,40 @@ end
 
 function Zone.Functions.updateStatusIndexRequest(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
-	if not msg["Index-Id"] or not msg["Status"] then
-		Zone.Functions.sendError(msg.From, "Invalid Data")
+	if not msg['Index-Id'] or not msg['Status'] then
+		Zone.Functions.sendError(msg.From, 'Invalid Data')
 		return
 	end
 
 	local entryIndex = nil
 	for i, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
-		if reqEntry.Id == msg["Index-Id"] then
+		if reqEntry.Id == msg['Index-Id'] then
 			entryIndex = i
 			break
 		end
 	end
 
 	if entryIndex then
-		Zone.Data.KV.Store.IndexRequests[entryIndex].Status = msg["Status"]
+		Zone.Data.KV.Store.IndexRequests[entryIndex].Status = msg['Status']
 		SyncState(msg)
 		msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 	else
-		Zone.Functions.sendError(msg.From, "Entry not found")
+		Zone.Functions.sendError(msg.From, 'Entry not found')
 	end
 end
 
 function Zone.Functions.updateIndexRequest(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
-	if not msg["Index-Id"] or not msg["Update-Type"] then
-		Zone.Functions.sendError(msg.From, "Invalid Data")
+	if not msg['Index-Id'] or not msg['Update-Type'] then
+		Zone.Functions.sendError(msg.From, 'Invalid Data')
 		return
 	end
 
@@ -971,7 +1015,7 @@ function Zone.Functions.updateIndexRequest(msg)
 	local entryIndex = -1
 
 	for reqIndex, reqEntry in ipairs(Zone.Data.KV.Store.IndexRequests) do
-		if reqEntry.Id == msg["Index-Id"] then
+		if reqEntry.Id == msg['Index-Id'] then
 			entry = reqEntry
 			entryIndex = reqIndex
 			break
@@ -979,29 +1023,36 @@ function Zone.Functions.updateIndexRequest(msg)
 	end
 
 	if entry and entryIndex > -1 then
-		if entry["Status"] == "Pending" then
-			Zone.Functions.sendError(msg.From, "Only Non Pending requests can be updated")
+		if entry['Status'] == 'Pending' then
+			Zone.Functions.sendError(
+				msg.From,
+				'Only Non Pending requests can be updated'
+			)
 			return
 		end
-		if msg["Update-Type"] == "Approve" then
-			local shouldForward = (entry["Type"] == "AssetUpdate") or isAlreadyIndexed(entry)
+		if msg['Update-Type'] == 'Approve' then
+			local shouldForward = (entry['Type'] == 'AssetUpdate')
+				or isAlreadyIndexed(entry)
 			if shouldForward then
-				local target = entry["AssetId"]
-				local action = entry["ForwardAction"]
+				local target = entry['AssetId']
+				local action = entry['ForwardAction']
 
 				if not target or not action then
-					Zone.Functions.sendError(msg.From, "Cannot forward: missing target or action")
+					Zone.Functions.sendError(
+						msg.From,
+						'Cannot forward: missing target or action'
+					)
 					return
 				end
 
 				local out = { Target = target, Action = action, Tags = {} }
 
-				if entry["ExcludeIndex"] ~= nil then
-					out.Tags["Exclude-Index"] = entry["ExcludeIndex"]
+				if entry['ExcludeIndex'] ~= nil then
+					out.Tags['Exclude-Index'] = entry['ExcludeIndex']
 				end
 
-				if entry["Payload"] and entry["Payload"]["Input"] ~= nil then
-					out.Data = json.encode(entry["Payload"]["Input"])
+				if entry['Payload'] and entry['Payload']['Input'] ~= nil then
+					out.Data = json.encode(entry['Payload']['Input'])
 				end
 
 				ao.send(out)
@@ -1011,17 +1062,17 @@ function Zone.Functions.updateIndexRequest(msg)
 				Zone.Data.KV.Store.Index = Zone.Data.KV.Store.Index or {}
 				table.insert(Zone.Data.KV.Store.Index, entry)
 			end
-		elseif msg["Update-Type"] == "Reject" then
+		elseif msg['Update-Type'] == 'Reject' then
 			table.remove(Zone.Data.KV.Store.IndexRequests, entryIndex)
 		else
-			Zone.Functions.sendError(msg.From, "Invalid Update-Type")
+			Zone.Functions.sendError(msg.From, 'Invalid Update-Type')
 			return
 		end
 
 		SyncState(msg)
 		msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 	else
-		Zone.Functions.sendError(msg.From, "Entry not found")
+		Zone.Functions.sendError(msg.From, 'Entry not found')
 	end
 end
 
@@ -1042,7 +1093,7 @@ function Zone.Functions.indexNotice(msg)
 	if entryIndex > -1 then
 		local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 		if not decodedData.success or not decodedData.data then
-			Zone.Functions.sendError(msg.From, "Invalid Data")
+			Zone.Functions.sendError(msg.From, 'Invalid Data')
 			return
 		end
 
@@ -1050,8 +1101,12 @@ function Zone.Functions.indexNotice(msg)
 		local newData = decodedData.data or {}
 
 		for key, value in pairs(newData) do
-			if type(value) == "table" and type(existingEntry[key]) == "table" then
-				existingEntry[key] = Zone.Functions.mergeTables(existingEntry[key], value)
+			if
+				type(value) == 'table'
+				and type(existingEntry[key]) == 'table'
+			then
+				existingEntry[key] =
+					Zone.Functions.mergeTables(existingEntry[key], value)
 			else
 				existingEntry[key] = value
 			end
@@ -1062,20 +1117,20 @@ function Zone.Functions.indexNotice(msg)
 		SyncState(msg)
 		msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 	else
-		Zone.Functions.sendError(msg.From, "Entry not found")
+		Zone.Functions.sendError(msg.From, 'Entry not found')
 	end
 end
 
 function Zone.Functions.setHandler(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
-	local path = msg.Tags.Path or ""
+	local path = msg.Tags.Path or ''
 	local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 	if not decodedData.success or not decodedData.data then
-		Zone.Functions.sendError(msg.From, "Invalid Data")
+		Zone.Functions.sendError(msg.From, 'Invalid Data')
 		return
 	end
 
@@ -1087,15 +1142,15 @@ end
 
 function Zone.Functions.appendHandler(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
-	local path = msg.Tags.Path or ""
+	local path = msg.Tags.Path or ''
 	local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 
 	if not decodedData.success or not decodedData.data then
-		Zone.Functions.sendError(msg.From, "Invalid Data")
+		Zone.Functions.sendError(msg.From, 'Invalid Data')
 		return
 	end
 
@@ -1107,13 +1162,16 @@ end
 
 function Zone.Functions.removeHandler(msg)
 	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, "Not Authorized")
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
 		return
 	end
 
-	local path = msg.Tags.Path or ""
-	if path == "" then
-		Zone.Functions.sendError(msg.From, "Invalid Path: Path required to remove")
+	local path = msg.Tags.Path or ''
+	if path == '' then
+		Zone.Functions.sendError(
+			msg.From,
+			'Invalid Path: Path required to remove'
+		)
 		return
 	end
 
@@ -1126,11 +1184,14 @@ end
 function Zone.Functions.transferOwnership(msg)
 	local authorized, message = Zone.Functions.isAuthorized(msg)
 	if not authorized then
-		return Zone.Functions.sendError(msg.From, "Not Authorized " .. (message or ""))
+		return Zone.Functions.sendError(
+			msg.From,
+			'Not Authorized ' .. (message or '')
+		)
 	end
 
-	local op = msg["Update-Type"]
-	local toAddr = msg["To"]
+	local op = msg['Update-Type']
+	local toAddr = msg['To']
 
 	local function findTransferByTo(to)
 		for i = #Zone.Transfers, 1, -1 do
@@ -1144,32 +1205,57 @@ function Zone.Functions.transferOwnership(msg)
 
 	local function ensureAdmin(id)
 		local roles = Zone.Functions.getActorRoles(id)
-		return roles and Zone.Functions.rolesHasValue(roles, Zone.RoleOptions.Admin) or false
+		return roles
+				and Zone.Functions.rolesHasValue(roles, Zone.RoleOptions.Admin)
+			or false
 	end
 
-	if not op or (op ~= "Invite" and op ~= "Accept" and op ~= "Reject" and op ~= "Cancel") then
-		return Zone.Functions.sendError(msg.From, "Invalid Update-Type. Use Invite | Accept | Reject | Cancel")
+	if
+		not op
+		or (
+			op ~= 'Invite'
+			and op ~= 'Accept'
+			and op ~= 'Reject'
+			and op ~= 'Cancel'
+		)
+	then
+		return Zone.Functions.sendError(
+			msg.From,
+			'Invalid Update-Type. Use Invite | Accept | Reject | Cancel'
+		)
 	end
 
-	if op == "Invite" then
+	if op == 'Invite' then
 		if msg.From ~= Owner then
-			return Zone.Functions.sendError(msg.From, "Only Owner can invite a new owner")
+			return Zone.Functions.sendError(
+				msg.From,
+				'Only Owner can invite a new owner'
+			)
 		end
 		if not toAddr or not checkValidAddress(toAddr) then
-			return Zone.Functions.sendError(msg.From, "Invalid or missing To address")
+			return Zone.Functions.sendError(
+				msg.From,
+				'Invalid or missing To address'
+			)
 		end
 		if not ensureAdmin(toAddr) then
-			return Zone.Functions.sendError(msg.From, "Invitee must currently have Admin role")
+			return Zone.Functions.sendError(
+				msg.From,
+				'Invitee must currently have Admin role'
+			)
 		end
 
 		local idx, existing = findTransferByTo(toAddr)
-		if idx > -1 and existing and existing.State == "pending" then
-			return Zone.Functions.sendError(msg.From, "A pending transfer already exists for this address")
+		if idx > -1 and existing and existing.State == 'pending' then
+			return Zone.Functions.sendError(
+				msg.From,
+				'A pending transfer already exists for this address'
+			)
 		end
 
 		for _, t in ipairs(Zone.Transfers) do
-			if t.State == "pending" then
-				t.State = "cancelled"
+			if t.State == 'pending' then
+				t.State = 'cancelled'
 				t.UpdatedAt = msg.Timestamp
 			end
 		end
@@ -1177,101 +1263,176 @@ function Zone.Functions.transferOwnership(msg)
 		table.insert(Zone.Transfers, {
 			To = toAddr,
 			From = Owner,
-			State = "pending",
+			State = 'pending',
 			CreatedAt = msg.Timestamp,
 			UpdatedAt = msg.Timestamp,
 		})
 
 		SyncState(msg)
-		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+		return msg.reply({
+			Target = msg.From,
+			Action = Zone.Constants.H_ZONE_SUCCESS,
+		})
 	end
 
-	if op == "Accept" then
+	if op == 'Accept' then
 		local idx, invite = findTransferByTo(msg.From)
 		if idx == -1 then
-			return Zone.Functions.sendError(msg.From, "No transfer invite found for this actor")
+			return Zone.Functions.sendError(
+				msg.From,
+				'No transfer invite found for this actor'
+			)
 		end
-		if invite and invite.State ~= "pending" then
-			return Zone.Functions.sendError(msg.From, "Transfer is not in pending state")
+		if invite and invite.State ~= 'pending' then
+			return Zone.Functions.sendError(
+				msg.From,
+				'Transfer is not in pending state'
+			)
 		end
 		if not ensureAdmin(msg.From) then
-			return Zone.Functions.sendError(msg.From, "Accepting actor must be an Admin")
+			return Zone.Functions.sendError(
+				msg.From,
+				'Accepting actor must be an Admin'
+			)
 		end
 
 		Owner = msg.From
-		invite.State = "accepted"
+		invite.State = 'accepted'
 		invite.AcceptedAt = msg.Timestamp
 		invite.UpdatedAt = msg.Timestamp
 
 		for _, t in ipairs(Zone.Transfers) do
-			if t ~= invite and t.State == "pending" then
-				t.State = "cancelled"
+			if t ~= invite and t.State == 'pending' then
+				t.State = 'cancelled'
 				t.UpdatedAt = msg.Timestamp
 			end
 		end
 
 		SyncState(msg)
-		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+		return msg.reply({
+			Target = msg.From,
+			Action = Zone.Constants.H_ZONE_SUCCESS,
+		})
 	end
 
-	if op == "Reject" then
+	if op == 'Reject' then
 		local idx, invite = findTransferByTo(msg.From)
 		if idx == -1 then
-			return Zone.Functions.sendError(msg.From, "No transfer invite found for this actor")
+			return Zone.Functions.sendError(
+				msg.From,
+				'No transfer invite found for this actor'
+			)
 		end
-		if invite and invite.State ~= "pending" then
-			return Zone.Functions.sendError(msg.From, "Transfer is not in pending state")
+		if invite and invite.State ~= 'pending' then
+			return Zone.Functions.sendError(
+				msg.From,
+				'Transfer is not in pending state'
+			)
 		end
 
-		invite.State = "rejected"
+		invite.State = 'rejected'
 		invite.RejectedAt = msg.Timestamp
 		invite.UpdatedAt = msg.Timestamp
 
 		SyncState(msg)
-		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+		return msg.reply({
+			Target = msg.From,
+			Action = Zone.Constants.H_ZONE_SUCCESS,
+		})
 	end
 
-	if op == "Cancel" then
+	if op == 'Cancel' then
 		if msg.From ~= Owner then
-			return Zone.Functions.sendError(msg.From, "Only Owner can cancel a transfer invite")
+			return Zone.Functions.sendError(
+				msg.From,
+				'Only Owner can cancel a transfer invite'
+			)
 		end
 		if not toAddr or not checkValidAddress(toAddr) then
-			return Zone.Functions.sendError(msg.From, "Invalid or missing To address")
+			return Zone.Functions.sendError(
+				msg.From,
+				'Invalid or missing To address'
+			)
 		end
 		local idx, invite = findTransferByTo(toAddr)
 		if idx == -1 then
-			return Zone.Functions.sendError(msg.From, "No transfer invite found for this address")
+			return Zone.Functions.sendError(
+				msg.From,
+				'No transfer invite found for this address'
+			)
 		end
-		if invite and invite.State ~= "pending" then
-			return Zone.Functions.sendError(msg.From, "Only pending invites can be cancelled")
+		if invite and invite.State ~= 'pending' then
+			return Zone.Functions.sendError(
+				msg.From,
+				'Only pending invites can be cancelled'
+			)
 		end
 
-		invite.State = "cancelled"
+		invite.State = 'cancelled'
 		invite.CancelledAt = msg.Timestamp
 		invite.UpdatedAt = msg.Timestamp
 
 		SyncState(msg)
-		return msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+		return msg.reply({
+			Target = msg.From,
+			Action = Zone.Constants.H_ZONE_SUCCESS,
+		})
 	end
 end
 
-Handlers.add(Zone.Constants.H_ZONE_GET, Zone.Constants.H_ZONE_GET, Zone.Functions.zoneGet)
+Handlers.add(
+	Zone.Constants.H_ZONE_GET,
+	Zone.Constants.H_ZONE_GET,
+	Zone.Functions.zoneGet
+)
 
-Handlers.add(Zone.Constants.H_ZONE_KEYS, Zone.Constants.H_ZONE_KEYS, Zone.Functions.keysHandler)
+Handlers.add(
+	Zone.Constants.H_ZONE_KEYS,
+	Zone.Constants.H_ZONE_KEYS,
+	Zone.Functions.keysHandler
+)
 
-Handlers.add(Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Constants.H_ZONE_CREDIT_NOTICE, Zone.Functions.creditNotice)
+Handlers.add(
+	Zone.Constants.H_ZONE_CREDIT_NOTICE,
+	Zone.Constants.H_ZONE_CREDIT_NOTICE,
+	Zone.Functions.creditNotice
+)
 
-Handlers.add(Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Constants.H_ZONE_DEBIT_NOTICE, Zone.Functions.debitNotice)
+Handlers.add(
+	Zone.Constants.H_ZONE_DEBIT_NOTICE,
+	Zone.Constants.H_ZONE_DEBIT_NOTICE,
+	Zone.Functions.debitNotice
+)
 
-Handlers.add(Zone.Constants.H_ZONE_UPDATE, Zone.Constants.H_ZONE_UPDATE, Zone.Functions.zoneUpdate)
+Handlers.add(
+	Zone.Constants.H_ZONE_UPDATE,
+	Zone.Constants.H_ZONE_UPDATE,
+	Zone.Functions.zoneUpdate
+)
 
-Handlers.add(Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Constants.H_ZONE_ADD_UPLOAD, Zone.Functions.addUpload)
+Handlers.add(
+	Zone.Constants.H_ZONE_ADD_UPLOAD,
+	Zone.Constants.H_ZONE_ADD_UPLOAD,
+	Zone.Functions.addUpload
+)
 
-Handlers.add(Zone.Constants.H_ZONE_RUN_ACTION, Zone.Constants.H_ZONE_RUN_ACTION, Zone.Functions.runAction)
+Handlers.add(
+	Zone.Constants.H_ZONE_RUN_ACTION,
+	Zone.Constants.H_ZONE_RUN_ACTION,
+	Zone.Functions.runAction
+)
 
-Handlers.add(Zone.Constants.H_ZONE_UPDATE_ASSET, Zone.Constants.H_ZONE_UPDATE_ASSET, Zone.Functions.updateAsset)
+Handlers.add(
+	Zone.Constants.H_ZONE_UPDATE_ASSET,
+	Zone.Constants.H_ZONE_UPDATE_ASSET,
+	Zone.Functions.updateAsset
+)
 
-Handlers.add(Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Constants.H_ZONE_ADD_INDEX_ID, Zone.Functions.addIndexId)
+Handlers.add(
+	Zone.Constants.H_ZONE_ADD_INDEX_ID,
+	Zone.Constants.H_ZONE_ADD_INDEX_ID,
+	Zone.Functions.addIndexId
+)
 
 Handlers.add(
 	Zone.Constants.H_ZONE_ADD_INDEX_REQUEST,
@@ -1291,19 +1452,47 @@ Handlers.add(
 	Zone.Functions.updateStatusIndexRequest
 )
 
-Handlers.add(Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Constants.H_ZONE_INDEX_NOTICE, Zone.Functions.indexNotice)
+Handlers.add(
+	Zone.Constants.H_ZONE_INDEX_NOTICE,
+	Zone.Constants.H_ZONE_INDEX_NOTICE,
+	Zone.Functions.indexNotice
+)
 
-Handlers.add(Zone.Constants.H_ZONE_SET, Zone.Constants.H_ZONE_SET, Zone.Functions.setHandler)
+Handlers.add(
+	Zone.Constants.H_ZONE_SET,
+	Zone.Constants.H_ZONE_SET,
+	Zone.Functions.setHandler
+)
 
-Handlers.add(Zone.Constants.H_ZONE_APPEND, Zone.Constants.H_ZONE_APPEND, Zone.Functions.appendHandler)
+Handlers.add(
+	Zone.Constants.H_ZONE_APPEND,
+	Zone.Constants.H_ZONE_APPEND,
+	Zone.Functions.appendHandler
+)
 
-Handlers.add(Zone.Constants.H_ZONE_REMOVE, Zone.Constants.H_ZONE_REMOVE, Zone.Functions.removeHandler)
+Handlers.add(
+	Zone.Constants.H_ZONE_REMOVE,
+	Zone.Constants.H_ZONE_REMOVE,
+	Zone.Functions.removeHandler
+)
 
-Handlers.add(Zone.Constants.H_ZONE_ROLE_SET, Zone.Constants.H_ZONE_ROLE_SET, Zone.Functions.zoneRoleSet)
+Handlers.add(
+	Zone.Constants.H_ZONE_ROLE_SET,
+	Zone.Constants.H_ZONE_ROLE_SET,
+	Zone.Functions.zoneRoleSet
+)
 
-Handlers.add(Zone.Constants.H_ZONE_JOIN, Zone.Constants.H_ZONE_JOIN, Zone.Functions.joinZone)
+Handlers.add(
+	Zone.Constants.H_ZONE_JOIN,
+	Zone.Constants.H_ZONE_JOIN,
+	Zone.Functions.joinZone
+)
 
-Handlers.add(Zone.Constants.H_ZONE_ADD_INVITE, Zone.Constants.H_ZONE_ADD_INVITE, Zone.Functions.addZoneInvite)
+Handlers.add(
+	Zone.Constants.H_ZONE_ADD_INVITE,
+	Zone.Constants.H_ZONE_ADD_INVITE,
+	Zone.Functions.addZoneInvite
+)
 
 Handlers.add(
 	Zone.Constants.H_ZONE_UPDATE_PATCH_MAP,
@@ -1331,7 +1520,7 @@ Handlers.add(
 local function setStoreValue(keyString, value)
 	-- 1) Split the input keyString on dots
 	local parts = {}
-	for part in string.gmatch(keyString, "[^%.]+") do
+	for part in string.gmatch(keyString, '[^%.]+') do
 		table.insert(parts, part)
 	end
 
@@ -1340,14 +1529,14 @@ local function setStoreValue(keyString, value)
 
 	-- Check if we want to append to an existing string
 	local isStringAppend = false
-	if string.sub(lastPart, -3) == "+++" then
+	if string.sub(lastPart, -3) == '+++' then
 		isStringAppend = true
 		lastPart = string.sub(lastPart, 1, -4) -- remove '+++'
 	end
 
 	-- Check if we are dealing with an array
 	local isArray = false
-	if string.sub(lastPart, -2) == "[]" then
+	if string.sub(lastPart, -2) == '[]' then
 		isArray = true
 		lastPart = string.sub(lastPart, 1, -3) -- remove '[]'
 	end
@@ -1357,15 +1546,15 @@ local function setStoreValue(keyString, value)
 
 	-- 3) Build a dot-notated key up to (but not including) the last part
 	--    We'll use this later to navigate or set in the KV store.
-	local pathUpToLast = table.concat(parts, ".", 1, #parts - 1)
+	local pathUpToLast = table.concat(parts, '.', 1, #parts - 1)
 	local finalKey = parts[#parts]
 
 	-- A small helper to rejoin the entire path so KV can handle the nested structure:
 	local function recombinePath(upTo, last)
-		if upTo == nil or upTo == "" then
+		if upTo == nil or upTo == '' then
 			return last
 		else
-			return upTo .. "." .. last
+			return upTo .. '.' .. last
 		end
 	end
 
@@ -1379,7 +1568,7 @@ local function setStoreValue(keyString, value)
 
 		if isArray then
 			-- If no array yet, create it with a single element
-			if type(currentValue) ~= "table" then
+			if type(currentValue) ~= 'table' then
 				Zone.Data.KV:set(fullKey, { value })
 				return
 			end
@@ -1398,7 +1587,7 @@ local function setStoreValue(keyString, value)
 			if currentValue == nil then
 				-- Nothing was there, just set it
 				Zone.Data.KV:set(fullKey, value)
-			elseif type(currentValue) == "string" then
+			elseif type(currentValue) == 'string' then
 				-- Append to existing string
 				Zone.Data.KV:set(fullKey, currentValue .. value)
 			else
@@ -1423,22 +1612,28 @@ end
 ZoneInitCompleted = ZoneInitCompleted or false
 
 if not ZoneInitCompleted then
-	if #Inbox >= 1 and Inbox[1]["On-Boot"] ~= nil then
+	if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
 		for _, tag in ipairs(Inbox[1].TagArray) do
-			local prefix = "Bootloader-"
+			local prefix = 'Bootloader-'
 			if string.sub(tag.name, 1, string.len(prefix)) == prefix then
-				local keyWithoutPrefix = string.sub(tag.name, string.len(prefix) + 1)
+				local keyWithoutPrefix =
+					string.sub(tag.name, string.len(prefix) + 1)
 				setStoreValue(keyWithoutPrefix, tag.value)
 			end
 
 			-- Check for Zone.PatchMap tags
-			local patchMapPrefix = "Zone-Patch-Map-"
-			if string.sub(tag.name, 1, string.len(patchMapPrefix)) == patchMapPrefix then
-				local patchKey = string.lower(string.sub(tag.name, string.len(patchMapPrefix) + 1))
+			local patchMapPrefix = 'Zone-Patch-Map-'
+			if
+				string.sub(tag.name, 1, string.len(patchMapPrefix))
+				== patchMapPrefix
+			then
+				local patchKey = string.lower(
+					string.sub(tag.name, string.len(patchMapPrefix) + 1)
+				)
 
 				-- Parse the tag value as JSON array of field paths
 				local status, decodedFields = pcall(json.decode, tag.value)
-				if status and type(decodedFields) == "table" then
+				if status and type(decodedFields) == 'table' then
 					Zone.PatchMap[patchKey] = decodedFields
 				end
 			end
