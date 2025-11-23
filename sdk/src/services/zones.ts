@@ -233,12 +233,20 @@ export function getZoneWith(deps: DependencyType) {
 			const processInfo = await readProcess(deps, { processId: zoneId, hydrate: opts?.hydrate });
 
 			if (processInfo?.zone) {
-				const zoneData = {
-					...processInfo.zone,
-					...processInfo.zone.Store ?? {}
+				let zone: any = processInfo.zone;
+
+				if (typeof zone === 'string') {
+					try {
+						zone = JSON.parse(zone);
+					} catch { }
+				}
+
+				zone = {
+					...zone,
+					...(zone.Store ?? {})
 				};
 
-				return mapFromProcessCase(zoneData);
+				return mapFromProcessCase(zone);
 			}
 
 			return await fallbackRead();
