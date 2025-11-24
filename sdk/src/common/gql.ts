@@ -164,10 +164,10 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 		sort += 'sort: ';
 		switch (args.sort) {
 			case 'ascending':
-				sort += 'HEIGHT_ASC';
+				sort += 'INGESTED_AT_ASC';
 				break;
 			case 'descending':
-				sort += 'HEIGHT_DESC';
+				sort += 'INGESTED_AT_DESC';
 				break;
 		}
 	}
