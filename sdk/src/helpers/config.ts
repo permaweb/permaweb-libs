@@ -9,8 +9,8 @@ export const AO = {
 		comments: 'C16qIcYR0jC2Tiz7e4wFJLHAMee2zIXBmwxmDzQ0pVI',
 		moderation: 'TGCoo6JDvZ7JY_E5Smz5VQiI9ncc6uXI8tU_snAodl0',
 		zone: {
-			id: 'ushdDXTVNW_XEVPVOPQQ9oU2qlwI5yirlqKJrLQCEvg',
-			version: '0.0.11',
+			id: 'f3xPt-9_YgB-GrBDymFi87CaOGkLKUILTAPO0Pjk_lw',
+			version: '0.0.12',
 		},
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',
