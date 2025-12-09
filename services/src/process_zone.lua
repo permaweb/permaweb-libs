@@ -789,14 +789,12 @@ function Zone.Functions.zoneRoleSet(msg)
 			return Zone.Functions.sendError(msg.From, "Role must be a table of strings")
 		end
 
-		-- === REMOVAL PRIORITY CHECK ===
 		if isRemovalOp then
 			local actorPriority = Zone.Functions.getActorPriority(msg.From)
 			local currentTargetRoles = Zone.Roles[actorId] and Zone.Roles[actorId].Roles or nil
 			local targetPriority = Zone.Functions.getHighestRolePriority(currentTargetRoles)
 
 			if msg.From ~= Owner then
-				-- If target has roles, requestor must outrank them
 				if targetPriority > 0 and actorPriority <= targetPriority then
 					return Zone.Functions.sendError(
 						msg.From,
@@ -805,17 +803,14 @@ function Zone.Functions.zoneRoleSet(msg)
 				end
 			end
 
-			-- ✔️ ACTUAL REMOVAL
 			Zone.Roles[actorId] = nil
 
 		else
-			-- === NORMAL ROLE UPDATE ===
 			Zone.Roles[actorId] = {
 				Roles = roles,
 				Type = type,
 			}
 
-			-- invite if needed
 			if sendInvite then
 				ao.send({
 					Target = actorId,
@@ -829,7 +824,6 @@ function Zone.Functions.zoneRoleSet(msg)
 		end
 	end
 
-	-- Success message
 	ao.send({
 		Target = msg.From,
 		Action = Zone.Constants.H_ZONE_SUCCESS,
