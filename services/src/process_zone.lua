@@ -731,97 +731,99 @@ function Zone.Functions.zoneUpdate(msg)
 	end
 end
 
-function Zone.Functions.zoneRoleSet(msg)
-	-- Data: { Id=<id>, Roles=<{ <role>, <role>, Type=<wallet> | <process> }> }[]
-	local function check_valid_roles(roles)
-		if not roles then
-			return true
-		end
 
-		if #roles == 0 then
-			return true
-		end
+function Zone.Functions.zoneRoleSet(msg)
+	-- Data: { Id=<id>, Roles=<{ <role>, <role> }>, Type=<wallet|process>, SendInvite=<bool> }[]
+
+	local function check_valid_roles(roles)
+		if not roles then return true end
+		if #roles == 0 then return true end
 
 		for _, role in ipairs(roles) do
-			if type(role) ~= 'string' then
+			if type(role) ~= "string" then
 				return false
 			end
-			if role == Zone.RoleOptions['Admin'] and msg.From ~= Owner then -- only SuperAdmin can assign Admin role
+			-- Only owner can assign Admin
+			if role == Zone.RoleOptions["Admin"] and msg.From ~= Owner then
 				return false
 			end
 		end
-
 		return true
 	end
 
 	local authorized, message = Zone.Functions.isAuthorized(msg)
 	if not authorized then
-		print('Not Authorized', message)
+		print("Not Authorized", message)
 		Zone.Functions.sendError(msg.From, message)
 		return
 	end
 
 	local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
-
-	if decodeResult.success and decodeResult.data then
-		for _, entry in ipairs(decodeResult.data) do
-			local actorId = entry.Id
-			local roles = entry.Roles
-			local type = entry.Type
-			local sendInvite = entry.SendInvite
-      local isRemovalOp = (roles == nil) or (type(roles) == 'table' and #roles == 0)
-      if not actorId then
-				ao.send({
-					Target = msg.From,
-					Action = 'Input-Error',
-					Tags = {
-						Status = 'Error',
-						Message = 'Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data',
-					},
-				})
-				return
-			end
-
-			if not checkValidAddress(actorId) then
-				Zone.Functions.sendError(msg.From, 'Id must be a valid address')
-				return
-			end
-
-			if not check_valid_roles(roles) then
-				Zone.Functions.sendError(
-					msg.From,
-					'Role must be a table of strings'
-				)
-				return
-			end
-
-if isRemovalOp then
-	-- Actor issuing the change
-	local actorPriority = Zone.Functions.getActorPriority(msg.From)
-	-- Target's current roles (before the change)
-	local currentTargetRoles = Zone.Roles[actorId] and Zone.Roles[actorId].Roles or nil
-	local targetPriority = Zone.Functions.getHighestRolePriority(currentTargetRoles)
-
-	-- Owner can remove anyone; no extra checks needed
-	if msg.From ~= Owner then
-		-- No roles on target? Nothing to remove, but also no need to block.
-		if targetPriority > 0 then
-			-- Must strictly outrank the target
-			if actorPriority <= targetPriority then
-				return Zone.Functions.sendError(
-					msg.From,
-					'Not allowed to remove roles for this user (insufficient priority)'
-				)
-			end
-		end
+	if not (decodeResult.success and decodeResult.data) then
+		return Zone.Functions.sendError(
+			msg.From,
+			string.format(
+				"Failed to parse role update data, received: %s. Data must be an object { Id, Roles, Type }",
+				msg.Data
+			)
+		)
 	end
-end
 
+	for _, entry in ipairs(decodeResult.data) do
+		local actorId = entry.Id
+		local roles = entry.Roles
+		local type = entry.Type
+		local sendInvite = entry.SendInvite
+
+		local isRemovalOp = (roles == nil) or (type(roles) == "table" and #roles == 0)
+
+		-- Validate
+		if not actorId then
+			return ao.send({
+				Target = msg.From,
+				Action = "Input-Error",
+				Tags = {
+					Status = "Error",
+					Message = "Invalid arguments: { Id, Roles } required",
+				}
+			})
+		end
+
+		if not checkValidAddress(actorId) then
+			return Zone.Functions.sendError(msg.From, "Id must be a valid address")
+		end
+
+		if not check_valid_roles(roles) then
+			return Zone.Functions.sendError(msg.From, "Role must be a table of strings")
+		end
+
+		-- === REMOVAL PRIORITY CHECK ===
+		if isRemovalOp then
+			local actorPriority = Zone.Functions.getActorPriority(msg.From)
+			local currentTargetRoles = Zone.Roles[actorId] and Zone.Roles[actorId].Roles or nil
+			local targetPriority = Zone.Functions.getHighestRolePriority(currentTargetRoles)
+
+			if msg.From ~= Owner then
+				-- If target has roles, requestor must outrank them
+				if targetPriority > 0 and actorPriority <= targetPriority then
+					return Zone.Functions.sendError(
+						msg.From,
+						"Not allowed to remove roles for this user (insufficient priority)"
+					)
+				end
+			end
+
+			-- ✔️ ACTUAL REMOVAL
+			Zone.Roles[actorId] = nil
+
+		else
+			-- === NORMAL ROLE UPDATE ===
 			Zone.Roles[actorId] = {
 				Roles = roles,
 				Type = type,
 			}
 
+			-- invite if needed
 			if sendInvite then
 				ao.send({
 					Target = actorId,
@@ -833,28 +835,21 @@ end
 				})
 			end
 		end
-
-		ao.send({
-			Target = msg.From,
-			Action = Zone.Constants.H_ZONE_SUCCESS,
-			Tags = {
-				Status = 'Success',
-				Message = 'Roles updated',
-			},
-		})
-
-		SyncState(msg)
-	else
-		Zone.Functions.sendError(
-			msg.From,
-			string.format(
-				'Failed to parse role update data, received: %s. %s.',
-				msg.Data,
-				'Data must be an object - { Id, Roles, Type }'
-			)
-		)
 	end
+
+	-- Success message
+	ao.send({
+		Target = msg.From,
+		Action = Zone.Constants.H_ZONE_SUCCESS,
+		Tags = {
+			Status = "Success",
+			Message = "Roles updated",
+		},
+	})
+
+	SyncState(msg)
 end
+
 
 function Zone.Functions.addZoneInvite(msg)
 	for _, invite in ipairs(Zone.Invites) do
