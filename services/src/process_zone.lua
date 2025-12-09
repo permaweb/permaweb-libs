@@ -71,6 +71,14 @@ Zone.RoleOptions = {
 	['ExternalContributor'] = 'ExternalContributor',
 }
 
+-- Role priority: higher number => higher authority
+Zone.RolePriority = {
+	[Zone.RoleOptions.ExternalContributor] = 1,
+	[Zone.RoleOptions.Contributor] = 2,
+	[Zone.RoleOptions.Moderator] = 3,
+	[Zone.RoleOptions.Admin] = 4,
+}
+
 Permissions = {
 	[Zone.Constants.H_ZONE_UPDATE] = {
 		Roles = {
@@ -78,10 +86,11 @@ Permissions = {
 		},
 	},
 	[Zone.Constants.H_ZONE_ROLE_SET] = {
-		Roles = {
-			Zone.RoleOptions.Admin,
-		},
+	Roles = {
+		Zone.RoleOptions.Admin,
+		Zone.RoleOptions.Moderator, -- just to let Moderators also remove users
 	},
+},
 	[Zone.Constants.H_ZONE_ADD_UPLOAD] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
@@ -332,6 +341,32 @@ function Zone.Functions.extractChangedFields(msg)
 	end
 
 	return changedFields
+end
+
+function Zone.Functions.getHighestRolePriority(roles)
+	if not roles or type(roles) ~= 'table' or #roles == 0 then
+		return 0 -- effectively "no role"
+	end
+	local maxPriority = 0
+	for _, r in ipairs(roles) do
+		local p = Zone.RolePriority[r] or 0
+		if p > maxPriority then
+			maxPriority = p
+		end
+	end
+	return maxPriority
+end
+
+function Zone.Functions.getActorPriority(actor)
+	if not actor then
+		return 0
+	end
+	-- Owner is always top
+	if actor == Owner then
+		return 999
+	end
+	local roles = Zone.Functions.getActorRoles(actor)
+	return Zone.Functions.getHighestRolePriority(roles)
 end
 
 function SendPatch(patchKey, patchData)
@@ -726,8 +761,8 @@ function Zone.Functions.zoneRoleSet(msg)
 			local roles = entry.Roles
 			local type = entry.Type
 			local sendInvite = entry.SendInvite
-
-			if not actorId then
+      local isRemovalOp = (roles == nil) or (type(roles) == 'table' and #roles == 0)
+      if not actorId then
 				ao.send({
 					Target = msg.From,
 					Action = 'Input-Error',
@@ -751,6 +786,28 @@ function Zone.Functions.zoneRoleSet(msg)
 				)
 				return
 			end
+
+if isRemovalOp then
+	-- Actor issuing the change
+	local actorPriority = Zone.Functions.getActorPriority(msg.From)
+	-- Target's current roles (before the change)
+	local currentTargetRoles = Zone.Roles[actorId] and Zone.Roles[actorId].Roles or nil
+	local targetPriority = Zone.Functions.getHighestRolePriority(currentTargetRoles)
+
+	-- Owner can remove anyone; no extra checks needed
+	if msg.From ~= Owner then
+		-- No roles on target? Nothing to remove, but also no need to block.
+		if targetPriority > 0 then
+			-- Must strictly outrank the target
+			if actorPriority <= targetPriority then
+				return Zone.Functions.sendError(
+					msg.From,
+					'Not allowed to remove roles for this user (insufficient priority)'
+				)
+			end
+		end
+	end
+end
 
 			Zone.Roles[actorId] = {
 				Roles = roles,
