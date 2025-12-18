@@ -736,14 +736,14 @@ function Zone.Functions.zoneRoleSet(msg)
 	-- Data: { Id=<id>, Roles=<{ <role>, <role> }>, Type=<wallet|process>, SendInvite=<bool> }[]
 
 	local function check_valid_roles(roles)
-		if not roles then return true end
+		if roles == nil then return true end
+		if type(roles) ~= "table" then return false end
 		if #roles == 0 then return true end
 
 		for _, role in ipairs(roles) do
 			if type(role) ~= "string" then
 				return false
 			end
-			-- Only owner can assign Admin
 			if role == Zone.RoleOptions["Admin"] and msg.From ~= Owner then
 				return false
 			end
@@ -753,7 +753,6 @@ function Zone.Functions.zoneRoleSet(msg)
 
 	local authorized, message = Zone.Functions.isAuthorized(msg)
 	if not authorized then
-		print("Not Authorized", message)
 		Zone.Functions.sendError(msg.From, message)
 		return
 	end
@@ -772,20 +771,15 @@ function Zone.Functions.zoneRoleSet(msg)
 	for _, entry in ipairs(decodeResult.data) do
 		local actorId = entry.Id
 		local roles = entry.Roles
-		local type = entry.Type
 		local sendInvite = entry.SendInvite
-
+		local actorType = entry.Type
 		local isRemovalOp = (roles == nil) or (type(roles) == "table" and #roles == 0)
 
-		-- Validate
 		if not actorId then
 			return ao.send({
 				Target = msg.From,
 				Action = "Input-Error",
-				Tags = {
-					Status = "Error",
-					Message = "Invalid arguments: { Id, Roles } required",
-				}
+				Tags = { Status = "Error", Message = "Invalid arguments: { Id, Roles } required" },
 			})
 		end
 
@@ -798,6 +792,10 @@ function Zone.Functions.zoneRoleSet(msg)
 		end
 
 		if isRemovalOp then
+			if actorId == Owner then
+				return Zone.Functions.sendError(msg.From, "Cannot remove roles from Owner")
+			end
+
 			local actorPriority = Zone.Functions.getActorPriority(msg.From)
 			local currentTargetRoles = Zone.Roles[actorId] and Zone.Roles[actorId].Roles or nil
 			local targetPriority = Zone.Functions.getHighestRolePriority(currentTargetRoles)
@@ -812,21 +810,14 @@ function Zone.Functions.zoneRoleSet(msg)
 			end
 
 			Zone.Roles[actorId] = nil
-
 		else
-			Zone.Roles[actorId] = {
-				Roles = roles,
-				Type = type,
-			}
+			Zone.Roles[actorId] = { Roles = roles, Type = actorType }
 
 			if sendInvite then
 				ao.send({
 					Target = actorId,
 					Action = Zone.Constants.H_ZONE_ADD_INVITE,
-					Tags = {
-						Name = Zone.Data.KV.Store.Name,
-						Logo = Zone.Data.KV.Store.Logo,
-					},
+					Tags = { Name = Zone.Data.KV.Store.Name, Logo = Zone.Data.KV.Store.Logo },
 				})
 			end
 		end
@@ -835,10 +826,7 @@ function Zone.Functions.zoneRoleSet(msg)
 	ao.send({
 		Target = msg.From,
 		Action = Zone.Constants.H_ZONE_SUCCESS,
-		Tags = {
-			Status = "Success",
-			Message = "Roles updated",
-		},
+		Tags = { Status = "Success", Message = "Roles updated" },
 	})
 
 	SyncState(msg)
