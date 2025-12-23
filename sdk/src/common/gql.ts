@@ -141,12 +141,21 @@ function getQuery(body: string): string {
 function getQueryBody(args: QueryBodyGQLArgsType): string {
 	const paginator = args.paginator ? args.paginator : PAGINATORS.default;
 	const ids = args.ids ? JSON.stringify(args.ids) : null;
+	
 	let blockFilter: { min?: number; max?: number } | null = null;
+	
 	if (args.minBlock !== undefined && args.minBlock !== null) {
-		blockFilter = {};
+		if (!blockFilter) blockFilter = {};
 		blockFilter.min = args.minBlock;
 	}
+	
+	if (args.maxBlock !== undefined && args.maxBlock !== null) {
+		if (!blockFilter) blockFilter = {};
+		blockFilter.max = args.maxBlock;
+	}
+
 	const blockFilterStr = blockFilter ? JSON.stringify(blockFilter).replace(/"([^"]+)":/g, '$1:') : null;
+	
 	const tags = args.tags
 		? JSON.stringify(args.tags)
 				.replace(/"(name)":/g, '$1:')
@@ -155,6 +164,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 				.replace(/"FUZZY_OR"/g, 'FUZZY_OR')
 				.replace(/"WILDCARD"/g, 'WILDCARD')
 		: null;
+		
 	const owners = args.owners ? JSON.stringify(args.owners) : null;
 	const recipients = args.recipients ? JSON.stringify(args.recipients) : null;
 	const cursor = args.cursor && args.cursor !== CURSORS.end ? `"${args.cursor}"` : null;
