@@ -97,6 +97,11 @@ Permissions = {
 				Zone.RoleOptions.Moderator,
 				Zone.RoleOptions.Contributor,
 			},
+			['Update-Assets'] = {
+				Zone.RoleOptions.Admin,
+				Zone.RoleOptions.Moderator,
+				Zone.RoleOptions.Contributor,
+			},
 		},
 	},
 	[Zone.Constants.H_ZONE_UPDATE_ASSET] = {
