@@ -726,6 +726,19 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
 	-- Initialize balances if needed
 	if Token.Creator and Token.TotalSupply then
 		Token.Balances = { [Token.Creator] = tostring(Token.TotalSupply) }
+
+		-- Notify creator's profile of the new asset
+		if checkValidAddress(Token.Creator) then
+			ao.send({
+				Target = Token.Creator,
+				Action = 'Add-Uploaded-Asset',
+				['Asset-Id'] = ao.id,
+				Timestamp = Inbox[1].Timestamp,
+				Quantity = tostring(Token.TotalSupply),
+				AssetType = Inbox[1].Tags['Asset-Type'] or nil,
+				ContentType = Inbox[1].Tags['Content-Type'] or nil,
+			})
+		end
 	end
 
 	syncState()

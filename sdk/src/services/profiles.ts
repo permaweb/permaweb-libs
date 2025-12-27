@@ -114,6 +114,7 @@ export function getProfileByIdWith(deps: DependencyType) {
 				invites: zone.invites,
 				version: zone.version,
 				authorities: zone.authorities,
+				collections: zone.collections, // Explicitly include collections from top-level zone
 				...zone.store,
 			};
 		} catch (e: any) {
