@@ -6,6 +6,7 @@ import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType, Read
 import { getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
 import { createZoneWith, getZoneWith, updateZoneVersionWith, updateZoneWith } from './zones.ts';
+import { getPrimaryNameWith } from 'common/ario.ts';
 
 export function createProfileWith(deps: DependencyType) {
 	const createZone = createZoneWith(deps);
@@ -101,12 +102,14 @@ export function getProfileByIdWith(deps: DependencyType) {
 	const getZone = getZoneWith(deps);
 
 	return async (profileId: string, opts?: ReadOptsType): Promise<ProfileType | null> => {
+		const { primaryName } = opts || {};
 		try {
 			const zone = await getZone(profileId, opts);
 			if (!zone) {
 				throw new Error('Error fetching profile - Not found');
 			}
-			return {
+
+			const profile = {
 				id: profileId,
 				owner: zone.owner,
 				assets: zone.assets,
@@ -116,7 +119,13 @@ export function getProfileByIdWith(deps: DependencyType) {
 				authorities: zone.authorities,
 				collections: zone.collections, // Explicitly include collections from top-level zone
 				...zone.store,
-			};
+			}
+
+			if(primaryName && primaryName.trim().length > 0) {
+				profile.arnsName = primaryName
+			}
+			
+			return profile
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error fetching profile');
 		}
@@ -126,7 +135,7 @@ export function getProfileByIdWith(deps: DependencyType) {
 export function getProfileByWalletAddressWith(deps: DependencyType) {
 	const getProfileById = getProfileByIdWith(deps);
 
-	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
+	return async (walletAddress: string, arns:boolean=false): Promise<(ProfileType & any) | null> => {
 		try {
 			const gqlResponse = await getGQLData({
 				gateway: GATEWAYS.ao,
@@ -144,7 +153,14 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 					return timestampB - timestampA;
 				});
 
-				return await getProfileById(gqlResponse.data[0].node.id);
+				let primaryName
+
+				if(arns) {
+					const getPrimaryName = getPrimaryNameWith(deps)
+					primaryName = await getPrimaryName(walletAddress)
+				}
+
+				return await getProfileById(gqlResponse.data[0].node.id, { primaryName });
 			}
 
 			return { id: null };
