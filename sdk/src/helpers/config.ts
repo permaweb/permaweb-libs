@@ -3,14 +3,14 @@ export const AO = {
 	scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA',
 	mu: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
 	src: {
-		asset: '4IWpYFltnnzsYrfnKDHNhLO8B7Q2ZT92tTOs_KMRzGY',
-		collection: 'C_nlkbEDbyLyzdxymMAZAAIiz1rhD7txg-LSQQS5Fmo',
+		asset: 'gqzwDfkE7fOGCL2scXHptIX6HoscikEGeqFE31yGZd4',
+		collection: 'x35anB0wqaCdjtketSkiLPrH4_jR_GWSUFTSK8fyaZU',
 		collectionActivity: 'qjpg3ramJVb2iF6O5BAUfKInQ0UHhi3NqfELh73qKGw',
 		comments: 'C16qIcYR0jC2Tiz7e4wFJLHAMee2zIXBmwxmDzQ0pVI',
 		moderation: 'TGCoo6JDvZ7JY_E5Smz5VQiI9ncc6uXI8tU_snAodl0',
 		zone: {
-			id: 'wGwD1IQPaMe5aY3pDMjdjz6W0W0GXyEwG0yQwUGLbuc',
-			version: '0.0.13',
+			id: 'lHteYPZqVzku_wUnqor8E4M_4Z1itQp05EJshxFphYw',
+			version: '0.0.14',
 		},
 	},
 	collectionRegistry: 'zwKi27GuKS3GOlwL3EhNGH02SJDDAO5Uy43ZJwomhZ4',

@@ -73,7 +73,15 @@ Handlers.add(
 	'Update-Assets',
 	Handlers.utils.hasMatchingTag('Action', 'Update-Assets'),
 	function(msg)
-		if msg.From ~= Owner and msg.From ~= ao.id and msg.From ~= Creator then
+		-- Check if message is from authorized sender (Owner, Creator, or ao.id)
+		-- Also allow zone-forwarded messages if original sender is Creator
+		local originalSender = msg.Tags and msg.Tags['Original-Sender']
+		local isAuthorized = (msg.From == Owner)
+			or (msg.From == ao.id)
+			or (msg.From == Creator)
+			or (originalSender and originalSender == Creator)
+
+		if not isAuthorized then
 			ao.send({
 				Target = msg.From,
 				Action = 'Authorization-Error',
