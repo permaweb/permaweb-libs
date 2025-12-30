@@ -535,6 +535,9 @@ function Zone.Functions.runAction(msg)
 		Tags = msg.Tags,
 	}
 
+	-- Include original sender for authorization checks in forwarded processes
+	messageToSend.Tags['Original-Sender'] = msg.From
+
 	if decodeResult.data and decodeResult.data.Input then
 		messageToSend.Data = json.encode(decodeResult.data.Input)
 	end
@@ -879,6 +882,32 @@ function Zone.Functions.updatePatchMap(msg)
 end
 
 function Zone.Functions.addUpload(msg)
+	-- Check if sender is Admin (existing authorization)
+	local isAdmin = (msg.From == Owner)
+		or Zone.Functions.actorHasRole(msg.From, Zone.RoleOptions.Admin)
+
+	-- If not Admin, check if message is from asset process and creator matches owner
+	if not isAdmin then
+		-- Verify Asset-Id is present and matches sender (asset sending to its creator's profile)
+		if not msg['Asset-Id'] or msg['Asset-Id'] ~= msg.From then
+			return Zone.Functions.sendError(
+				msg.From,
+				'Not Authorized: Invalid Asset-Id'
+			)
+		end
+
+		-- Verify asset creator matches profile owner
+		-- Asset process includes Creator in message Tags
+		local assetCreator = msg.Tags and msg.Tags['Creator']
+		if not assetCreator or assetCreator ~= Owner then
+			return Zone.Functions.sendError(
+				msg.From,
+				'Not Authorized: Asset creator does not match profile owner'
+			)
+		end
+	end
+
+	-- Process the asset addition
 	Zone.Data.AssetManager:update({
 		Type = 'Add',
 		AssetId = msg['Asset-Id'],

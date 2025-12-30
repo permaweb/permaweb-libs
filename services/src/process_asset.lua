@@ -176,6 +176,17 @@ Handlers.add('Init', 'Init', function(msg)
 			Action = 'Add-Uploaded-Asset',
 			Quantity = tostring(Token.TotalSupply),
 			['Asset-Id'] = ao.id,
+			Timestamp = msg.Timestamp,
+			AssetType = Inbox[1].Tags['Asset-Type'] or nil,
+			ContentType = Inbox[1].Tags['Content-Type'] or nil,
+			Tags = {
+				Creator = Token.Creator,
+			},
+		})
+		-- Reply to prevent "Failed to fetch" errors
+		msg.reply({
+			Action = 'Init-Notice',
+			Tags = { Status = 'Success' },
 		})
 	end
 end)
@@ -737,6 +748,9 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
 				Quantity = tostring(Token.TotalSupply),
 				AssetType = Inbox[1].Tags['Asset-Type'] or nil,
 				ContentType = Inbox[1].Tags['Content-Type'] or nil,
+				Tags = {
+					Creator = Token.Creator,
+				},
 			})
 		end
 	end
