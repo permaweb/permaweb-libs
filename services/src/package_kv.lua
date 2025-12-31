@@ -129,6 +129,26 @@ function KV:remove(keyString)
 	current[keys[#keys]] = nil
 end
 
+--- Removes an item from an array stored at the given key path by matching its Id field.
+-- @param keyString A dot-separated string representing the key path to the array.
+-- @param id The Id value to match for removal.
+-- @return True if an item was removed, false otherwise.
+function KV:removeById(keyString, id)
+	local array = self:get(keyString)
+	if type(array) ~= 'table' then
+		return false -- Not an array, nothing to remove
+	end
+
+	for i, item in ipairs(array) do
+		if type(item) == 'table' and item.Id == id then
+			table.remove(array, i)
+			return true
+		end
+	end
+
+	return false -- No matching item found
+end
+
 --- Returns the number of top-level keys in the store.
 -- @return The count of top-level keys in the key-value store.
 function KV:len()
