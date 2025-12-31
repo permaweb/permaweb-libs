@@ -1,6 +1,10 @@
 {
 	"name": "@permaweb/libs",
+<<<<<<< HEAD
 	"version": "0.0.78",
+=======
+	"version": "0.0.75",
+>>>>>>> d325abaa6ee808fb097fa4b8220b0ddb52c2aaae
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",

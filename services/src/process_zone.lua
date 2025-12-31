@@ -833,7 +833,11 @@ function Zone.Functions.zoneRoleSet(msg)
 			Zone.Roles[actorId] = 'Removed'
 
 			-- TODO: Pass key from user instead of 'Portals'
-			ao.send({ Target = actorId, Action = Zone.Constants.H_ZONE_REMOVE, Tags = { Path = 'Portals.' .. ao.id } })
+			ao.send({
+				Target = actorId,
+				Action = Zone.Constants.H_ZONE_REMOVE,
+				Tags = { Path = 'Portals.' .. ao.id },
+			})
 		else
 			Zone.Roles[actorId] = { Roles = roles, Type = actorType }
 
