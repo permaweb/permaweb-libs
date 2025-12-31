@@ -88,7 +88,7 @@ Permissions = {
 	[Zone.Constants.H_ZONE_ROLE_SET] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
-			Zone.RoleOptions.Moderator
+			Zone.RoleOptions.Moderator,
 		},
 	},
 	[Zone.Constants.H_ZONE_ADD_UPLOAD] = {
@@ -815,6 +815,7 @@ function Zone.Functions.zoneRoleSet(msg)
 
 			local actorPriority = Zone.Functions.getActorPriority(msg.From)
 			local currentTargetRoles = Zone.Roles[actorId]
+					and type(Zone.Roles[actorId]) == 'table'
 					and Zone.Roles[actorId].Roles
 				or nil
 			local targetPriority =
@@ -829,7 +830,10 @@ function Zone.Functions.zoneRoleSet(msg)
 				end
 			end
 
-			Zone.Roles[actorId] = nil
+			Zone.Roles[actorId] = 'Removed'
+
+			-- TODO: Pass key from user instead of 'Portals'
+			ao.send({ Target = actorId, Action = Zone.Constants.H_ZONE_REMOVE, Tags = { Path = 'Portals.' .. ao.id } })
 		else
 			Zone.Roles[actorId] = { Roles = roles, Type = actorType }
 
@@ -1251,11 +1255,6 @@ function Zone.Functions.appendHandler(msg)
 end
 
 function Zone.Functions.removeHandler(msg)
-	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, 'Not Authorized')
-		return
-	end
-
 	local path = msg.Tags.Path or ''
 	if path == '' then
 		Zone.Functions.sendError(
@@ -1265,7 +1264,38 @@ function Zone.Functions.removeHandler(msg)
 		return
 	end
 
-	Zone.Data.KV:remove(path)
+	-- Check if this is a self-removal operation
+	-- Path format: "Portals.{zoneId}" where zoneId should match msg.From
+	local isSelfRemoval = false
+	local pathParts = {}
+	for part in string.gmatch(path, '[^%.]+') do
+		table.insert(pathParts, part)
+	end
+
+	-- If path has exactly 2 parts (e.g., "Portals.{id}") and the second part equals msg.From
+	if #pathParts == 2 and pathParts[2] == msg.From then
+		isSelfRemoval = true
+	end
+
+	-- If not self-removal, check normal authorization
+	if not isSelfRemoval then
+		if not Zone.Functions.isAuthorized(msg) then
+			Zone.Functions.sendError(msg.From, 'Not Authorized')
+			return
+		end
+		Zone.Data.KV:remove(path)
+	else
+		-- Self-removal: remove the item with Id matching msg.From from the array
+		local arrayPath = pathParts[1]
+		local removed = Zone.Data.KV:removeById(arrayPath, msg.From)
+		if not removed then
+			Zone.Functions.sendError(
+				msg.From,
+				'Failed to remove: Item not found in ' .. arrayPath
+			)
+			return
+		end
+	end
 
 	SyncState(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
