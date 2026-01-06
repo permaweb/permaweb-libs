@@ -307,7 +307,7 @@ function Zone.Functions.extractChangedFields(msg)
 		or msg.Action == Zone.Constants.H_ZONE_APPEND
 		or msg.Action == Zone.Constants.H_ZONE_REMOVE
 	then
-		local path = msg.Tags.Path or ''
+		local path = msg.Tags['Store-Path'] or ''
 		if path ~= '' then
 			table.insert(changedFields, 'Store.' .. path)
 		end
@@ -688,7 +688,7 @@ function Zone.Functions.keysHandler(msg)
 		return
 	end
 
-	local path = msg.Tags.Path or nil
+	local path = msg.Tags['Store-Path'] or nil
 	local keys = Zone.Data.KV:keys(path)
 
 	msg.reply({
@@ -832,12 +832,13 @@ function Zone.Functions.zoneRoleSet(msg)
 
 			Zone.Roles[actorId] = 'Removed'
 
-			-- TODO: Pass key from user instead of 'Portals'
-			ao.send({
-				Target = actorId,
-				Action = Zone.Constants.H_ZONE_REMOVE,
-				Tags = { Path = 'Portals.' .. ao.id },
-			})
+			if entry.RemoteZonePath then
+				ao.send({
+					Target = actorId,
+					Action = Zone.Constants.H_ZONE_REMOVE,
+					Tags = { ['Store-Path'] = entry.RemoteZonePath .. '.' .. ao.id },
+				})
+			end
 		else
 			Zone.Roles[actorId] = { Roles = roles, Type = actorType }
 
@@ -1225,7 +1226,7 @@ function Zone.Functions.setHandler(msg)
 		return
 	end
 
-	local path = msg.Tags.Path or ''
+	local path = msg.Tags['Store-Path'] or ''
 	local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 	if not decodedData.success or not decodedData.data then
 		Zone.Functions.sendError(msg.From, 'Invalid Data')
@@ -1244,7 +1245,7 @@ function Zone.Functions.appendHandler(msg)
 		return
 	end
 
-	local path = msg.Tags.Path or ''
+	local path = msg.Tags['Store-Path'] or ''
 	local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 
 	if not decodedData.success or not decodedData.data then
@@ -1259,24 +1260,24 @@ function Zone.Functions.appendHandler(msg)
 end
 
 function Zone.Functions.removeHandler(msg)
-	local path = msg.Tags.Path or ''
+	local path = msg.Tags['Store-Path'] or ''
 	if path == '' then
 		Zone.Functions.sendError(
 			msg.From,
-			'Invalid Path: Path required to remove'
+			'Invalid Path: Store-Path required to remove'
 		)
 		return
 	end
 
 	-- Check if this is a self-removal operation
-	-- Path format: "Portals.{zoneId}" where zoneId should match msg.From
+	-- Path format: "[RemoteZonePath].{zoneId}" where zoneId should match msg.From
 	local isSelfRemoval = false
 	local pathParts = {}
 	for part in string.gmatch(path, '[^%.]+') do
 		table.insert(pathParts, part)
 	end
 
-	-- If path has exactly 2 parts (e.g., "Portals.{id}") and the second part equals msg.From
+	-- If path has exactly 2 parts (e.g., "[RemoteZonePath].{id}") and the second part equals msg.From
 	if #pathParts == 2 and pathParts[2] == msg.From then
 		isSelfRemoval = true
 	end

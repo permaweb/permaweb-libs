@@ -80,7 +80,7 @@ export function addToZoneWith(deps: DependencyType) {
 			const zoneUpdateId = await aoSend(deps, {
 				processId: zoneId,
 				action: 'Zone-Append',
-				tags: [{ name: 'Path', value: args.path }],
+				tags: [{ name: 'Store-Path', value: args.path }],
 				data: args.data,
 			});
 
@@ -111,7 +111,7 @@ export function updateZonePatchMapWith(deps: DependencyType) {
 
 export function setZoneRolesWith(deps: DependencyType) {
 	return async (
-		args: { granteeId: string; roles: string[]; type: 'wallet' | 'process'; sendInvite: boolean }[],
+		args: { granteeId: string; roles: string[]; type: 'wallet' | 'process'; sendInvite: boolean, remoteZonePath?: string }[],
 		zoneId: string,
 	): Promise<string | null> => {
 		const zoneValid = checkValidAddress(zoneId);
@@ -124,12 +124,16 @@ export function setZoneRolesWith(deps: DependencyType) {
 			if (!granteeValid) throw new Error('Invalid granteeId address');
 			if (entry.type !== 'wallet' && entry.type !== 'process') throw new Error('Invalid role type');
 
-			data.push({
+			const roleEntry: any = {
 				Id: entry.granteeId,
 				Roles: entry.roles,
 				Type: entry.type,
 				SendInvite: entry.sendInvite,
-			});
+			}
+
+			if (entry.remoteZonePath) roleEntry.RemoteZonePath = entry.remoteZonePath;
+
+			data.push(roleEntry);
 		}
 
 		try {
