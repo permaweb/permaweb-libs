@@ -71,6 +71,14 @@ Zone.RoleOptions = {
 	['ExternalContributor'] = 'ExternalContributor',
 }
 
+-- Role Priority: Higher Number => Higher Authority
+Zone.RolePriority = {
+	[Zone.RoleOptions.ExternalContributor] = 1,
+	[Zone.RoleOptions.Contributor] = 2,
+	[Zone.RoleOptions.Moderator] = 3,
+	[Zone.RoleOptions.Admin] = 4,
+}
+
 Permissions = {
 	[Zone.Constants.H_ZONE_UPDATE] = {
 		Roles = {
@@ -80,6 +88,7 @@ Permissions = {
 	[Zone.Constants.H_ZONE_ROLE_SET] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
+			Zone.RoleOptions.Moderator,
 		},
 	},
 	[Zone.Constants.H_ZONE_ADD_UPLOAD] = {
@@ -298,7 +307,7 @@ function Zone.Functions.extractChangedFields(msg)
 		or msg.Action == Zone.Constants.H_ZONE_APPEND
 		or msg.Action == Zone.Constants.H_ZONE_REMOVE
 	then
-		local path = msg.Tags.Path or ''
+		local path = msg.Tags['Store-Path'] or ''
 		if path ~= '' then
 			table.insert(changedFields, 'Store.' .. path)
 		end
@@ -337,6 +346,31 @@ function Zone.Functions.extractChangedFields(msg)
 	end
 
 	return changedFields
+end
+
+function Zone.Functions.getHighestRolePriority(roles)
+	if not roles or type(roles) ~= 'table' or #roles == 0 then
+		return 0
+	end
+	local maxPriority = 0
+	for _, r in ipairs(roles) do
+		local p = Zone.RolePriority[r] or 0
+		if p > maxPriority then
+			maxPriority = p
+		end
+	end
+	return maxPriority
+end
+
+function Zone.Functions.getActorPriority(actor)
+	if not actor then
+		return 0
+	end
+	if actor == Owner then
+		return 999
+	end
+	local roles = Zone.Functions.getActorRoles(actor)
+	return Zone.Functions.getHighestRolePriority(roles)
 end
 
 function SendPatch(patchKey, patchData)
@@ -654,7 +688,7 @@ function Zone.Functions.keysHandler(msg)
 		return
 	end
 
-	local path = msg.Tags.Path or nil
+	local path = msg.Tags['Store-Path'] or nil
 	local keys = Zone.Data.KV:keys(path)
 
 	msg.reply({
@@ -697,12 +731,15 @@ function Zone.Functions.zoneUpdate(msg)
 end
 
 function Zone.Functions.zoneRoleSet(msg)
-	-- Data: { Id=<id>, Roles=<{ <role>, <role>, Type=<wallet> | <process> }> }[]
+	-- Data: { Id=<id>, Roles=<{ <role>, <role> }>, Type=<wallet|process>, SendInvite=<bool> }[]
+
 	local function check_valid_roles(roles)
-		if not roles then
+		if roles == nil then
 			return true
 		end
-
+		if type(roles) ~= 'table' then
+			return false
+		end
 		if #roles == 0 then
 			return true
 		end
@@ -711,59 +748,99 @@ function Zone.Functions.zoneRoleSet(msg)
 			if type(role) ~= 'string' then
 				return false
 			end
-			if role == Zone.RoleOptions['Admin'] and msg.From ~= Owner then -- only SuperAdmin can assign Admin role
+			if role == Zone.RoleOptions['Admin'] and msg.From ~= Owner then
 				return false
 			end
 		end
-
 		return true
 	end
 
 	local authorized, message = Zone.Functions.isAuthorized(msg)
 	if not authorized then
-		print('Not Authorized', message)
 		Zone.Functions.sendError(msg.From, message)
 		return
 	end
 
 	local decodeResult = Zone.Functions.decodeMessageData(msg.Data)
+	if not (decodeResult.success and decodeResult.data) then
+		return Zone.Functions.sendError(
+			msg.From,
+			string.format(
+				'Failed to parse role update data, received: %s. Data must be an object { Id, Roles, Type }',
+				msg.Data
+			)
+		)
+	end
 
-	if decodeResult.success and decodeResult.data then
-		for _, entry in ipairs(decodeResult.data) do
-			local actorId = entry.Id
-			local roles = entry.Roles
-			local type = entry.Type
-			local sendInvite = entry.SendInvite
+	for _, entry in ipairs(decodeResult.data) do
+		local actorId = entry.Id
+		local roles = entry.Roles
+		local sendInvite = entry.SendInvite
+		local actorType = entry.Type
+		local isRemovalOp = (roles == nil)
+			or (type(roles) == 'table' and #roles == 0)
 
-			if not actorId then
-				ao.send({
-					Target = msg.From,
-					Action = 'Input-Error',
-					Tags = {
-						Status = 'Error',
-						Message = 'Invalid arguments, required { Id=<id>, Roles=<{ <role>, <role> }> or {} or nil} in data',
-					},
-				})
-				return
-			end
+		if not actorId then
+			return ao.send({
+				Target = msg.From,
+				Action = 'Input-Error',
+				Tags = {
+					Status = 'Error',
+					Message = 'Invalid arguments: { Id, Roles } required',
+				},
+			})
+		end
 
-			if not checkValidAddress(actorId) then
-				Zone.Functions.sendError(msg.From, 'Id must be a valid address')
-				return
-			end
+		if not checkValidAddress(actorId) then
+			return Zone.Functions.sendError(
+				msg.From,
+				'Id must be a valid address'
+			)
+		end
 
-			if not check_valid_roles(roles) then
-				Zone.Functions.sendError(
+		if not check_valid_roles(roles) then
+			return Zone.Functions.sendError(
+				msg.From,
+				'Role must be a table of strings'
+			)
+		end
+
+		if isRemovalOp then
+			if actorId == Owner then
+				return Zone.Functions.sendError(
 					msg.From,
-					'Role must be a table of strings'
+					'Cannot remove roles from Owner'
 				)
-				return
 			end
 
-			Zone.Roles[actorId] = {
-				Roles = roles,
-				Type = type,
-			}
+			local actorPriority = Zone.Functions.getActorPriority(msg.From)
+			local currentTargetRoles = Zone.Roles[actorId]
+					and type(Zone.Roles[actorId]) == 'table'
+					and Zone.Roles[actorId].Roles
+				or nil
+			local targetPriority =
+				Zone.Functions.getHighestRolePriority(currentTargetRoles)
+
+			if msg.From ~= Owner then
+				if targetPriority > 0 and actorPriority <= targetPriority then
+					return Zone.Functions.sendError(
+						msg.From,
+						'Not allowed to remove roles for this user (insufficient priority)'
+					)
+				end
+			end
+
+			Zone.Roles[actorId] = 'Removed'
+
+			if entry.RemoteZonePath then
+				ao.send({
+					Target = actorId,
+					Action = Zone.Constants.H_ZONE_REMOVE,
+					Tags = { ['Store-Path'] = entry.RemoteZonePath .. '.' .. ao.id },
+				})
+			end
+		else
+			Zone.Roles[actorId] = { Roles = roles, Type = actorType }
 
 			if sendInvite then
 				ao.send({
@@ -776,27 +853,15 @@ function Zone.Functions.zoneRoleSet(msg)
 				})
 			end
 		end
-
-		ao.send({
-			Target = msg.From,
-			Action = Zone.Constants.H_ZONE_SUCCESS,
-			Tags = {
-				Status = 'Success',
-				Message = 'Roles updated',
-			},
-		})
-
-		SyncState(msg)
-	else
-		Zone.Functions.sendError(
-			msg.From,
-			string.format(
-				'Failed to parse role update data, received: %s. %s.',
-				msg.Data,
-				'Data must be an object - { Id, Roles, Type }'
-			)
-		)
 	end
+
+	ao.send({
+		Target = msg.From,
+		Action = Zone.Constants.H_ZONE_SUCCESS,
+		Tags = { Status = 'Success', Message = 'Roles updated' },
+	})
+
+	SyncState(msg)
 end
 
 function Zone.Functions.addZoneInvite(msg)
@@ -1161,7 +1226,7 @@ function Zone.Functions.setHandler(msg)
 		return
 	end
 
-	local path = msg.Tags.Path or ''
+	local path = msg.Tags['Store-Path'] or ''
 	local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 	if not decodedData.success or not decodedData.data then
 		Zone.Functions.sendError(msg.From, 'Invalid Data')
@@ -1180,7 +1245,7 @@ function Zone.Functions.appendHandler(msg)
 		return
 	end
 
-	local path = msg.Tags.Path or ''
+	local path = msg.Tags['Store-Path'] or ''
 	local decodedData = Zone.Functions.decodeMessageData(msg.Data)
 
 	if not decodedData.success or not decodedData.data then
@@ -1195,21 +1260,47 @@ function Zone.Functions.appendHandler(msg)
 end
 
 function Zone.Functions.removeHandler(msg)
-	if not Zone.Functions.isAuthorized(msg) then
-		Zone.Functions.sendError(msg.From, 'Not Authorized')
-		return
-	end
-
-	local path = msg.Tags.Path or ''
+	local path = msg.Tags['Store-Path'] or ''
 	if path == '' then
 		Zone.Functions.sendError(
 			msg.From,
-			'Invalid Path: Path required to remove'
+			'Invalid Path: Store-Path required to remove'
 		)
 		return
 	end
 
-	Zone.Data.KV:remove(path)
+	-- Check if this is a self-removal operation
+	-- Path format: "[RemoteZonePath].{zoneId}" where zoneId should match msg.From
+	local isSelfRemoval = false
+	local pathParts = {}
+	for part in string.gmatch(path, '[^%.]+') do
+		table.insert(pathParts, part)
+	end
+
+	-- If path has exactly 2 parts (e.g., "[RemoteZonePath].{id}") and the second part equals msg.From
+	if #pathParts == 2 and pathParts[2] == msg.From then
+		isSelfRemoval = true
+	end
+
+	-- If not self-removal, check normal authorization
+	if not isSelfRemoval then
+		if not Zone.Functions.isAuthorized(msg) then
+			Zone.Functions.sendError(msg.From, 'Not Authorized')
+			return
+		end
+		Zone.Data.KV:remove(path)
+	else
+		-- Self-removal: remove the item with Id matching msg.From from the array
+		local arrayPath = pathParts[1]
+		local removed = Zone.Data.KV:removeById(arrayPath, msg.From)
+		if not removed then
+			Zone.Functions.sendError(
+				msg.From,
+				'Failed to remove: Item not found in ' .. arrayPath
+			)
+			return
+		end
+	end
 
 	SyncState(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
