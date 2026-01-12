@@ -4,6 +4,12 @@ Comments = Comments or {}
 
 AuthUsers = AuthUsers or {}
 
+Rules = Rules or {
+	ProfileAgeRequired = 0, -- minimum profile age in milliseconds (0 = disabled)
+	MutedWords = {}, -- list of blocked words/phrases
+	RequireProfileThumbnail = false, -- whether profile must have a thumbnail
+}
+
 CommentsById = CommentsById or {} -- id -> comment
 ByParent = ByParent or {} -- parentKey -> { childIds in append order }
 
@@ -108,6 +114,53 @@ local function normalizeStatus(s)
 		return s
 	end
 	return nil
+end
+
+local function containsMutedWord(content)
+	if not content or not Rules.MutedWords or #Rules.MutedWords == 0 then
+		return false, nil
+	end
+	local lowerContent = string.lower(content)
+	for _, word in ipairs(Rules.MutedWords) do
+		if string.find(lowerContent, string.lower(word), 1, true) then
+			return true, word
+		end
+	end
+	return false, nil
+end
+
+local function validateCommentRules(msg, content)
+	-- Check muted words
+	local hasMuted, mutedWord = containsMutedWord(content)
+	if hasMuted then
+		return false, 'Content contains blocked word: ' .. mutedWord
+	end
+
+	-- Check profile age requirement
+	if Rules.ProfileAgeRequired and Rules.ProfileAgeRequired > 0 then
+		local profileCreatedAt = getTag(msg, 'Profile-Created-At')
+		if profileCreatedAt then
+			profileCreatedAt = tonumber(profileCreatedAt)
+			if profileCreatedAt then
+				local profileAge = msg.Timestamp - profileCreatedAt
+				if profileAge < Rules.ProfileAgeRequired then
+					return false, 'Profile age requirement not met'
+				end
+			end
+		else
+			return false, 'Profile age verification required'
+		end
+	end
+
+	-- Check profile thumbnail requirement
+	if Rules.RequireProfileThumbnail then
+		local hasThumbnail = getTag(msg, 'Has-Profile-Thumbnail')
+		if hasThumbnail ~= 'true' then
+			return false, 'Profile thumbnail required'
+		end
+	end
+
+	return true, nil
 end
 
 function SyncState()
@@ -244,6 +297,17 @@ Handlers.add('Add-Comment', 'Add-Comment', function(msg)
 			Target = msg.From,
 			Action = 'Add-Comment-Error',
 			Error = 'Empty content',
+		})
+		return
+	end
+
+	-- Validate against rules
+	local isValid, ruleError = validateCommentRules(msg, content)
+	if not isValid then
+		Send({
+			Target = msg.From,
+			Action = 'Add-Comment-Error',
+			Error = ruleError,
 		})
 		return
 	end
@@ -559,6 +623,52 @@ Handlers.add('Unpin-Comment', 'Unpin-Comment', function(msg)
 	Send({ Target = msg.From, Action = 'Unpin-Comment-Success', Id = id })
 end)
 
+Handlers.add('Get-Rules', 'Get-Rules', function(msg)
+	Send({ Target = msg.From, Data = json.encode(Rules) })
+end)
+
+Handlers.add('Update-Rules', 'Update-Rules', function(msg)
+	if not isAuthorized(msg.From) then
+		Send({
+			Target = msg.From,
+			Action = 'Update-Rules-Error',
+			Error = 'Unauthorized',
+		})
+		return
+	end
+
+	local updates = {}
+	if msg.Data and msg.Data ~= '' then
+		local success, decoded = pcall(json.decode, msg.Data)
+		if success and type(decoded) == 'table' then
+			updates = decoded
+		end
+	end
+
+	-- Update ProfileAgeRequired
+	if updates.ProfileAgeRequired ~= nil then
+		local age = tonumber(updates.ProfileAgeRequired)
+		if age and age >= 0 then
+			Rules.ProfileAgeRequired = age
+		end
+	end
+
+	-- Update MutedWords
+	if updates.MutedWords ~= nil then
+		if type(updates.MutedWords) == 'table' then
+			Rules.MutedWords = updates.MutedWords
+		end
+	end
+
+	-- Update RequireProfileThumbnail
+	if updates.RequireProfileThumbnail ~= nil then
+		Rules.RequireProfileThumbnail = updates.RequireProfileThumbnail == true
+	end
+
+	SyncDynamicState('rules', Rules)
+	Send({ Target = msg.From, Action = 'Update-Rules-Success', Data = json.encode(Rules) })
+end)
+
 local isInitialized = false
 
 -- Boot Initialization
@@ -572,7 +682,22 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
 				table.insert(AuthUsers, authUser)
 			end
 		end
+		if tag.name == 'Rules' then
+			local success, rulesData = pcall(json.decode, tag.value)
+			if success and type(rulesData) == 'table' then
+				if rulesData.ProfileAgeRequired ~= nil then
+					Rules.ProfileAgeRequired = tonumber(rulesData.ProfileAgeRequired) or 0
+				end
+				if rulesData.MutedWords ~= nil and type(rulesData.MutedWords) == 'table' then
+					Rules.MutedWords = rulesData.MutedWords
+				end
+				if rulesData.RequireProfileThumbnail ~= nil then
+					Rules.RequireProfileThumbnail = rulesData.RequireProfileThumbnail == true
+				end
+			end
+		end
 	end
 
 	SyncDynamicState('users', AuthUsers)
+	SyncDynamicState('rules', Rules)
 end
