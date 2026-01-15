@@ -300,7 +300,7 @@ export function isValidMediaData(data: any) {
 export function cleanTagValues(tags: TagType[]): TagType[] {
 	return tags.map((tag) => ({
 		...tag,
-		value: tag.value.replace(/\r?\n/g, ' '),
+		value: tag.value?.replace(/\r?\n/g, ' ') ?? '',
 	}));
 }
 
