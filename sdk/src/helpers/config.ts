@@ -6,7 +6,7 @@ export const AO = {
 		asset: 'gqzwDfkE7fOGCL2scXHptIX6HoscikEGeqFE31yGZd4',
 		collection: 'x35anB0wqaCdjtketSkiLPrH4_jR_GWSUFTSK8fyaZU',
 		collectionActivity: 'qjpg3ramJVb2iF6O5BAUfKInQ0UHhi3NqfELh73qKGw',
-		comments: 'C16qIcYR0jC2Tiz7e4wFJLHAMee2zIXBmwxmDzQ0pVI',
+		comments: 'p7QlFn1ZAw07Rtf5HGh6BY5Bl09sUkDO3BzkvKxRD-k',
 		moderation: 'TGCoo6JDvZ7JY_E5Smz5VQiI9ncc6uXI8tU_snAodl0',
 		zone: {
 			id: 'TsQmPFp6egCo5Wj0okHMxqJx-7EETIBIYLCxat1_QVU',
