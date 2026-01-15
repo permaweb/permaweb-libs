@@ -41,6 +41,8 @@ export type MessageSendType = {
 	tags?: TagType[] | null;
 	data?: any;
 	useRawData?: boolean;
+	returnResult?: boolean;
+	deepResult?: { target: string };
 };
 
 export type MessageResultType = {
@@ -188,7 +190,7 @@ export type BaseGQLArgsType = {
 	sort?: GQLSortType;
 };
 
-export type GQLArgsType = { gateway: string } & BaseGQLArgsType;
+export type GQLArgsType = { gateway?: string } & BaseGQLArgsType;
 
 export type QueryBodyGQLArgsType = BaseGQLArgsType & { gateway?: string; queryKey?: string };
 
