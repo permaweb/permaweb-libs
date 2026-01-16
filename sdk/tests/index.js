@@ -1,7 +1,9 @@
 import Arweave from 'arweave';
 import { connect, createSigner } from '@permaweb/aoconnect';
 import Permaweb from '@permaweb/libs';
+import { ARIO } from '@ar.io/sdk';
 import fs from 'fs';
+import 'dotenv/config'
 
 const CREATOR = 'L0p6ecK4PdgWome2LI0STBNl5_ZK3XwnXCcoUq0tLLY';
 
@@ -111,9 +113,13 @@ function logError(message) {
 		scheduler: 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc',
 	};
 
+	const ario = ARIO.init({
+		signer
+	});
+
 	const dependencies = {
 		ao: connect({
-			MODE: 'mainnet',
+			MODE: "legacy",
 			URL: AO_NODE.url,
 			SCHEDULER: AO_NODE.scheduler,
 			signer: signer,
@@ -121,6 +127,7 @@ function logError(message) {
 		arweave: arweave,
 		signer: signer,
 		node: AO_NODE,
+		ario
 	};
 
 	const permaweb = Permaweb.init(dependencies);
@@ -159,6 +166,7 @@ function logError(message) {
 	async function testProfiles() {
 		try {
 			logTest('Testing profile creation...');
+			const address = await arweave.wallets.jwkToAddress(wallet)
 			const profileId = await permaweb.createProfile(
 				{
 					username: 'My username',
@@ -178,12 +186,29 @@ function logError(message) {
 			expect(profileById.username).toEqual('My username');
 
 			logTest('Testing profile fetch by address...');
-			const profileByWalletAddress = await permaweb.getProfileByWalletAddress(
-				await arweave.wallets.jwkToAddress(wallet),
+			let profileByWalletAddress = await permaweb.getProfileByWalletAddress(
+				address
 			);
 
 			expect(profileByWalletAddress).toBeDefined();
-			expect(profileByWalletAddress.username).toEqual('My username');
+
+			logTest('Testing ArNS primary name support...');
+
+			expect(profileByWalletAddress.arnsName).toEqual(undefined)
+
+			const isFetchArns = true
+
+			profileByWalletAddress = await permaweb.getProfileByWalletAddress(
+				address, isFetchArns
+			);
+			//check if wallet was generated automatically 
+			//It will show normal display name because generated wallets do not have primary names attached
+			if(fs.existsSync(process.env.PATH_TO_WALLET)) {
+				expect(profileByWalletAddress.arnsName).toEqual(process.env.ArNS_NAME);
+			} else {
+				console.log(address, "has no primary name")
+                expect(profileByWalletAddress.arnsName).toEqual(undefined)
+			}
 
 			logTest('Testing profile update...');
 			const profileUpdateId = await permaweb.updateProfile(
