@@ -301,16 +301,16 @@ Handlers.add('Add-Comment', 'Add-Comment', function(msg)
 		return
 	end
 
-	-- Validate against rules
-	local isValid, ruleError = validateCommentRules(msg, content)
-	if not isValid then
-		Send({
-			Target = msg.From,
-			Action = 'Add-Comment-Error',
-			Error = ruleError,
-		})
-		return
-	end
+	-- (disabled) Validate comment rules
+	-- local isValid, ruleError = validateCommentRules(msg, content)
+	-- if not isValid then
+	-- 	Send({
+	-- 		Target = msg.From,
+	-- 		Action = 'Add-Comment-Error',
+	-- 		Error = ruleError,
+	-- 	})
+	-- 	return
+	-- end
 
 	local id = getTag(msg, 'Comment-Id') or msg.Id
 	if CommentsById[id] then
