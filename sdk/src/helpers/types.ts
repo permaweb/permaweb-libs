@@ -8,6 +8,7 @@ export type DependencyType = {
 export type ProcessReadType = {
 	processId: string;
 	path?: string;
+	appendPath?: string;
 	hydrate?: boolean;
 	fallbackAction?: string;
 	tags?: TagType[];

@@ -178,7 +178,8 @@ export function readProcessWith(deps: DependencyType) {
 
 export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 	const node = deps.node?.url ?? HB.defaultNode;
-	const url = `${node}/${args.processId}~process@1.0/${args.hydrate ? 'now' : 'compute'}`;
+	let url = `${node}/${args.processId}~process@1.0/${args.hydrate ? 'now' : 'compute'}`;
+	if (args.path && args.appendPath) url += `/${args.path}`;
 
 	try {
 		const headers: HeadersInit = {};
@@ -189,18 +190,18 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 
 		const res = await fetch(url, { headers });
 		if (res.ok) {
-			const body = await res.json();
+			const parsed = await res.json();
 
-			if (args.path) {
+			if (args.path && !args.appendPath) {
 				try {
-					return JSON.parse(body[args.path]);
+					return JSON.parse(parsed[args.path]);
 				}
 				catch {
-					return body[args.path];
+					return parsed[args.path];
 				}
 			}
 
-			return body;
+			return parsed['body'] ?? parsed;
 		}
 
 		throw new Error('Error getting state from HyperBEAM.');
