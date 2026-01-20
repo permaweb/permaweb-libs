@@ -1,5 +1,5 @@
 import { aoSend, readProcess } from '../common/ao.ts';
-import { CommentCreateArgType, DependencyType } from '../helpers/types.ts';
+import { CommentCreateArgType, CommentRulesType, DependencyType } from '../helpers/types.ts';
 import { mapFromProcessCase } from '../helpers/utils.ts';
 
 export function createCommentWith(deps: DependencyType) {
@@ -163,6 +163,51 @@ export function unpinCommentWith(deps: DependencyType) {
 			return txId;
 		} catch (e: any) {
 			throw new Error(`Error at 'unpinCommentWith' doing 'Unpin-Comment': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function getRulesWith(deps: DependencyType) {
+	return async (args: { commentsId: string }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+
+			const rules = mapFromProcessCase(
+				await readProcess(deps, {
+					processId: args.commentsId,
+					path: 'rules',
+					fallbackAction: 'Get-Rules',
+				}),
+			);
+
+			return rules as CommentRulesType;
+		} catch (e: any) {
+			throw new Error(`Error at 'getRulesWith' doing 'Get-Rules': ${e?.message ?? String(e)}`);
+		}
+	};
+}
+
+export function updateRulesWith(deps: DependencyType) {
+	return async (args: { commentsId: string; rules: CommentRulesType }) => {
+		try {
+			if (!args.commentsId) throw new Error('Must provide commentsId');
+			if (!args.rules) throw new Error('Must provide rules');
+
+			const data = {
+				ProfileAgeRequired: args.rules.profileAgeRequired,
+				MutedWords: args.rules.mutedWords,
+				RequireProfileThumbnail: args.rules.requireProfileThumbnail,
+			};
+
+			const txId = await aoSend(deps, {
+				processId: args.commentsId,
+				action: 'Update-Rules',
+				data: JSON.stringify(data),
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(`Error at 'updateRulesWith' doing 'Update-Rules': ${e?.message ?? String(e)}`);
 		}
 	};
 }

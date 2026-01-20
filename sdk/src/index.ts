@@ -42,6 +42,8 @@ function init(deps: Helpers.DependencyType) {
 		userRemoveComment: Services.removeUserCommentWith(deps),
 		pinComment: Services.pinCommentWith(deps),
 		unpinComment: Services.unpinCommentWith(deps),
+		getRules: Services.getRulesWith(deps),
+		updateRules: Services.updateRulesWith(deps),
 
 		/* Collections */
 		createCollection: Services.createCollectionWith(deps),

@@ -144,6 +144,12 @@ export type CommentCreateArgType = {
 	metadata?: object;
 };
 
+export type CommentRulesType = {
+	profileAgeRequired?: number;
+	mutedWords?: string[];
+	requireProfileThumbnail?: boolean;
+};
+
 export type CollectionManifestType = {
 	type: string;
 	items: string[];
