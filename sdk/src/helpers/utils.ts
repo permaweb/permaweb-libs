@@ -300,6 +300,62 @@ export function isValidMediaData(data: any) {
 export function cleanTagValues(tags: TagType[]): TagType[] {
 	return tags.map((tag) => ({
 		...tag,
-		value: tag.value.replace(/\r?\n/g, ' '),
+		value: tag.value?.replace(/\r?\n/g, ' ') ?? '',
+	}));
+}
+
+export async function withRetries<T>(
+	fn: () => Promise<T>,
+	options: {
+		maxRetries?: number;
+		delayMs?: number;
+		backoff?: boolean;
+		validate?: (result: T) => boolean;
+	} = {}
+): Promise<T> {
+	const { maxRetries = 3, delayMs = 1000, backoff = true, validate } = options;
+
+	let lastError: Error;
+	let lastResult: T;
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			const result = await fn();
+
+			if (!validate || validate(result)) {
+				if (attempt > 0) {
+					globalLog(`Success on attempt ${attempt + 1}`);
+				}
+				return result;
+			}
+
+			lastResult = result;
+			if (attempt < maxRetries - 1) {
+				const delay = backoff ? delayMs * Math.pow(2, attempt) : delayMs;
+				globalLog(`Validation failed on attempt ${attempt + 1}/${maxRetries}, retrying in ${delay}ms...`);
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
+		} catch (error) {
+			lastError = error as Error;
+			if (attempt < maxRetries - 1) {
+				const delay = backoff ? delayMs * Math.pow(2, attempt) : delayMs;
+				globalLog(`Error on attempt ${attempt + 1}/${maxRetries}: ${lastError.message}, retrying in ${delay}ms...`);
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
+		}
+	}
+
+	if (lastError!) {
+		globalLog(`Failed after ${maxRetries} attempts: ${lastError.message}`);
+		throw lastError;
+	}
+
+	globalLog(`Validation failed after ${maxRetries} attempts`);
+	return lastResult!;
+}
+
+export function lowercaseTagKeys(tags: { name: string; values: string[] }[]): { name: string; values: string[] }[] {
+	return tags.map((tag) => ({
+		...tag,
+		name: tag.name.toLowerCase(),
 	}));
 }

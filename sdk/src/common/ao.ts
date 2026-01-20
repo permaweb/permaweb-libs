@@ -10,7 +10,9 @@ import {
 	ProcessSpawnType,
 	TagType,
 } from '../helpers/types.ts';
-import { cleanTagValues, getTagValue, globalLog } from '../helpers/utils.ts';
+import { cleanTagValues, getTagValue, globalLog, lowercaseTagKeys, withRetries } from '../helpers/utils.ts';
+
+import { getGQLData } from './gql.ts';
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
 	const tags = [
@@ -59,14 +61,110 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 
 		const data = args.useRawData ? args.data : JSON.stringify(args.data);
 
-		const txId = await deps.ao.message({
+		const message = await deps.ao.message({
 			process: args.processId,
 			signer: deps.signer,
 			tags: cleanTagValues(tags),
 			data: data,
 		});
 
-		return txId;
+		if (args.returnResult || args.deepResult) {
+			globalLog('Returning message result...');
+
+			const result = await deps.ao.result({
+				process: args.processId,
+				message: message
+			});
+
+			if (args.deepResult) {
+				globalLog('Searching for nested result...');
+
+				if (result?.Messages?.length > 0) {
+					const message = result.Messages[0];
+					const reference = getTagValue(message.Tags, 'Reference');
+
+					if (!reference) {
+						globalLog('No reference found');
+						return result;
+					}
+
+					globalLog(`Reference: ${reference}`);
+
+					let messageTags = [
+						{ name: 'From-Process', values: [args.processId] },
+						{ name: 'Reference', values: [reference] },
+					]
+
+					switch (deps.ao.MODE) {
+						case 'mainnet':
+							messageTags = lowercaseTagKeys(messageTags);
+							break;
+						case 'legacy':
+							break;
+					}
+
+					const gqlMessageLookup = await withRetries(
+						() => getGQLData({ tags: messageTags }),
+						{
+							maxRetries: 100,
+							delayMs: 1000,
+							backoff: true,
+							validate: (result) => result?.data?.length > 0,
+						}
+					);
+
+					globalLog('Returning nested result...');
+
+					let messageId = gqlMessageLookup.data[0].node.id;
+
+					switch (deps.ao.MODE) {
+						case 'mainnet':
+							const slotTags = [
+								{ name: 'body+link', values: [messageId] }
+							]
+
+							globalLog('Searching for slot...');
+							const gqlSlotLookup = await withRetries(
+								() => getGQLData({ tags: slotTags }),
+								{
+									maxRetries: 100,
+									delayMs: 1000,
+									backoff: true,
+									validate: (result) => result?.data?.length > 0,
+								}
+							);
+
+							const node = gqlSlotLookup?.data?.[0].node;
+							const slot = getTagValue(node.tags, 'slot');
+
+							if (slot) {
+								globalLog(`Slot: ${slot}`);
+								messageId = slot;
+							}
+
+							break;
+						case 'legacy':
+							break;
+					}
+
+					const deepResult = await deps.ao.result({
+						process: args.deepResult.target,
+						message: messageId,
+					});
+
+					return deepResult;
+				}
+				else {
+					globalLog('No nested message found');
+					return result;
+				}
+			}
+
+			return result;
+
+		}
+
+		return message;
 	} catch (e: any) {
 		throw new Error(e);
 	}
@@ -80,7 +178,8 @@ export function readProcessWith(deps: DependencyType) {
 
 export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 	const node = deps.node?.url ?? HB.defaultNode;
-	const url = `${node}/${args.processId}~process@1.0/${args.hydrate ? 'now' : 'compute'}`;
+	let url = `${node}/${args.processId}~process@1.0/${args.hydrate ? 'now' : 'compute'}`;
+	if (args.path && args.appendPath) url += `/${args.path}`;
 
 	try {
 		const headers: HeadersInit = {};
@@ -91,18 +190,18 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 
 		const res = await fetch(url, { headers });
 		if (res.ok) {
-			const body = await res.json();
+			const parsed = await res.json();
 
-			if (args.path) {
+			if (args.path && !args.appendPath) {
 				try {
-					return JSON.parse(body[args.path]);
+					return JSON.parse(parsed[args.path]);
 				}
 				catch {
-					return body[args.path];
+					return parsed[args.path];
 				}
 			}
 
-			return body;
+			return parsed['body'] ?? parsed;
 		}
 
 		throw new Error('Error getting state from HyperBEAM.');
@@ -114,31 +213,6 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 		throw e;
 	}
 }
-
-// export async function readProcess(deps: DependencyType, args: ProcessReadType) {
-// 	const node = deps.node?.url ?? HB.defaultNode;
-// 	let url = `${node}/${args.processId}~process@1.0/now`;
-// 	if (args.path) url += `/${args.path}`;
-
-// 	try {
-// 		const headers: HeadersInit = {};
-
-// 		headers['require-codec'] = 'application/json';
-// 		headers['accept-bundle'] = 'true';
-
-
-// 		const res = await fetch(url, { headers });
-// 		if (res.ok) return res.json();
-
-// 		throw new Error('Error getting state from HyperBEAM.');
-// 	} catch (e: any) {
-// 		if (args.fallbackAction) {
-// 			const result = await aoDryRun(deps, { processId: args.processId, action: args.fallbackAction, tags: args.tags });
-// 			return result;
-// 		}
-// 		throw e;
-// 	}
-// }
 
 export function aoDryRunWith(deps: DependencyType) {
 	return async (args: MessageSendType) => {
