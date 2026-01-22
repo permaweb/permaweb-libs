@@ -274,6 +274,28 @@ const zone = await permaweb.getZone(zoneId);
 
 </details>
 
+##### `leaveZone`
+
+```typescript
+const leaveZoneId = await permaweb.leaveZone(zoneId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to leave
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ZoneLeaveId;
+```
+
+</details>
+
 ### Profiles
 
 Profiles are a digital representation of entities, such as users, organizations, or channels. They include specific metadata that describes the entity and can be associated with various digital assets and collections. Profiles are created, updated, and fetched using the following functions.
@@ -978,7 +1000,7 @@ ModerationRemoveId;
 ```typescript
 const subscriptionId = await permaweb.addModerationSubscription({
   moderationId: moderationProcessId,
-  originPortal: "OriginPortalId",
+  originZone: "OriginZoneId",
   subscriptionType: "default"
 });
 ```
@@ -988,7 +1010,7 @@ const subscriptionId = await permaweb.addModerationSubscription({
 
 - `args`: Object containing:
   - `moderationId`: The ID of the moderation process
-  - `originPortal`: The ID of the portal/zone to subscribe to
+  - `originZone`: The ID of the zone to subscribe to
   - `subscriptionType` (optional): Type of subscription (e.g., "default", "spam")
 
 </details>
@@ -1007,7 +1029,7 @@ ModerationSubscriptionId;
 ```typescript
 const removeId = await permaweb.removeModerationSubscription({
   moderationId: moderationProcessId,
-  originPortal: "OriginPortalId"
+  originZone: "OriginZoneId"
 });
 ```
 
@@ -1016,7 +1038,7 @@ const removeId = await permaweb.removeModerationSubscription({
 
 - `args`: Object containing:
   - `moderationId`: The ID of the moderation process
-  - `originPortal`: The ID of the portal/zone to unsubscribe from
+  - `originZone`: The ID of the zone to unsubscribe from
 
 </details>
 
@@ -1049,7 +1071,7 @@ const subscriptions = await permaweb.getModerationSubscriptions({
   <summary><strong>Response</strong></summary>
 
 ```typescript
-["PortalId1", "PortalId2", "PortalId3"];
+["ZoneId1", "ZoneId2", "ZoneId3"];
 ```
 
 </details>

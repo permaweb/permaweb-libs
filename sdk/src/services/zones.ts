@@ -293,3 +293,20 @@ export function transferZoneOwnershipWith(deps: DependencyType) {
 		}
 	};
 }
+
+export function leaveZoneWith(deps: DependencyType) {
+	return async (zoneId: string): Promise<string | null> => {
+		if (!checkValidAddress(zoneId)) throw new Error('Invalid zone address');
+
+		try {
+			const txId = await aoSend(deps, {
+				processId: zoneId,
+				action: 'Zone-Leave',
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(e?.message ?? e ?? 'Error leaving zone');
+		}
+	};
+}

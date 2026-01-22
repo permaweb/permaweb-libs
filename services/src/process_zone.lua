@@ -62,6 +62,7 @@ Zone.Constants = {
 	H_ZONE_UPDATE_PATCH_MAP = 'Zone-Update-Patch-Map',
 	H_ZONE_ADD_UPLOAD = 'Add-Uploaded-Asset',
 	H_ZONE_TRANSFER_OWNERSHIP = 'Zone-Transfer-Ownership',
+	H_ZONE_LEAVE = 'Zone-Leave',
 }
 
 Zone.RoleOptions = {
@@ -278,7 +279,9 @@ function Zone.Functions.extractChangedFields(msg)
 	end
 
 	-- Check for role updates
-	if msg.Action == Zone.Constants.H_ZONE_ROLE_SET then
+	if msg.Action == Zone.Constants.H_ZONE_ROLE_SET
+	   or msg.Action == Zone.Constants.H_ZONE_LEAVE
+	then
 		table.insert(changedFields, 'Roles')
 	end
 
@@ -1306,6 +1309,34 @@ function Zone.Functions.removeHandler(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
+function Zone.Functions.leaveZone(msg)
+	-- Check if msg.From is the Owner
+	if msg.From == Owner then
+		return Zone.Functions.sendError(
+			msg.From,
+			'Owner cannot remove themselves from roles'
+		)
+	end
+
+	-- Check if msg.From exists in Zone.Roles
+	if not Zone.Roles[msg.From] then
+		return Zone.Functions.sendError(
+			msg.From,
+			'User not found in roles'
+		)
+	end
+
+	-- Remove the user from Zone.Roles
+	Zone.Roles[msg.From] = 'Removed'
+
+	SyncState(msg)
+	msg.reply({
+		Target = msg.From,
+		Action = Zone.Constants.H_ZONE_SUCCESS,
+		Tags = { Status = 'Success', Message = 'Successfully removed from roles' },
+	})
+end
+
 function Zone.Functions.transferOwnership(msg)
 	local authorized, message = Zone.Functions.isAuthorized(msg)
 	if not authorized then
@@ -1629,6 +1660,12 @@ Handlers.add(
 	Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP,
 	Zone.Constants.H_ZONE_TRANSFER_OWNERSHIP,
 	Zone.Functions.transferOwnership
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_LEAVE,
+	Zone.Constants.H_ZONE_LEAVE,
+	Zone.Functions.leaveZone
 )
 
 --------------------------------------------------------------------------------
