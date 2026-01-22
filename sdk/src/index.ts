@@ -20,6 +20,7 @@ function init(deps: Helpers.DependencyType) {
 		updateZoneVersion: Services.updateZoneVersionWith(deps),
 		updateZoneAuthorities: Services.updateZoneAuthoritiesWith(deps),
 		transferZoneOwnership: Services.transferZoneOwnershipWith(deps),
+		leaveZone: Services.leaveZoneWith(deps),
 
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),

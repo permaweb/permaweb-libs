@@ -204,15 +204,15 @@ export function removeModerationEntryWith(deps: DependencyType) {
 export function addModerationSubscriptionWith(deps: DependencyType) {
 	return async (args: {
 		moderationId: string;
-		originPortal: string;
+		originZone: string;
 		subscriptionType?: string;
 	}): Promise<string | null> => {
 		try {
 			if (!args.moderationId) throw new Error('Must provide moderationId');
-			if (!args.originPortal) throw new Error('Must provide originPortal');
+			if (!args.originZone) throw new Error('Must provide originZone');
 
 			const tags = [
-				{ name: 'Zone-Id', value: args.originPortal },
+				{ name: 'Zone-Id', value: args.originZone },
 				{ name: 'Moderation-Process-Id', value: args.moderationId },
 			];
 			if (args.subscriptionType) {
@@ -234,15 +234,15 @@ export function addModerationSubscriptionWith(deps: DependencyType) {
  * Remove a moderation subscription from the moderation process
  */
 export function removeModerationSubscriptionWith(deps: DependencyType) {
-	return async (args: { moderationId: string; originPortal: string }): Promise<string | null> => {
+	return async (args: { moderationId: string; originZone: string }): Promise<string | null> => {
 		try {
 			if (!args.moderationId) throw new Error('Must provide moderationId');
-			if (!args.originPortal) throw new Error('Must provide originPortal');
+			if (!args.originZone) throw new Error('Must provide originZone');
 
 			return await aoSend(deps, {
 				processId: args.moderationId,
 				action: 'Remove-Moderation-Subscription',
-				tags: [{ name: 'Zone-Id', value: args.originPortal }],
+				tags: [{ name: 'Zone-Id', value: args.originZone }],
 			});
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error removing moderation subscription');

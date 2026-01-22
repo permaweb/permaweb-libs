@@ -219,7 +219,7 @@ export function cleanTagValue(value: string) {
 /**
  * Extracts all values from a key-value store that match a given prefix
  * @param store The key-value store object to search
- * @param prefix The prefix to filter keys by (e.g., 'portal')
+ * @param prefix The prefix to filter keys by (e.g., 'zone')
  * @returns Array of values whose keys match the prefix
  */
 export function getStoreNamespace<T = any>(prefix: string, store: Record<string, T>): T[] {

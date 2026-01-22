@@ -181,11 +181,11 @@ await permaweb.removeModerationEntry({
 ```
 
 #### Cross-Zone Subscriptions
-Zones can subscribe to other zones' moderation lists using the `originPortal` parameter:
+Zones can subscribe to other zones' moderation lists using the `originZone` parameter:
 ```typescript
 await permaweb.addModerationSubscription({
   moderationId: moderationId,
-  originPortal: "other-zone-id",
+  originZone: "other-zone-id",
   subscriptionType: "default"
 });
 
@@ -197,7 +197,7 @@ const subscriptions = await permaweb.getModerationSubscriptions({
 // Remove subscription
 await permaweb.removeModerationSubscription({
   moderationId: moderationId,
-  originPortal: "other-zone-id"
+  originZone: "other-zone-id"
 });
 ```
 
