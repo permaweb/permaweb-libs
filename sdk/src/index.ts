@@ -21,6 +21,7 @@ function init(deps: Helpers.DependencyType) {
 		updateZoneAuthorities: Services.updateZoneAuthoritiesWith(deps),
 		transferZoneOwnership: Services.transferZoneOwnershipWith(deps),
 		leaveZone: Services.leaveZoneWith(deps),
+		removeFromIndex: Services.removeFromIndexWith(deps),
 
 		/* Profiles */
 		createProfile: Services.createProfileWith(deps),

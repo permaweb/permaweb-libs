@@ -47,6 +47,7 @@ Zone.Constants = {
 	H_ZONE_DEBIT_NOTICE = 'Debit-Notice',
 	H_ZONE_RUN_ACTION = 'Run-Action',
 	H_ZONE_ADD_INDEX_ID = 'Add-Index-Id',
+	H_ZONE_REMOVE_FROM_INDEX = 'Remove-From-Index',
 	H_ZONE_ADD_INDEX_REQUEST = 'Add-Index-Request',
 	H_ZONE_UPDATE_INDEX_REQUEST = 'Update-Index-Request',
 	H_ZONE_UPDATE_STATUS_INDEX_REQUEST = 'Update-Status-Index-Request',
@@ -124,6 +125,12 @@ Permissions = {
 	[Zone.Constants.H_ZONE_ADD_INDEX_ID] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
+		},
+	},
+	[Zone.Constants.H_ZONE_REMOVE_FROM_INDEX] = {
+		Roles = {
+			Zone.RoleOptions.Admin,
+			Zone.RoleOptions.Moderator,
 		},
 	},
 	[Zone.Constants.H_ZONE_ADD_INDEX_REQUEST] = {
@@ -288,6 +295,7 @@ function Zone.Functions.extractChangedFields(msg)
 	-- Check for index updates
 	if
 		msg.Action == Zone.Constants.H_ZONE_ADD_INDEX_ID
+		or msg.Action == Zone.Constants.H_ZONE_REMOVE_FROM_INDEX
 		or msg.Action == Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST
 		or msg.Action == Zone.Constants.H_ZONE_INDEX_NOTICE
 	then
@@ -1041,6 +1049,39 @@ function Zone.Functions.addIndexId(msg)
 	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
 end
 
+function Zone.Functions.removeFromIndex(msg)
+	if not Zone.Functions.isAuthorized(msg) then
+		Zone.Functions.sendError(msg.From, 'Not Authorized')
+		return
+	end
+
+	if not msg['Index-Id'] then
+		Zone.Functions.sendError(msg.From, 'Invalid Data')
+		return
+	end
+
+	-- If Store.Index doesn't exist, do nothing
+	if not Zone.Data.KV.Store.Index then
+		msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+		return
+	end
+
+	local indexToRemove = -1
+	for i, index in ipairs(Zone.Data.KV.Store.Index) do
+		if index.Id == msg['Index-Id'] then
+			indexToRemove = i
+			break
+		end
+	end
+
+	if indexToRemove > -1 then
+		table.remove(Zone.Data.KV.Store.Index, indexToRemove)
+		SyncState(msg)
+	end
+
+	msg.reply({ Target = msg.From, Action = Zone.Constants.H_ZONE_SUCCESS })
+end
+
 function Zone.Functions.addIndexRequest(msg)
 	if not Zone.Functions.isAuthorized(msg) then
 		Zone.Functions.sendError(msg.From, 'Not Authorized')
@@ -1588,6 +1629,12 @@ Handlers.add(
 	Zone.Constants.H_ZONE_ADD_INDEX_ID,
 	Zone.Constants.H_ZONE_ADD_INDEX_ID,
 	Zone.Functions.addIndexId
+)
+
+Handlers.add(
+	Zone.Constants.H_ZONE_REMOVE_FROM_INDEX,
+	Zone.Constants.H_ZONE_REMOVE_FROM_INDEX,
+	Zone.Functions.removeFromIndex
 )
 
 Handlers.add(
