@@ -310,3 +310,22 @@ export function leaveZoneWith(deps: DependencyType) {
 		}
 	};
 }
+
+export function removeFromIndexWith(deps: DependencyType) {
+	return async (args: { indexId: string }, zoneId: string): Promise<string | null> => {
+		if (!checkValidAddress(zoneId)) throw new Error('Invalid zone address');
+		if (!checkValidAddress(args.indexId)) throw new Error('Invalid index ID');
+
+		try {
+			const txId = await aoSend(deps, {
+				processId: zoneId,
+				action: 'Remove-From-Index',
+				tags: [{ name: 'Index-Id', value: args.indexId }],
+			});
+
+			return txId;
+		} catch (e: any) {
+			throw new Error(e?.message ?? e ?? 'Error removing from index');
+		}
+	};
+}
