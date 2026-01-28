@@ -247,14 +247,6 @@ Handlers.add(
 				bint(Token.Balances[data.Recipient]) + bint(data.Quantity)
 			)
 
-			-- If new balance zeroes out then remove it from the table
-			if bint(Token.Balances[msg.From]) <= bint(0) then
-				Token.Balances[msg.From] = nil
-			end
-			if bint(Token.Balances[data.Recipient]) <= bint(0) then
-				Token.Balances[data.Recipient] = nil
-			end
-
 			local debitNoticeTags = {
 				Status = 'Success',
 				Message = 'Balance transferred, debit notice issued',
