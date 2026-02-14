@@ -2,7 +2,8 @@ export type DependencyType = {
 	ao: any;
 	signer?: any;
 	arweave?: any;
-	node?: { url: string; scheduler: string; authority: string };
+	node?: { url: string, scheduler: string, authority:string };
+	ario?:any
 };
 
 export type ProcessReadType = {
@@ -16,6 +17,7 @@ export type ProcessReadType = {
 
 export type ReadOptsType = {
 	hydrate?: boolean;
+	primaryName?: string;
 }
 
 export type ProcessSpawnType = {
