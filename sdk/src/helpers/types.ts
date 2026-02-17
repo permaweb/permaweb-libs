@@ -140,6 +140,7 @@ export type CommentCreateArgType = {
 	commentsId: string;
 	parentId?: string;
 	rootId?: string;
+	tipReceiptId?: string;
 	tags?: TagType[];
 	metadata?: object;
 };
@@ -148,6 +149,12 @@ export type CommentRulesType = {
 	profileAgeRequired?: number;
 	mutedWords?: string[];
 	requireProfileThumbnail?: boolean;
+	enableTipping?: boolean;
+	requireTipToComment?: boolean;
+	tipAssetId?: string;
+	minTipAmount?: string;
+	highlightPaidComments?: boolean;
+	showPaidTab?: boolean;
 };
 
 export type CollectionManifestType = {

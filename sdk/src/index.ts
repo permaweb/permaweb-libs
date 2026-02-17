@@ -38,6 +38,7 @@ function init(deps: Helpers.DependencyType) {
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
 		getComments: Services.getCommentsWith(deps),
+		getPaidComments: Services.getPaidCommentsWith(deps),
 		updateCommentStatus: Services.updateCommentStatusWith(deps),
 		removeComment: Services.removeCommentWith(deps),
 		updateCommentContent: Services.updateCommentContentWith(deps),
@@ -46,6 +47,7 @@ function init(deps: Helpers.DependencyType) {
 		unpinComment: Services.unpinCommentWith(deps),
 		getRules: Services.getRulesWith(deps),
 		updateRules: Services.updateRulesWith(deps),
+		tipAndCreateComment: Services.tipAndCreateCommentWith(deps),
 
 		/* Collections */
 		createCollection: Services.createCollectionWith(deps),
