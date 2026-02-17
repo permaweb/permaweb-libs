@@ -8,10 +8,37 @@ Rules = Rules or {
 	ProfileAgeRequired = 0, -- minimum profile age in milliseconds (0 = disabled)
 	MutedWords = {}, -- list of blocked words/phrases
 	RequireProfileThumbnail = false, -- whether profile must have a thumbnail
+	EnableTipping = false, -- whether tipping features are enabled
+	RequireTipToComment = false, -- whether comments require an attached tip receipt
+	TipAssetId = nil, -- token process allowed to create tip receipts
+	MinTipAmount = '1', -- minimum tip amount (base units) required for paid comment
+	HighlightPaidComments = false, -- UI hint for highlighting paid comments
+	ShowPaidTab = false, -- UI hint for showing paid comments tab
 }
 
 CommentsById = CommentsById or {} -- id -> comment
 ByParent = ByParent or {} -- parentKey -> { childIds in append order }
+TipReceiptsById = TipReceiptsById or {} -- receiptId -> receipt object
+TipReceiptToCommentId = TipReceiptToCommentId or {} -- receiptId -> commentId
+
+local function normalizeAmount(value)
+	if value == nil then
+		return nil
+	end
+	local n = tonumber(value)
+	if not n or n < 0 then
+		return nil
+	end
+	return tostring(math.floor(n))
+end
+
+local function toNumber(value)
+	local n = tonumber(value)
+	if not n then
+		return 0
+	end
+	return n
+end
 
 local function parentKey(pid)
 	return pid or 'NULL'
@@ -163,6 +190,48 @@ local function validateCommentRules(msg, content)
 	return true, nil
 end
 
+local function validateTipReceipt(msg, tipReceiptId)
+	if
+		not Rules.EnableTipping
+		or not Rules.RequireTipToComment
+	then
+		return true, nil
+	end
+
+	if not Rules.TipAssetId or Rules.TipAssetId == '' then
+		return false, 'Tipping enabled but TipAssetId is not configured'
+	end
+
+	if not tipReceiptId or tipReceiptId == '' then
+		return false, 'Tip-Receipt-Id is required'
+	end
+
+	local receipt = TipReceiptsById[tipReceiptId]
+	if not receipt then
+		return false, 'Invalid Tip-Receipt-Id'
+	end
+
+	if receipt.Payer ~= msg.From then
+		return false, 'Tip receipt does not belong to sender'
+	end
+
+	if receipt.AssetId ~= Rules.TipAssetId then
+		return false, 'Tip receipt asset does not match rules'
+	end
+
+	if receipt.Used == true then
+		return false, 'Tip receipt already used'
+	end
+
+	local minTipAmount = toNumber(Rules.MinTipAmount or '1')
+	local tipAmount = toNumber(receipt.Amount or '0')
+	if tipAmount < minTipAmount then
+		return false, 'Tip amount below minimum'
+	end
+
+	return true, receipt
+end
+
 function SyncState()
 	Send({ device = 'patch@1.0', zone = GetState() })
 end
@@ -281,6 +350,81 @@ Handlers.add('Get-Auth-Users', 'Get-Auth-Users', function(msg)
 	Send({ Target = msg.From, Data = json.encode(AuthUsers) })
 end)
 
+Handlers.add('Get-Tip-Receipt', 'Get-Tip-Receipt', function(msg)
+	local receiptId = getTag(msg, 'Tip-Receipt-Id')
+	if not receiptId or receiptId == '' then
+		Send({
+			Target = msg.From,
+			Action = 'Get-Tip-Receipt-Error',
+			Error = 'Tip-Receipt-Id required',
+		})
+		return
+	end
+	Send({ Target = msg.From, Data = json.encode(TipReceiptsById[receiptId]) })
+end)
+
+Handlers.add('Get-Paid-Comments', 'Get-Paid-Comments', function(msg)
+	local paid = {}
+	for _, c in ipairs(Comments) do
+		if c and c.Status == 'active' and c.TipReceiptId and c.TipAmount then
+			table.insert(paid, c)
+		end
+	end
+
+	table.sort(paid, function(a, b)
+		local aTip = toNumber(a.TipAmount)
+		local bTip = toNumber(b.TipAmount)
+		if aTip ~= bTip then
+			return aTip > bTip
+		end
+		local aDate = a.DateCreated or 0
+		local bDate = b.DateCreated or 0
+		return aDate > bDate
+	end)
+
+	Send({ Target = msg.From, Data = json.encode(paid) })
+end)
+
+Handlers.add('Credit-Notice', 'Credit-Notice', function(msg)
+	if not Rules.EnableTipping then
+		return
+	end
+
+	if not Rules.TipAssetId or Rules.TipAssetId == '' then
+		return
+	end
+
+	if msg.From ~= Rules.TipAssetId then
+		return
+	end
+
+	local sender = getTag(msg, 'Sender')
+	local quantity = getTag(msg, 'Quantity')
+	local receiptId = getTag(msg, 'X-Tip-Receipt-Id') or getTag(msg, 'Tip-Receipt-Id') or msg.Id
+	local amount = normalizeAmount(quantity)
+
+	if not sender or sender == '' or not amount then
+		return
+	end
+
+	if TipReceiptsById[receiptId] then
+		return
+	end
+
+	local receipt = {
+		Id = receiptId,
+		Payer = sender,
+		Amount = amount,
+		AssetId = msg.From,
+		TipTxId = msg.Id,
+		DateCreated = msg.Timestamp,
+		Used = false,
+	}
+
+	TipReceiptsById[receiptId] = receipt
+	SyncDynamicState('tipReceiptsById', TipReceiptsById)
+end)
+
 Handlers.add('Add-Comment', 'Add-Comment', function(msg)
 	local parentId = getTag(msg, 'Parent-Id')
 	local content = msg.Data
@@ -301,16 +445,27 @@ Handlers.add('Add-Comment', 'Add-Comment', function(msg)
 		return
 	end
 
-	-- (disabled) Validate comment rules
-	-- local isValid, ruleError = validateCommentRules(msg, content)
-	-- if not isValid then
-	-- 	Send({
-	-- 		Target = msg.From,
-	-- 		Action = 'Add-Comment-Error',
-	-- 		Error = ruleError,
-	-- 	})
-	-- 	return
-	-- end
+	-- Validate comment rules
+	local isValid, ruleError = validateCommentRules(msg, content)
+	if not isValid then
+		Send({
+			Target = msg.From,
+			Action = 'Add-Comment-Error',
+			Error = ruleError,
+		})
+		return
+	end
+
+	local tipReceiptId = getTag(msg, 'Tip-Receipt-Id')
+	local tipValid, tipResult = validateTipReceipt(msg, tipReceiptId)
+	if not tipValid then
+		Send({
+			Target = msg.From,
+			Action = 'Add-Comment-Error',
+			Error = tipResult,
+		})
+		return
+	end
 
 	local id = getTag(msg, 'Comment-Id') or msg.Id
 	if CommentsById[id] then
@@ -352,6 +507,15 @@ Handlers.add('Add-Comment', 'Add-Comment', function(msg)
 		depth = (parent.Depth or 0) + 1
 	end
 
+	local metadata = {}
+	local metadataRaw = getTag(msg, 'Metadata')
+	if metadataRaw and metadataRaw ~= '' then
+		local success, decoded = pcall(json.decode, metadataRaw)
+		if success and type(decoded) == 'table' then
+			metadata = decoded
+		end
+	end
+
 	local newComment = {
 		Id = id,
 		Creator = msg.From,
@@ -362,8 +526,24 @@ Handlers.add('Add-Comment', 'Add-Comment', function(msg)
 		ParentId = parentId,
 		Depth = depth,
 		ChildrenCount = 0,
-		Metadata = msg.Metadata or {},
+		Metadata = metadata,
 	}
+
+	if type(tipResult) == 'table' then
+		newComment.TipReceiptId = tipResult.Id
+		newComment.TipAmount = tipResult.Amount
+		newComment.TipAssetId = tipResult.AssetId
+		newComment.TipTxId = tipResult.TipTxId
+		newComment.TipPayer = tipResult.Payer
+
+		tipResult.Used = true
+		tipResult.UsedBy = id
+		tipResult.UsedAt = msg.Timestamp
+		TipReceiptsById[tipResult.Id] = tipResult
+		TipReceiptToCommentId[tipResult.Id] = id
+		SyncDynamicState('tipReceiptsById', TipReceiptsById)
+		SyncDynamicState('tipReceiptToCommentId', TipReceiptToCommentId)
+	end
 
 	table.insert(Comments, newComment)
 	CommentsById[id] = newComment
@@ -665,6 +845,29 @@ Handlers.add('Update-Rules', 'Update-Rules', function(msg)
 		Rules.RequireProfileThumbnail = updates.RequireProfileThumbnail == true
 	end
 
+	-- Update tipping flags
+	if updates.EnableTipping ~= nil then
+		Rules.EnableTipping = updates.EnableTipping == true
+	end
+	if updates.RequireTipToComment ~= nil then
+		Rules.RequireTipToComment = updates.RequireTipToComment == true
+	end
+	if updates.TipAssetId ~= nil then
+		Rules.TipAssetId = tostring(updates.TipAssetId)
+	end
+	if updates.MinTipAmount ~= nil then
+		local normalized = normalizeAmount(updates.MinTipAmount)
+		if normalized then
+			Rules.MinTipAmount = normalized
+		end
+	end
+	if updates.HighlightPaidComments ~= nil then
+		Rules.HighlightPaidComments = updates.HighlightPaidComments == true
+	end
+	if updates.ShowPaidTab ~= nil then
+		Rules.ShowPaidTab = updates.ShowPaidTab == true
+	end
+
 	SyncDynamicState('rules', Rules)
 	Send({ Target = msg.From, Action = 'Update-Rules-Success', Data = json.encode(Rules) })
 end)
@@ -694,10 +897,33 @@ if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
 				if rulesData.RequireProfileThumbnail ~= nil then
 					Rules.RequireProfileThumbnail = rulesData.RequireProfileThumbnail == true
 				end
+				if rulesData.EnableTipping ~= nil then
+					Rules.EnableTipping = rulesData.EnableTipping == true
+				end
+				if rulesData.RequireTipToComment ~= nil then
+					Rules.RequireTipToComment = rulesData.RequireTipToComment == true
+				end
+				if rulesData.TipAssetId ~= nil then
+					Rules.TipAssetId = tostring(rulesData.TipAssetId)
+				end
+				if rulesData.MinTipAmount ~= nil then
+					local normalized = normalizeAmount(rulesData.MinTipAmount)
+					if normalized then
+						Rules.MinTipAmount = normalized
+					end
+				end
+				if rulesData.HighlightPaidComments ~= nil then
+					Rules.HighlightPaidComments = rulesData.HighlightPaidComments == true
+				end
+				if rulesData.ShowPaidTab ~= nil then
+					Rules.ShowPaidTab = rulesData.ShowPaidTab == true
+				end
 			end
 		end
 	end
 
 	SyncDynamicState('users', AuthUsers)
 	SyncDynamicState('rules', Rules)
+	SyncDynamicState('tipReceiptsById', TipReceiptsById)
+	SyncDynamicState('tipReceiptToCommentId', TipReceiptToCommentId)
 end
