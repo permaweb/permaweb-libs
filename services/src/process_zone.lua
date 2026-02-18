@@ -286,8 +286,9 @@ function Zone.Functions.extractChangedFields(msg)
 	end
 
 	-- Check for role updates
-	if msg.Action == Zone.Constants.H_ZONE_ROLE_SET
-	   or msg.Action == Zone.Constants.H_ZONE_LEAVE
+	if
+		msg.Action == Zone.Constants.H_ZONE_ROLE_SET
+		or msg.Action == Zone.Constants.H_ZONE_LEAVE
 	then
 		table.insert(changedFields, 'Roles')
 	end
@@ -437,6 +438,10 @@ function Zone.Functions.getActorRoles(actor)
 end
 
 function Zone.Functions.actorHasRole(actor, role)
+	if Zone.Functions.tableLength(Zone.Roles) <= 0 then
+		return false
+	end
+
 	local actorRoles = Zone.Functions.getActorRoles(actor)
 	if Zone.Functions.rolesHasValue(actorRoles, role) then
 		return true
@@ -847,7 +852,9 @@ function Zone.Functions.zoneRoleSet(msg)
 				ao.send({
 					Target = actorId,
 					Action = Zone.Constants.H_ZONE_REMOVE,
-					Tags = { ['Store-Path'] = entry.RemoteZonePath .. '.' .. ao.id },
+					Tags = {
+						['Store-Path'] = entry.RemoteZonePath .. '.' .. ao.id,
+					},
 				})
 			end
 		else
@@ -975,7 +982,7 @@ function Zone.Functions.addUpload(msg)
 		-- Verify asset creator matches profile owner
 		-- Asset process includes Creator in message Tags
 		local assetCreator = msg.Tags and msg.Tags['Creator']
-		if not assetCreator or assetCreator ~= Owner then
+		if not assetCreator or (assetCreator ~= Owner and assetCreator ~= ao.id) then
 			return Zone.Functions.sendError(
 				msg.From,
 				'Not Authorized: Asset creator does not match profile owner'
@@ -988,8 +995,8 @@ function Zone.Functions.addUpload(msg)
 		Type = 'Add',
 		AssetId = msg['Asset-Id'],
 		Timestamp = msg.Timestamp,
-		AssetType = msg.AssetType,
-		ContentType = msg.ContentType,
+		AssetType = nil,
+		ContentType = nil,
 		Quantity = msg.Quantity,
 		SyncState = function()
 			SyncState(msg)
@@ -1361,10 +1368,7 @@ function Zone.Functions.leaveZone(msg)
 
 	-- Check if msg.From exists in Zone.Roles
 	if not Zone.Roles[msg.From] then
-		return Zone.Functions.sendError(
-			msg.From,
-			'User not found in roles'
-		)
+		return Zone.Functions.sendError(msg.From, 'User not found in roles')
 	end
 
 	-- Remove the user from Zone.Roles
@@ -1374,7 +1378,10 @@ function Zone.Functions.leaveZone(msg)
 	msg.reply({
 		Target = msg.From,
 		Action = Zone.Constants.H_ZONE_SUCCESS,
-		Tags = { Status = 'Success', Message = 'Successfully removed from roles' },
+		Tags = {
+			Status = 'Success',
+			Message = 'Successfully removed from roles',
+		},
 	})
 end
 
