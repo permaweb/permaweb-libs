@@ -24,6 +24,7 @@ IndexRecipients = IndexRecipients or {}
 
 DateCreated = DateCreated or nil
 LastUpdate = LastUpdate or nil
+Initialized = Initialized or false
 
 local function checkValidAddress(address)
 	if not address or type(address) ~= 'string' then
@@ -168,26 +169,174 @@ local function syncState()
 	Send({ device = 'patch@1.0', asset = getState() })
 end
 
+local function setStoreValue(key, value)
+	-- Split by '.'
+	local parts = {}
+	for part in string.gmatch(key, '[^%.]+') do
+		table.insert(parts, part)
+	end
+
+	local lastPart = parts[#parts]
+
+	local isAppend = false
+	if string.sub(lastPart, -3) == '+++' then
+		isAppend = true
+		lastPart = string.sub(lastPart, 1, -4) -- remove '+++'
+	end
+
+	local isArray = false
+	if string.sub(lastPart, -2) == '[]' then
+		isArray = true
+		lastPart = string.sub(lastPart, 1, -3)
+	end
+
+	parts[#parts] = lastPart
+
+	-- Traverse the structure in Metadata
+	local current = Metadata
+	for i = 1, #parts - 1 do
+		local segment = parts[i]
+		if current[segment] == nil then
+			current[segment] = {}
+		end
+		current = current[segment]
+	end
+
+	local finalKey = parts[#parts]
+
+	local status, decodedValue = pcall(json.decode, value)
+
+	if not status or decodedValue == nil then
+		decodedValue = value
+	end
+
+	if isAppend then
+		-- Append mode
+		if type(current[finalKey]) == 'table' then
+			-- Append to an existing table
+			table.insert(current[finalKey], decodedValue)
+		elseif isArray then
+			-- Append to the last array element
+			local arr = current[finalKey]
+			arr[#arr] = arr[#arr] .. value
+		else
+			-- Append to a string or create a new array
+			current[finalKey] = current[finalKey]
+					and { current[finalKey], decodedValue }
+				or { decodedValue }
+		end
+	else
+		-- Normal mode
+		if type(decodedValue) == 'table' then
+			if current[finalKey] == nil then
+				current[finalKey] = decodedValue
+			else
+				-- Merge tables
+				for k, v in pairs(decodedValue) do
+					current[finalKey][k] = v
+				end
+			end
+		elseif isArray then
+			if current[finalKey] == nil then
+				current[finalKey] = { value }
+			else
+				table.insert(current[finalKey], value)
+			end
+		else
+			current[finalKey] = decodedValue
+		end
+	end
+end
+
+local function setTokenProps(collectedValues)
+	for key, values in pairs(collectedValues) do
+		if Token[key] ~= nil then
+			if #values == 1 then
+				if type(Token[key]) == 'table' then
+					table.insert(Token[key], values[1])
+				else
+					Token[key] = values[1]
+				end
+			else
+				if type(Token[key]) == 'table' then
+					for _, value in ipairs(values) do
+						table.insert(Token[key], value)
+					end
+				else
+					Token[key] = values
+				end
+			end
+		end
+	end
+
+	-- Replace unset placeholders in Token with nil
+	for k, v in pairs(Token) do
+		if v == unsetPlaceholder then
+			Token[k] = nil
+		end
+	end
+end
+
 Handlers.add('Init', 'Init', function(msg)
-	if Token.Creator and Token.TotalSupply then
-		-- Notify creator of the asset
-		ao.send({
-			Target = Token.Creator,
-			Action = 'Add-Uploaded-Asset',
-			Quantity = tostring(Token.TotalSupply),
-			['Asset-Id'] = ao.id,
-			Timestamp = msg.Timestamp,
-			AssetType = Inbox[1].Tags['Asset-Type'] or nil,
-			ContentType = Inbox[1].Tags['Content-Type'] or nil,
-			Tags = {
-				Creator = Token.Creator,
-			},
-		})
-		-- Reply to prevent "Failed to fetch" errors
-		msg.reply({
-			Action = 'Init-Notice',
-			Tags = { Status = 'Success' },
-		})
+	-- Boot Initialization
+	if not Initialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
+		Initialized = true
+
+		local collectedValues = {}
+		for _, tag in ipairs(Inbox[1].TagArray) do
+			if tag.name == 'Date-Created' then
+				DateCreated = tostring(tag.value)
+			end
+
+			if tag.name == 'Auth-Users' then
+				local authUsers = json.decode(tag.value)
+				for _, authUser in ipairs(authUsers) do
+					table.insert(AuthUsers, authUser)
+				end
+			end
+
+			local bootLoaderPrefix = 'Bootloader-'
+			if
+				string.sub(tag.name, 1, string.len(bootLoaderPrefix))
+				== bootLoaderPrefix
+			then
+				local keyWithoutPrefix =
+					string.sub(tag.name, string.len(bootLoaderPrefix) + 1)
+				if not Token[keyWithoutPrefix] then
+					setStoreValue(keyWithoutPrefix, tag.value)
+				end
+
+				if not collectedValues[keyWithoutPrefix] then
+					collectedValues[keyWithoutPrefix] = { tag.value }
+				else
+					table.insert(collectedValues[keyWithoutPrefix], tag.value)
+				end
+			end
+		end
+
+		setTokenProps(collectedValues)
+
+		-- Notify creator's profile of the new asset
+		if Token.Creator and checkValidAddress(Token.Creator) then
+			ao.send({
+				Target = Token.Creator,
+				Action = 'Add-Uploaded-Asset',
+				['Asset-Id'] = ao.id,
+				Timestamp = Inbox[1].Timestamp,
+				Quantity = tostring(Token.TotalSupply or '1'),
+				Tags = {
+					Creator = Token.Creator,
+				},
+			})
+
+			-- Initialize balances if needed
+			if Token.TotalSupply then
+				Token.Balances =
+					{ [Token.Creator] = tostring(Token.TotalSupply) }
+			end
+		end
+
+		syncState()
 	end
 end)
 
@@ -562,190 +711,3 @@ Handlers.add('Send-Index', 'Send-Index', function(msg)
 		end
 	end
 end)
-
--- Parse the key string to determine the nested structure:
--- Split the key by . to get each 'level'.
--- For the last part, check if it ends with []. If so, we are dealing with an array field.
--- Traverse store according to the split key parts, creating sub-tables as needed.
--- At the final level:
--- If it’s a normal field (no []), assign the value directly.
--- If it ends with [], append the value to an array at that field.
--- Examples:
--- setStoreValue('User.Name', 'Alice')
--- setStoreValue('User.Address.City', 'New York')
--- setStoreValue('Tags[]', 'tag1')
--- setStoreValue('Tags[]', 'tag2')
--- setStoreValue('User.Hobbies[]', 'gaming')
--- setStoreValue('User.Hobbies[]', 'chess')
-local function setStoreValue(key, value)
-	-- Split by '.'
-	local parts = {}
-	for part in string.gmatch(key, '[^%.]+') do
-		table.insert(parts, part)
-	end
-
-	local lastPart = parts[#parts]
-
-	local isAppend = false
-	if string.sub(lastPart, -3) == '+++' then
-		isAppend = true
-		lastPart = string.sub(lastPart, 1, -4) -- remove '+++'
-	end
-
-	local isArray = false
-	if string.sub(lastPart, -2) == '[]' then
-		isArray = true
-		lastPart = string.sub(lastPart, 1, -3)
-	end
-
-	parts[#parts] = lastPart
-
-	-- Traverse the structure in Metadata
-	local current = Metadata
-	for i = 1, #parts - 1 do
-		local segment = parts[i]
-		if current[segment] == nil then
-			current[segment] = {}
-		end
-		current = current[segment]
-	end
-
-	local finalKey = parts[#parts]
-
-	local status, decodedValue = pcall(json.decode, value)
-
-	if not status or decodedValue == nil then
-		decodedValue = value
-	end
-
-	if isAppend then
-		-- Append mode
-		if type(current[finalKey]) == 'table' then
-			-- Append to an existing table
-			table.insert(current[finalKey], decodedValue)
-		elseif isArray then
-			-- Append to the last array element
-			local arr = current[finalKey]
-			arr[#arr] = arr[#arr] .. value
-		else
-			-- Append to a string or create a new array
-			current[finalKey] = current[finalKey]
-					and { current[finalKey], decodedValue }
-				or { decodedValue }
-		end
-	else
-		-- Normal mode
-		if type(decodedValue) == 'table' then
-			if current[finalKey] == nil then
-				current[finalKey] = decodedValue
-			else
-				-- Merge tables
-				for k, v in pairs(decodedValue) do
-					current[finalKey][k] = v
-				end
-			end
-		elseif isArray then
-			if current[finalKey] == nil then
-				current[finalKey] = { value }
-			else
-				table.insert(current[finalKey], value)
-			end
-		else
-			current[finalKey] = decodedValue
-		end
-	end
-end
-
--- setTokenProps adjusts the Token table based on the bootloader values
-local function setTokenProps(collectedValues)
-	for key, values in pairs(collectedValues) do
-		if Token[key] ~= nil then
-			if #values == 1 then
-				if type(Token[key]) == 'table' then
-					table.insert(Token[key], values[1])
-				else
-					Token[key] = values[1]
-				end
-			else
-				if type(Token[key]) == 'table' then
-					for _, value in ipairs(values) do
-						table.insert(Token[key], value)
-					end
-				else
-					Token[key] = values
-				end
-			end
-		end
-	end
-
-	-- Replace unset placeholders in Token with nil
-	for k, v in pairs(Token) do
-		if v == unsetPlaceholder then
-			Token[k] = nil
-		end
-	end
-end
-
-local isInitialized = false
-
--- Boot Initialization
-if not isInitialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
-	isInitialized = true
-
-	local collectedValues = {}
-	for _, tag in ipairs(Inbox[1].TagArray) do
-		if tag.name == 'Date-Created' then
-			DateCreated = tostring(tag.value)
-		end
-
-		if tag.name == 'Auth-Users' then
-			local authUsers = json.decode(tag.value)
-			for _, authUser in ipairs(authUsers) do
-				table.insert(AuthUsers, authUser)
-			end
-		end
-
-		local bootLoaderPrefix = 'Bootloader-'
-		if
-			string.sub(tag.name, 1, string.len(bootLoaderPrefix))
-			== bootLoaderPrefix
-		then
-			local keyWithoutPrefix =
-				string.sub(tag.name, string.len(bootLoaderPrefix) + 1)
-			if not Token[keyWithoutPrefix] then
-				setStoreValue(keyWithoutPrefix, tag.value)
-			end
-
-			if not collectedValues[keyWithoutPrefix] then
-				collectedValues[keyWithoutPrefix] = { tag.value }
-			else
-				table.insert(collectedValues[keyWithoutPrefix], tag.value)
-			end
-		end
-	end
-
-	setTokenProps(collectedValues)
-
-	-- Initialize balances if needed
-	if Token.Creator and Token.TotalSupply then
-		Token.Balances = { [Token.Creator] = tostring(Token.TotalSupply) }
-
-		-- Notify creator's profile of the new asset
-		if checkValidAddress(Token.Creator) then
-			ao.send({
-				Target = Token.Creator,
-				Action = 'Add-Uploaded-Asset',
-				['Asset-Id'] = ao.id,
-				Timestamp = Inbox[1].Timestamp,
-				Quantity = tostring(Token.TotalSupply),
-				AssetType = Inbox[1].Tags['Asset-Type'] or nil,
-				ContentType = Inbox[1].Tags['Content-Type'] or nil,
-				Tags = {
-					Creator = Token.Creator,
-				},
-			})
-		end
-	end
-
-	syncState()
-end
