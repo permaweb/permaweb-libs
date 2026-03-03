@@ -1,5 +1,5 @@
 import { aoCreateProcessWith, aoDryRun, readProcess } from '../common/ao.ts';
-import { getGQLData } from '../common/gql.ts';
+import { getGQLDataWith } from '../common/gql.ts';
 import { AO, CONTENT_TYPES, GATEWAYS, TAGS } from '../helpers/config.ts';
 import {
 	AssetCreateArgsType,
@@ -77,6 +77,7 @@ export async function getAtomicAsset(
 		);
 
 		if (args?.useGateway) {
+			const getGQLData = getGQLDataWith(deps);
 			const gqlResponse = await getGQLData({
 				gateway: GATEWAYS.ao,
 				ids: [id],
@@ -108,24 +109,27 @@ export function getAtomicAssetWith(deps: DependencyType) {
 	};
 }
 
-export async function getAtomicAssets(ids: string[]): Promise<AssetHeaderType[] | null> {
-	try {
-		const gqlResponse = await getGQLData({
-			gateway: GATEWAYS.arweave,
-			ids: ids ?? null,
-			tags: null,
-			owners: null,
-			cursor: null,
-		});
+export function getAtomicAssetsWith(deps: DependencyType) {
+	return async (ids: string[]): Promise<AssetHeaderType[] | null> => {
+		try {
+			const getGQLData = getGQLDataWith(deps);
+			const gqlResponse = await getGQLData({
+				gateway: GATEWAYS.arweave,
+				ids: ids ?? null,
+				tags: null,
+				owners: null,
+				cursor: null,
+			});
 
-		if (gqlResponse && gqlResponse.data.length) {
-			return gqlResponse.data.map((element: GQLNodeResponseType) => buildAsset(element));
+			if (gqlResponse && gqlResponse.data.length) {
+				return gqlResponse.data.map((element: GQLNodeResponseType) => buildAsset(element));
+			}
+
+			return null;
+		} catch (e: any) {
+			throw new Error(e);
 		}
-
-		return null;
-	} catch (e: any) {
-		throw new Error(e);
-	}
+	};
 }
 
 export function buildAsset(element: GQLNodeResponseType): any {

@@ -1,7 +1,7 @@
 import { GATEWAYS, TAGS } from 'helpers/config.ts';
 
 import { resolveTransactionWith } from '../common/arweave.ts';
-import { getGQLData } from '../common/gql.ts';
+import { getGQLDataWith } from '../common/gql.ts';
 import { DependencyType, GQLNodeResponseType, ProfileArgsType, ProfileType, ReadOptsType } from '../helpers/types.ts';
 import { getBootTag, isValidMediaData } from '../helpers/utils.ts';
 
@@ -37,7 +37,7 @@ export function createProfileWith(deps: DependencyType) {
 		await Promise.all([addImageTag('Thumbnail'), addImageTag('Banner')]);
 
 		try {
-			profileId = await createZone({ tags: tags }, callback);
+			profileId = await createZone({ tags: tags, skipModeration: true }, callback);
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error creating profile');
 		}
@@ -114,7 +114,7 @@ export function getProfileByIdWith(deps: DependencyType) {
 				invites: zone.invites,
 				version: zone.version,
 				authorities: zone.authorities,
-				collections: zone.collections, // Explicitly include collections from top-level zone
+				collections: zone.collections,
 				...zone.store,
 			};
 		} catch (e: any) {
@@ -128,6 +128,7 @@ export function getProfileByWalletAddressWith(deps: DependencyType) {
 
 	return async (walletAddress: string): Promise<(ProfileType & any) | null> => {
 		try {
+			const getGQLData = getGQLDataWith(deps);
 			const gqlResponse = await getGQLData({
 				gateway: GATEWAYS.ao,
 				tags: [

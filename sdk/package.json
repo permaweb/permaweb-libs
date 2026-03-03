@@ -31,12 +31,15 @@
 	},
 	"exports": {
 		".": {
+			"react-native": "./dist/index.esm.js",
 			"import": "./dist/index.esm.js",
 			"require": "./dist/index.cjs"
 		},
 		"./browser": "./dist/index.esm.js",
-		"./node": "./dist/index.js"
+		"./node": "./dist/index.js",
+		"./native": "./dist/index.esm.js"
 	},
+	"react-native": "./dist/index.esm.js",
 	"scripts": {
 		"prepare": "husky install",
 		"clean:install": "rm -rf node_modules package-lock.json || true && npm cache clean --force && npm install",
@@ -44,7 +47,16 @@
 		"build": "node build.js"
 	},
 	"dependencies": {
-		"@dha-team/arbundles": "^1.0.3"
+		"@dha-team/arbundles": "^1.0.3",
+		"events": "^3.3.0"
+	},
+	"peerDependencies": {
+		"react-native-get-random-values": ">=1.8.0"
+	},
+	"peerDependenciesMeta": {
+		"react-native-get-random-values": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
 		"@types/async-retry": "^1.4.9",
