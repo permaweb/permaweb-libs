@@ -105,8 +105,9 @@ export function formatDate(dateArg: string | number | null, dateType: 'iso' | 'e
 	}
 
 	return fullTime
-		? `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()} at ${date.getHours() % 12 || 12
-		}:${date.getMinutes().toString().padStart(2, '0')} ${date.getHours() >= 12 ? 'PM' : 'AM'}`
+		? `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()} at ${
+				date.getHours() % 12 || 12
+			}:${date.getMinutes().toString().padStart(2, '0')} ${date.getHours() >= 12 ? 'PM' : 'AM'}`
 		: `${date.toLocaleString('default', { month: 'long' })} ${date.getDate()}, ${date.getUTCFullYear()}`;
 }
 
@@ -170,14 +171,23 @@ export function getBase64Data(dataURL: string) {
 	return dataURL.split(',')[1];
 }
 
-export function getByteSize(input: string | Buffer): number {
+export function getByteSize(input: string | Uint8Array | ArrayBuffer | any): number {
 	let sizeInBytes: number;
-	if (Buffer.isBuffer(input)) {
-		sizeInBytes = input.length;
+
+	// Check for Uint8Array or ArrayBuffer
+	if (input instanceof Uint8Array) {
+		sizeInBytes = input.byteLength;
+	} else if (input instanceof ArrayBuffer) {
+		sizeInBytes = input.byteLength;
 	} else if (typeof input === 'string') {
-		sizeInBytes = Buffer.byteLength(input, 'utf-8');
+		// Calculate UTF-8 byte length without Buffer
+		const encoder = new TextEncoder();
+		sizeInBytes = encoder.encode(input).byteLength;
+	} else if (typeof Buffer !== 'undefined' && Buffer.isBuffer && Buffer.isBuffer(input)) {
+		// Support Buffer if available (Node.js)
+		sizeInBytes = input.length;
 	} else {
-		throw new Error('Input must be a string or a Buffer');
+		throw new Error('Input must be a string, Uint8Array, ArrayBuffer, or Buffer');
 	}
 
 	return sizeInBytes;
@@ -273,14 +283,9 @@ export function mapFromProcessCase(obj: any): any {
 				return acc;
 			}
 
-			const fromKey =
-				checkValidAddress(key as any) || key.includes('-')
-					? key
-					: fromProcessCase(key);
+			const fromKey = checkValidAddress(key as any) || key.includes('-') ? key : fromProcessCase(key);
 
-			acc[fromKey] = checkValidAddress(value as any)
-				? value
-				: mapFromProcessCase(value);
+			acc[fromKey] = checkValidAddress(value as any) ? value : mapFromProcessCase(value);
 
 			return acc;
 		}, {});
@@ -311,7 +316,7 @@ export async function withRetries<T>(
 		delayMs?: number;
 		backoff?: boolean;
 		validate?: (result: T) => boolean;
-	} = {}
+	} = {},
 ): Promise<T> {
 	const { maxRetries = 3, delayMs = 1000, backoff = true, validate } = options;
 

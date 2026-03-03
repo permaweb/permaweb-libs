@@ -1,13 +1,33 @@
 import * as Common from './common/index.ts';
 import * as Helpers from './helpers/index.ts';
+import type { PlatformDependencyType } from './helpers/platform.ts';
+import { createPlatformContext } from './helpers/platform-providers.ts';
 import * as Services from './services/index.ts';
 
+export type {
+	Base64Handler,
+	BlobHandler,
+	CryptoProvider,
+	FileHandler,
+	FileInput,
+	PlatformContext,
+	PlatformType,
+	SecureStorageProvider,
+	StorageProvider,
+	WalletProvider,
+} from './helpers/platform.ts';
+export { createPlatformContext, detectPlatform } from './helpers/platform-providers.ts';
 export * as Types from './helpers/types.ts';
 
 /* For clients to be able to detect new zone versions */
 export const CurrentZoneVersion = Helpers.AO.src.zone.version;
 
-function init(deps: Helpers.DependencyType) {
+function init(deps: Helpers.DependencyType | PlatformDependencyType) {
+	const platformDeps = deps as PlatformDependencyType;
+	if (!platformDeps.platform) {
+		platformDeps.platform = createPlatformContext();
+	}
+	
 	return {
 		/* Zones */
 		createZone: Services.createZoneWith(deps),
@@ -33,7 +53,7 @@ function init(deps: Helpers.DependencyType) {
 		/* Assets */
 		createAtomicAsset: Services.createAtomicAssetWith(deps),
 		getAtomicAsset: Services.getAtomicAssetWith(deps),
-		getAtomicAssets: Services.getAtomicAssets,
+		getAtomicAssets: Services.getAtomicAssetsWith(deps),
 
 		/* Comments */
 		createComment: Services.createCommentWith(deps),
@@ -64,8 +84,8 @@ function init(deps: Helpers.DependencyType) {
 
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),
-		getGQLData: Common.getGQLData,
-		getAggregatedGQLData: Common.getAggregatedGQLData,
+		getGQLData: Common.getGQLDataWith(deps),
+		getAggregatedGQLData: Common.getAggregatedGQLDataWith(deps),
 		createProcess: Common.aoCreateProcessWith(deps),
 		readProcess: Common.aoDryRunWith(deps),
 		readState: Common.readProcessWith(deps),

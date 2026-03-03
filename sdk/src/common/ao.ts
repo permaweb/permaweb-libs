@@ -12,12 +12,12 @@ import {
 } from '../helpers/types.ts';
 import { cleanTagValues, getTagValue, globalLog, lowercaseTagKeys, withRetries } from '../helpers/utils.ts';
 
-import { getGQLData } from './gql.ts';
+import { getGQLDataWith } from './gql.ts';
 
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
 	const tags = [
 		{ name: 'Authority', value: deps.node?.authority ?? AO.mu },
-		{ name: 'Process-Timestamp', value: new Date().getTime().toString() }
+		{ name: 'Process-Timestamp', value: new Date().getTime().toString() },
 	];
 	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
 
@@ -73,7 +73,7 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 
 			const result = await deps.ao.result({
 				process: args.processId,
-				message: message
+				message: message,
 			});
 
 			if (args.deepResult) {
@@ -93,7 +93,7 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 					let messageTags = [
 						{ name: 'From-Process', values: [args.processId] },
 						{ name: 'Reference', values: [reference] },
-					]
+					];
 
 					switch (deps.ao.MODE) {
 						case 'mainnet':
@@ -103,15 +103,13 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 							break;
 					}
 
-					const gqlMessageLookup = await withRetries(
-						() => getGQLData({ tags: messageTags }),
-						{
-							maxRetries: 100,
-							delayMs: 1000,
-							backoff: true,
-							validate: (result) => result?.data?.length > 0,
-						}
-					);
+					const getGQLData = getGQLDataWith(deps);
+					const gqlMessageLookup = await withRetries(() => getGQLData({ tags: messageTags }), {
+						maxRetries: 100,
+						delayMs: 1000,
+						backoff: true,
+						validate: (result) => result?.data?.length > 0,
+					});
 
 					globalLog('Returning nested result...');
 
@@ -119,20 +117,15 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 
 					switch (deps.ao.MODE) {
 						case 'mainnet':
-							const slotTags = [
-								{ name: 'body+link', values: [messageId] }
-							]
+							const slotTags = [{ name: 'body+link', values: [messageId] }];
 
 							globalLog('Searching for slot...');
-							const gqlSlotLookup = await withRetries(
-								() => getGQLData({ tags: slotTags }),
-								{
-									maxRetries: 100,
-									delayMs: 1000,
-									backoff: true,
-									validate: (result) => result?.data?.length > 0,
-								}
-							);
+							const gqlSlotLookup = await withRetries(() => getGQLData({ tags: slotTags }), {
+								maxRetries: 100,
+								delayMs: 1000,
+								backoff: true,
+								validate: (result) => result?.data?.length > 0,
+							});
 
 							const node = gqlSlotLookup?.data?.[0].node;
 							const slot = getTagValue(node.tags, 'slot');
@@ -153,15 +146,13 @@ export async function aoSend(deps: DependencyType, args: MessageSendType): Promi
 					});
 
 					return deepResult;
-				}
-				else {
+				} else {
 					globalLog('No nested message found');
 					return result;
 				}
 			}
 
 			return result;
-
 		}
 
 		return message;
@@ -187,7 +178,6 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 		headers['require-codec'] = 'application/json';
 		headers['accept-bundle'] = 'true';
 
-
 		const res = await fetch(url, { headers });
 		if (res.ok) {
 			const parsed = await res.json();
@@ -195,8 +185,7 @@ export async function readProcess(deps: DependencyType, args: ProcessReadType) {
 			if (args.path && !args.appendPath) {
 				try {
 					return JSON.parse(parsed[args.path]);
-				}
-				catch {
+				} catch {
 					return parsed[args.path];
 				}
 			}

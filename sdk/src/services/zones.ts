@@ -5,35 +5,37 @@ import { checkValidAddress, globalLog, mapFromProcessCase } from '../helpers/uti
 
 export function createZoneWith(deps: DependencyType) {
 	return async (
-		args: { data?: any; tags?: TagType[]; authUsers?: string[] },
+		args: { data?: any; tags?: TagType[]; authUsers?: string[], skipModeration?: boolean },
 		callback?: (status: any) => void,
 	): Promise<string | null> => {
 		try {
 			let moderationId = null;
 
-			try {
-				const moderationTags = [
-					{ name: TAGS.keys.onBoot, value: AO.src.moderation },
-					{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
-				];
+			if (!args.skipModeration) {
+				try {
+					const moderationTags = [
+						{ name: TAGS.keys.onBoot, value: AO.src.moderation },
+						{ name: TAGS.keys.dateCreated, value: new Date().getTime().toString() },
+					];
 
-				if (args.authUsers) {
-					moderationTags.push({ name: 'Auth-Users', value: JSON.stringify(args.authUsers) });
+					if (args.authUsers) {
+						moderationTags.push({ name: 'Auth-Users', value: JSON.stringify(args.authUsers) });
+					}
+
+					const aoCreateProcess = aoCreateProcessWith(deps);
+					moderationId = await aoCreateProcess(
+						{
+							tags: moderationTags,
+						},
+						callback ? (status: any) => callback(status) : undefined,
+					);
+
+					globalLog(`Moderation Process ID: ${moderationId}`);
+					await new Promise((r) => setTimeout(r, 500));
+				} catch (e: any) {
+					console.error('Error creating moderation process:', e);
+					throw new Error(`Failed to create mandatory moderation process: ${e.message}`);
 				}
-
-				const aoCreateProcess = aoCreateProcessWith(deps);
-				moderationId = await aoCreateProcess(
-					{
-						tags: moderationTags,
-					},
-					callback ? (status: any) => callback(status) : undefined,
-				);
-
-				globalLog(`Moderation Process ID: ${moderationId}`);
-				await new Promise((r) => setTimeout(r, 500));
-			} catch (e: any) {
-				console.error('Error creating moderation process:', e);
-				throw new Error(`Failed to create mandatory moderation process: ${e.message}`);
 			}
 
 			const tags = [{ name: TAGS.keys.onBoot, value: AO.src.zone.id }];
@@ -111,7 +113,13 @@ export function updateZonePatchMapWith(deps: DependencyType) {
 
 export function setZoneRolesWith(deps: DependencyType) {
 	return async (
-		args: { granteeId: string; roles: string[]; type: 'wallet' | 'process'; sendInvite: boolean, remoteZonePath?: string }[],
+		args: {
+			granteeId: string;
+			roles: string[];
+			type: 'wallet' | 'process';
+			sendInvite: boolean;
+			remoteZonePath?: string;
+		}[],
 		zoneId: string,
 	): Promise<string | null> => {
 		const zoneValid = checkValidAddress(zoneId);
@@ -129,7 +137,7 @@ export function setZoneRolesWith(deps: DependencyType) {
 				Roles: entry.roles,
 				Type: entry.type,
 				SendInvite: entry.sendInvite,
-			}
+			};
 
 			if (entry.remoteZonePath) roleEntry.RemoteZonePath = entry.remoteZonePath;
 
@@ -226,7 +234,12 @@ export function updateZoneAuthoritiesWith(deps: DependencyType) {
 export function getZoneWith(deps: DependencyType) {
 	return async (zoneId: string, opts?: ReadOptsType): Promise<any | null> => {
 		const fallbackRead = async () => {
-			const processInfo = await readProcess(deps, { processId: zoneId, path: 'zone', hydrate: opts?.hydrate, fallbackAction: 'Info' });
+			const processInfo = await readProcess(deps, {
+				processId: zoneId,
+				path: 'zone',
+				hydrate: opts?.hydrate,
+				fallbackAction: 'Info',
+			});
 			if (processInfo.body) {
 				return mapFromProcessCase(JSON.parse(processInfo.body));
 			}
@@ -247,7 +260,7 @@ export function getZoneWith(deps: DependencyType) {
 
 				zone = {
 					...zone,
-					...(zone.Store ?? {})
+					...(zone.Store ?? {}),
 				};
 
 				return mapFromProcessCase(zone);
