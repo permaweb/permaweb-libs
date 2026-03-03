@@ -37,7 +37,7 @@ export function getGQLDataWith(deps: DependencyType) {
 				data = [...response.data.transactions.edges];
 				count = response.data.transactions.count ?? 0;
 
-				const lastResults: boolean = data.length < paginator || !response.data.transactions.pageInfo.hasNextPage;
+				const lastResults: boolean = data.length < paginator || !response.data.transactions?.pageInfo?.hasNextPage;
 
 				if (lastResults) nextCursor = CURSORS.end;
 				else nextCursor = data[data.length - 1].cursor;
@@ -118,7 +118,7 @@ export async function getBatchGQLData(args: BatchGQLArgsType): Promise<BatchAGQL
 					data = [...response.data[queryKey].edges];
 					count = response.data[queryKey].count ?? 0;
 
-					const lastResults: boolean = data.length < paginator || !response.data[queryKey].pageInfo.hasNextPage;
+					const lastResults: boolean = data.length < paginator || !response.data[queryKey].pageInfo?.hasNextPage;
 
 					if (lastResults) nextCursor = CURSORS.end;
 					else nextCursor = data[data.length - 1].cursor;
@@ -212,7 +212,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 		recipientsfield || null,
 		blockFilterStr ? `block: ${blockFilterStr}` : null,
 		cursor ? `after: ${cursor}` : null,
-		// sort || null, // TODO
+		sort || null,
 	].filter(Boolean).join(',\n\t\t\t\t');
 
 	let body = `
@@ -220,6 +220,9 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 				${transactionParams}
 			){
 			${txCount}
+			pageInfo {
+				hasNextPage
+			}
 			edges {
 				cursor
 				node {
