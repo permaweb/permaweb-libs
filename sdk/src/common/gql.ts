@@ -31,8 +31,28 @@ export function getGQLDataWith(deps: DependencyType) {
 
 		try {
 			let queryBody: string = getQueryBody(args);
-			const response = await getResponse({ gateway: deps.gateway ?? args.gateway ?? GATEWAYS.ao, query: getQuery(queryBody) });
+			const response = await getResponse({ gateway: args.gateway ?? deps.gateway ?? GATEWAYS.ao, query: getQuery(queryBody) });
 
+			// Handle single transaction query response
+			if (args.id && response?.data?.transaction) {
+				const transaction = response.data.transaction;
+				// Normalize single transaction into the same array format as transactions query
+				data = [{
+					cursor: null,
+					node: transaction
+				}];
+				count = 1;
+				nextCursor = CURSORS.end;
+
+				return {
+					data: data,
+					count: count,
+					nextCursor: nextCursor,
+					previousCursor: null,
+				};
+			}
+
+			// Handle transactions query response
 			if (response?.data?.transactions?.edges?.length) {
 				data = [...response.data.transactions.edges];
 				count = response.data.transactions.count ?? 0;
@@ -114,7 +134,26 @@ export async function getBatchGQLData(args: BatchGQLArgsType): Promise<BatchAGQL
 				let count: number = 0;
 				let nextCursor: string | null = null;
 
-				if (response.data[queryKey].edges.length) {
+				// Handle single transaction query response
+				if (args.entries[queryKey].id && response.data[queryKey].id) {
+					const transaction = response.data[queryKey];
+					// Normalize single transaction into the same array format
+					data = [{
+						cursor: null,
+						node: transaction
+					}];
+					count = 1;
+					nextCursor = CURSORS.end;
+
+					responseObject[queryKey] = {
+						data: data,
+						count: count,
+						nextCursor: nextCursor,
+						previousCursor: null,
+					};
+				}
+				// Handle transactions query response
+				else if (response.data[queryKey].edges?.length) {
 					data = [...response.data[queryKey].edges];
 					count = response.data[queryKey].count ?? 0;
 
@@ -146,6 +185,7 @@ function getQuery(body: string): string {
 
 function getQueryBody(args: QueryBodyGQLArgsType): string {
 	const paginator = args.paginator ? args.paginator : PAGINATORS.default;
+	const id = args.id ? `"${args.id}"` : null;
 	const ids = args.ids ? JSON.stringify(args.ids) : null;
 
 	let blockFilter: { min?: number; max?: number } | null = null;
@@ -202,6 +242,22 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 			if (recipients) recipientsfield = `recipients: ${recipients}`;
 			nodeFields += ` recipient`;
 			break;
+	}
+
+	if (id) {
+		let body = `
+		transaction(id: ${id}) {
+			id
+			tags {
+				name
+				value
+			}
+			${nodeFields}
+		}`;
+
+		if (args.queryKey) body = `${args.queryKey}: ${body}`;
+
+		return body;
 	}
 
 	const transactionParams = [
