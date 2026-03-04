@@ -212,7 +212,7 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 		recipientsfield || null,
 		blockFilterStr ? `block: ${blockFilterStr}` : null,
 		cursor ? `after: ${cursor}` : null,
-		sort || null,
+		sort || null
 	].filter(Boolean).join(',\n\t\t\t\t');
 
 	let body = `
@@ -220,9 +220,6 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 				${transactionParams}
 			){
 			${txCount}
-			pageInfo {
-				hasNextPage
-			}
 			edges {
 				cursor
 				node {
