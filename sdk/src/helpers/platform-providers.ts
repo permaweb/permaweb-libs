@@ -14,7 +14,6 @@ import type {
 	WalletProvider,
 } from './platform.ts';
 import { detectPlatform } from './platform.ts';
-import { globalLog } from './utils.ts';
 
 // ============================================================================
 // Browser Implementations
@@ -509,13 +508,10 @@ class ReactNativeBase64Handler implements Base64Handler {
 export function createPlatformContext(customProviders?: Partial<PlatformContext>): PlatformContext {
 	const platform = detectPlatform();
 
-	globalLog(`Platform detected: ${platform}`);
-
 	let defaultContext: PlatformContext;
 
 	switch (platform) {
 		case 'browser':
-			globalLog('Initializing browser providers (ArConnect, File API, Blob API, Web Crypto)');
 			defaultContext = {
 				wallet: new BrowserWalletProvider(),
 				file: new BrowserFileHandler(),
@@ -527,7 +523,6 @@ export function createPlatformContext(customProviders?: Partial<PlatformContext>
 			break;
 
 		case 'react-native':
-			globalLog('Initializing React Native providers (custom wallet required, polyfills active)');
 			defaultContext = {
 				wallet: new ReactNativeWalletProvider(),
 				file: new ReactNativeFileHandler(),
@@ -540,7 +535,6 @@ export function createPlatformContext(customProviders?: Partial<PlatformContext>
 
 		case 'node':
 		default:
-			globalLog('Initializing Node.js providers (limited wallet support)');
 			// Node.js implementation would go here
 			// For now, use browser implementations as they're mostly compatible
 			defaultContext = {
@@ -550,14 +544,6 @@ export function createPlatformContext(customProviders?: Partial<PlatformContext>
 				base64: new BrowserBase64Handler(),
 			};
 			break;
-	}
-
-	// Log custom provider overrides
-	if (customProviders) {
-		const overrides = Object.keys(customProviders).filter(key => customProviders[key as keyof PlatformContext]);
-		if (overrides.length > 0) {
-			globalLog(`Custom providers: ${overrides.join(', ')}`);
-		}
 	}
 
 	// Merge custom providers

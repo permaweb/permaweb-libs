@@ -57,7 +57,9 @@ export function getGQLDataWith(deps: DependencyType) {
 				data = [...response.data.transactions.edges];
 				count = response.data.transactions.count ?? 0;
 
-				const lastResults: boolean = data.length < paginator || !response.data.transactions?.pageInfo?.hasNextPage;
+				const lastResults: boolean =
+					data.length < paginator ||
+					response.data.transactions?.pageInfo?.hasNextPage === false;
 
 				if (lastResults) nextCursor = CURSORS.end;
 				else nextCursor = data[data.length - 1].cursor;
