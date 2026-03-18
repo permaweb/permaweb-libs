@@ -45,6 +45,7 @@ export function createZoneWith(deps: DependencyType) {
 
 			if (args.tags && args.tags.length) args.tags.forEach((tag: TagType) => tags.push(tag));
 
+			globalLog(`Creating zone with source: ${AO.src.zone.id} v${AO.src.zone.version}`);
 			const aoCreateProcess = aoCreateProcessWith(deps);
 			const zoneId = await aoCreateProcess(
 				{ data: args.data, tags: tags },
@@ -240,6 +241,7 @@ export function getZoneWith(deps: DependencyType) {
 				hydrate: opts?.hydrate,
 				fallbackAction: 'Info',
 			});
+
 			if (processInfo.body) {
 				return mapFromProcessCase(JSON.parse(processInfo.body));
 			}

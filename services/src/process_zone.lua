@@ -39,6 +39,7 @@ Zone = Zone or {}
 Zone.Functions = Zone.Functions or {}
 
 Zone.Constants = {
+	H_ZONE_INIT = 'Init',
 	H_ZONE_ERROR = 'Zone-Error',
 	H_ZONE_SUCCESS = 'Zone-Success',
 	H_ZONE_KEYS = 'Zone-Keys',
@@ -53,7 +54,7 @@ Zone.Constants = {
 	H_ZONE_UPDATE_STATUS_INDEX_REQUEST = 'Update-Status-Index-Request',
 	H_ZONE_INDEX_NOTICE = 'Index-Notice',
 	H_ZONE_UPDATE = 'Zone-Update',
-	H_ZONE_UPDATE_ASSET = 'Update-Asset-Through-Zone',
+	H_ZONE_UPDATE_ASSET_THROUGH_ZONE = 'Update-Asset-Through-Zone',
 	H_ZONE_ROLE_SET = 'Role-Set',
 	H_ZONE_SET = 'Zone-Set',
 	H_ZONE_JOIN = 'Zone-Join',
@@ -64,6 +65,8 @@ Zone.Constants = {
 	H_ZONE_ADD_UPLOAD = 'Add-Uploaded-Asset',
 	H_ZONE_TRANSFER_OWNERSHIP = 'Zone-Transfer-Ownership',
 	H_ZONE_LEAVE = 'Zone-Leave',
+	H_ZONE_UPDATE_ASSET = 'Update-Asset',
+	H_ZONE_UPDATE_ASSETS = 'Update-Assets',
 }
 
 Zone.RoleOptions = {
@@ -103,19 +106,19 @@ Permissions = {
 			Zone.RoleOptions.Admin,
 		},
 		ForwardActions = {
-			['Update-Asset'] = {
+			[Zone.Constants.H_ZONE_UPDATE_ASSET] = {
 				Zone.RoleOptions.Admin,
 				Zone.RoleOptions.Moderator,
 				Zone.RoleOptions.Contributor,
 			},
-			['Update-Assets'] = {
+			[Zone.Constants.H_ZONE_UPDATE_ASSETS] = {
 				Zone.RoleOptions.Admin,
 				Zone.RoleOptions.Moderator,
 				Zone.RoleOptions.Contributor,
 			},
 		},
 	},
-	[Zone.Constants.H_ZONE_UPDATE_ASSET] = {
+	[Zone.Constants.H_ZONE_UPDATE_ASSET_THROUGH_ZONE] = {
 		Roles = {
 			Zone.RoleOptions.Admin,
 			Zone.RoleOptions.Contributor,
@@ -179,7 +182,108 @@ Zone.Invites = Zone.Invites or {}
 
 Zone.Transfers = Zone.Transfers or {}
 
+ZoneInitCompleted = ZoneInitCompleted or false
+
 Zone.Version = '0.0.1'
+
+--------------------------------------------------------------------------------
+-- Helper function: setStoreValue
+-- This function takes a dot-notated key and a value, then sets it in the
+-- Zone.Data.KV store with the following behaviors:
+--   1) If the final segment ends with '[]', we treat it as an array field and
+--      append the new value.
+--   2) If the final segment ends with '+++', we treat it as an instruction to
+--      'append the string' to whatever already exists at that key. If it is an
+--      array field (with '[]'), we append to the last element.
+--   3) Otherwise, we just set/overwrite the value at that key in the KV store.
+--------------------------------------------------------------------------------
+local function setStoreValue(keyString, value)
+	-- 1) Split the input keyString on dots
+	local parts = {}
+	for part in string.gmatch(keyString, '[^%.]+') do
+		table.insert(parts, part)
+	end
+
+	-- 2) Check for trailing '+++' or '[]'
+	local lastPart = parts[#parts]
+
+	-- Check if we want to append to an existing string
+	local isStringAppend = false
+	if string.sub(lastPart, -3) == '+++' then
+		isStringAppend = true
+		lastPart = string.sub(lastPart, 1, -4) -- remove '+++'
+	end
+
+	-- Check if we are dealing with an array
+	local isArray = false
+	if string.sub(lastPart, -2) == '[]' then
+		isArray = true
+		lastPart = string.sub(lastPart, 1, -3) -- remove '[]'
+	end
+
+	-- Update the last segment in our parts table
+	parts[#parts] = lastPart
+
+	-- 3) Build a dot-notated key up to (but not including) the last part
+	--    We'll use this later to navigate or set in the KV store.
+	local pathUpToLast = table.concat(parts, '.', 1, #parts - 1)
+	local finalKey = parts[#parts]
+
+	-- A small helper to rejoin the entire path so KV can handle the nested structure:
+	local function recombinePath(upTo, last)
+		if upTo == nil or upTo == '' then
+			return last
+		else
+			return upTo .. '.' .. last
+		end
+	end
+
+	local fullKey = recombinePath(pathUpToLast, finalKey)
+
+	--------------------------------------------------------------------
+	-- 4) Handling for the '+++' case (string appending)
+	--------------------------------------------------------------------
+	if isStringAppend then
+		local currentValue = Zone.Data.KV:get(fullKey)
+
+		if isArray then
+			-- If no array yet, create it with a single element
+			if type(currentValue) ~= 'table' then
+				Zone.Data.KV:set(fullKey, { value })
+				return
+			end
+			-- Otherwise, append the incoming string to the last element
+			local lastIndex = #currentValue
+			if lastIndex == 0 then
+				-- If array is empty, just add this as the first element
+				table.insert(currentValue, value)
+			else
+				-- Append to the last string in the array
+				currentValue[lastIndex] = currentValue[lastIndex] .. value
+			end
+			Zone.Data.KV:set(fullKey, currentValue)
+		else
+			-- Not an array, just a single field
+			if currentValue == nil then
+				-- Nothing was there, just set it
+				Zone.Data.KV:set(fullKey, value)
+			elseif type(currentValue) == 'string' then
+				-- Append to existing string
+				Zone.Data.KV:set(fullKey, currentValue .. value)
+			else
+				-- If it wasn't a string, simply overwrite
+				Zone.Data.KV:set(fullKey, value)
+			end
+		end
+	else
+		if isArray then
+			Zone.Data.KV:append(fullKey, value)
+		else
+			-- Normal field, just set (overwrite) it
+			Zone.Data.KV:set(fullKey, value)
+		end
+	end
+end
 
 function GetFullState()
 	return {
@@ -308,7 +412,7 @@ function Zone.Functions.extractChangedFields(msg)
 		msg.Action == Zone.Constants.H_ZONE_ADD_INDEX_REQUEST
 		or msg.Action == Zone.Constants.H_ZONE_UPDATE_INDEX_REQUEST
 		or msg.Action == Zone.Constants.H_ZONE_UPDATE_STATUS_INDEX_REQUEST
-		or msg.Action == Zone.Constants.H_ZONE_UPDATE_ASSET
+		or msg.Action == Zone.Constants.H_ZONE_UPDATE_ASSET_THROUGH_ZONE
 	then
 		table.insert(changedFields, 'Store.IndexRequests')
 	end
@@ -691,6 +795,53 @@ function Zone.Functions.updateAsset(msg)
 	})
 end
 
+function Zone.Functions.zoneInit(msg)
+	if not ZoneInitCompleted then
+		if msg.From == Owner then
+			for _, tag in ipairs(Inbox[1].TagArray) do
+				local prefix = 'Bootloader-'
+				if string.sub(tag.name, 1, string.len(prefix)) == prefix then
+					local keyWithoutPrefix =
+						string.sub(tag.name, string.len(prefix) + 1)
+					setStoreValue(keyWithoutPrefix, tag.value)
+				end
+
+				-- Check for Zone.PatchMap tags
+				local patchMapPrefix = 'Zone-Patch-Map-'
+				if
+					string.sub(tag.name, 1, string.len(patchMapPrefix))
+					== patchMapPrefix
+				then
+					local patchKey = string.lower(
+						string.sub(tag.name, string.len(patchMapPrefix) + 1)
+					)
+
+					-- Parse the tag value as JSON array of field paths
+					local status, decodedFields = pcall(json.decode, tag.value)
+					if status and type(decodedFields) == 'table' then
+						Zone.PatchMap[patchKey] = decodedFields
+					end
+				end
+			end
+		end
+
+		local patchMapLength = Zone.Functions.tableLength(Zone.PatchMap)
+
+		if patchMapLength > 0 then
+			-- Send individual patch messages for each configured patch key
+			for patchKey, _ in pairs(Zone.PatchMap) do
+				local patchData = Zone.Functions.getPatchData(patchKey)
+				SendPatch(patchKey, patchData)
+			end
+		else
+			-- Only send full zone update if no patch map is configured
+			SyncState(nil)
+		end
+
+		ZoneInitCompleted = true
+	end
+end
+
 function Zone.Functions.zoneGet(msg)
 	msg.reply({
 		Action = Zone.Constants.H_ZONE_SUCCESS,
@@ -982,7 +1133,10 @@ function Zone.Functions.addUpload(msg)
 		-- Verify asset creator matches profile owner
 		-- Asset process includes Creator in message Tags
 		local assetCreator = msg.Tags and msg.Tags['Creator']
-		if not assetCreator or (assetCreator ~= Owner and assetCreator ~= ao.id) then
+		if
+			not assetCreator
+			or (assetCreator ~= Owner and assetCreator ~= ao.id)
+		then
 			return Zone.Functions.sendError(
 				msg.From,
 				'Not Authorized: Asset creator does not match profile owner'
@@ -1585,6 +1739,12 @@ function Zone.Functions.transferOwnership(msg)
 end
 
 Handlers.add(
+	Zone.Constants.H_ZONE_INIT,
+	Zone.Constants.H_ZONE_INIT,
+	Zone.Functions.zoneInit
+)
+
+Handlers.add(
 	Zone.Constants.H_ZONE_GET,
 	Zone.Constants.H_ZONE_GET,
 	Zone.Functions.zoneGet
@@ -1627,8 +1787,8 @@ Handlers.add(
 )
 
 Handlers.add(
-	Zone.Constants.H_ZONE_UPDATE_ASSET,
-	Zone.Constants.H_ZONE_UPDATE_ASSET,
+	Zone.Constants.H_ZONE_UPDATE_ASSET_THROUGH_ZONE,
+	Zone.Constants.H_ZONE_UPDATE_ASSET_THROUGH_ZONE,
 	Zone.Functions.updateAsset
 )
 
@@ -1721,155 +1881,5 @@ Handlers.add(
 	Zone.Constants.H_ZONE_LEAVE,
 	Zone.Functions.leaveZone
 )
-
---------------------------------------------------------------------------------
--- Helper function: setStoreValue
--- This function takes a dot-notated key and a value, then sets it in the
--- Zone.Data.KV store with the following behaviors:
---   1) If the final segment ends with '[]', we treat it as an array field and
---      append the new value.
---   2) If the final segment ends with '+++', we treat it as an instruction to
---      'append the string' to whatever already exists at that key. If it is an
---      array field (with '[]'), we append to the last element.
---   3) Otherwise, we just set/overwrite the value at that key in the KV store.
---------------------------------------------------------------------------------
-local function setStoreValue(keyString, value)
-	-- 1) Split the input keyString on dots
-	local parts = {}
-	for part in string.gmatch(keyString, '[^%.]+') do
-		table.insert(parts, part)
-	end
-
-	-- 2) Check for trailing '+++' or '[]'
-	local lastPart = parts[#parts]
-
-	-- Check if we want to append to an existing string
-	local isStringAppend = false
-	if string.sub(lastPart, -3) == '+++' then
-		isStringAppend = true
-		lastPart = string.sub(lastPart, 1, -4) -- remove '+++'
-	end
-
-	-- Check if we are dealing with an array
-	local isArray = false
-	if string.sub(lastPart, -2) == '[]' then
-		isArray = true
-		lastPart = string.sub(lastPart, 1, -3) -- remove '[]'
-	end
-
-	-- Update the last segment in our parts table
-	parts[#parts] = lastPart
-
-	-- 3) Build a dot-notated key up to (but not including) the last part
-	--    We'll use this later to navigate or set in the KV store.
-	local pathUpToLast = table.concat(parts, '.', 1, #parts - 1)
-	local finalKey = parts[#parts]
-
-	-- A small helper to rejoin the entire path so KV can handle the nested structure:
-	local function recombinePath(upTo, last)
-		if upTo == nil or upTo == '' then
-			return last
-		else
-			return upTo .. '.' .. last
-		end
-	end
-
-	local fullKey = recombinePath(pathUpToLast, finalKey)
-
-	--------------------------------------------------------------------
-	-- 4) Handling for the '+++' case (string appending)
-	--------------------------------------------------------------------
-	if isStringAppend then
-		local currentValue = Zone.Data.KV:get(fullKey)
-
-		if isArray then
-			-- If no array yet, create it with a single element
-			if type(currentValue) ~= 'table' then
-				Zone.Data.KV:set(fullKey, { value })
-				return
-			end
-			-- Otherwise, append the incoming string to the last element
-			local lastIndex = #currentValue
-			if lastIndex == 0 then
-				-- If array is empty, just add this as the first element
-				table.insert(currentValue, value)
-			else
-				-- Append to the last string in the array
-				currentValue[lastIndex] = currentValue[lastIndex] .. value
-			end
-			Zone.Data.KV:set(fullKey, currentValue)
-		else
-			-- Not an array, just a single field
-			if currentValue == nil then
-				-- Nothing was there, just set it
-				Zone.Data.KV:set(fullKey, value)
-			elseif type(currentValue) == 'string' then
-				-- Append to existing string
-				Zone.Data.KV:set(fullKey, currentValue .. value)
-			else
-				-- If it wasn't a string, simply overwrite
-				Zone.Data.KV:set(fullKey, value)
-			end
-		end
-
-		--------------------------------------------------------------------
-		-- 5) Handling for a normal set, with or without '[]'
-		--------------------------------------------------------------------
-	else
-		if isArray then
-			Zone.Data.KV:append(fullKey, value)
-		else
-			-- Normal field, just set (overwrite) it
-			Zone.Data.KV:set(fullKey, value)
-		end
-	end
-end
-
-ZoneInitCompleted = ZoneInitCompleted or false
-
-if not ZoneInitCompleted then
-	if #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
-		for _, tag in ipairs(Inbox[1].TagArray) do
-			local prefix = 'Bootloader-'
-			if string.sub(tag.name, 1, string.len(prefix)) == prefix then
-				local keyWithoutPrefix =
-					string.sub(tag.name, string.len(prefix) + 1)
-				setStoreValue(keyWithoutPrefix, tag.value)
-			end
-
-			-- Check for Zone.PatchMap tags
-			local patchMapPrefix = 'Zone-Patch-Map-'
-			if
-				string.sub(tag.name, 1, string.len(patchMapPrefix))
-				== patchMapPrefix
-			then
-				local patchKey = string.lower(
-					string.sub(tag.name, string.len(patchMapPrefix) + 1)
-				)
-
-				-- Parse the tag value as JSON array of field paths
-				local status, decodedFields = pcall(json.decode, tag.value)
-				if status and type(decodedFields) == 'table' then
-					Zone.PatchMap[patchKey] = decodedFields
-				end
-			end
-		end
-	end
-
-	local patchMapLength = Zone.Functions.tableLength(Zone.PatchMap)
-
-	if patchMapLength > 0 then
-		-- Send individual patch messages for each configured patch key
-		for patchKey, _ in pairs(Zone.PatchMap) do
-			local patchData = Zone.Functions.getPatchData(patchKey)
-			SendPatch(patchKey, patchData)
-		end
-	else
-		-- Only send full zone update if no patch map is configured
-		SyncState(nil)
-	end
-
-	ZoneInitCompleted = true
-end
 
 return Zone
