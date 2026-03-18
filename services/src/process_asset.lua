@@ -279,7 +279,7 @@ end
 
 Handlers.add('Init', 'Init', function(msg)
 	-- Boot Initialization
-	if not Initialized and #Inbox >= 1 and Inbox[1]['On-Boot'] ~= nil then
+	if not Initialized and msg.From == Owner then
 		Initialized = true
 
 		local collectedValues = {}

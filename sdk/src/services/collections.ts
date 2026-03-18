@@ -120,7 +120,7 @@ export function createCollectionWith(deps: DependencyType) {
 					{ name: 'CollectionId', value: collectionId },
 					{ name: 'DateCreated', value: dateTime },
 					{ name: 'UCM-Process', value: 'Collection-Activity' },
-					{ name: 'On-Boot', value: AO.src.collectionActivity },
+					{ name: TAGS.keys.onBoot, value: AO.src.collectionActivity },
 				];
 
 				const collectionActivityId = await aoCreateProcess(

@@ -1,4 +1,4 @@
-import { AO, HB } from '../helpers/config.ts';
+import { AO, HB, TAGS } from '../helpers/config.ts';
 import { getTxEndpoint } from '../helpers/endpoints.ts';
 import {
 	DependencyType,
@@ -14,12 +14,26 @@ import { cleanTagValues, getTagValue, globalLog, lowercaseTagKeys, withRetries }
 
 import { getGQLDataWith } from './gql.ts';
 
+/* If set, do not pass On-Boot and eval the data instead */
+const EVAL_ON_BOOT = true;
+
 export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Promise<string> {
+	const onBootTx = getTagValue(args.tags ?? [], TAGS.keys.onBoot);
+
 	const tags = [
 		{ name: 'Authority', value: deps.node?.authority ?? AO.mu },
 		{ name: 'Process-Timestamp', value: new Date().getTime().toString() },
 	];
-	if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push(tag));
+
+	if (args.tags && args.tags.length > 0) {
+		if (onBootTx && EVAL_ON_BOOT) {
+			const filteredTags = args.tags.filter((tag) => tag.name !== TAGS.keys.onBoot);
+			filteredTags.forEach((tag: TagType) => tags.push(tag));
+		}
+		else {
+			args.tags.forEach((tag: TagType) => tags.push(tag));
+		}
+	}
 
 	try {
 		const processId = await deps.ao.spawn({
@@ -32,6 +46,20 @@ export async function aoSpawn(deps: DependencyType, args: ProcessSpawnType): Pro
 
 		globalLog(`Process ID: ${processId}`);
 		globalLog('Sending initial message...');
+
+		if (onBootTx && EVAL_ON_BOOT) {
+			globalLog(`Evaluating: ${onBootTx}...`);
+
+			const response = await fetch(getTxEndpoint(onBootTx));
+			const src = await response.text();
+
+			await aoSend(deps, {
+				processId: processId,
+				action: 'Eval',
+				data: src,
+				useRawData: true
+			});
+		}
 
 		await aoSend(deps, {
 			processId: processId,
