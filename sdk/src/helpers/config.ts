@@ -90,9 +90,11 @@ export const TAGS = {
 	},
 };
 
+// TODO: Fix up.arweave.net upload
 export const UPLOAD = {
-	node1: 'https://turbo.ardrive.io',
+	node1: 'https://up.arweave.net',
 	batchSize: 1,
 	chunkSize: 7500000,
-	dispatchUploadSize: 100 * 1024,
+	// dispatchUploadSize: 100 * 1024,
+	dispatchUploadSize: 0,
 };
