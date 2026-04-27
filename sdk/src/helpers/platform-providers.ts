@@ -14,6 +14,25 @@ import type {
 	WalletProvider,
 } from './platform.ts';
 import { detectPlatform } from './platform.ts';
+import type { TagType } from './types.ts';
+
+function normalizeBase64Input(input: string): string {
+	const base64 = input.includes(',') ? (input.split(',').pop() ?? '') : input;
+	const normalized = base64.trim().replace(/-/g, '+').replace(/_/g, '/');
+	const padding = normalized.length % 4;
+
+	return padding ? normalized + '='.repeat(4 - padding) : normalized;
+}
+
+function toUint8Array(input: any): Uint8Array {
+	if (input instanceof Uint8Array) return input;
+	if (input instanceof ArrayBuffer) return new Uint8Array(input);
+	if (ArrayBuffer.isView(input)) return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
+	if (Array.isArray(input)) return new Uint8Array(input);
+	if (input && typeof input === 'object') return new Uint8Array(Object.values(input).map((value: any) => Number(value)));
+
+	return new Uint8Array(input);
+}
 
 // ============================================================================
 // Browser Implementations
@@ -35,7 +54,20 @@ class BrowserWalletProvider implements WalletProvider {
 			name: 'RSA-PSS',
 			saltLength: 32,
 		});
-		return new Uint8Array(signature);
+		return toUint8Array(signature);
+	}
+
+	async signDataItem(dataItem: {
+		data: Uint8Array;
+		tags?: TagType[];
+		target?: string;
+		anchor?: string;
+	}): Promise<Uint8Array> {
+		if (typeof window === 'undefined' || !(window as any).arweaveWallet?.signDataItem) {
+			throw new Error('ArConnect signDataItem not available');
+		}
+
+		return toUint8Array(await (window as any).arweaveWallet.signDataItem(dataItem));
 	}
 
 	async getActivePublicKey(): Promise<string> {
@@ -70,7 +102,7 @@ class BrowserFileHandler implements FileHandler {
 		}
 		if (typeof file === 'string') {
 			// Assume base64
-			const binary = atob(file);
+			const binary = atob(normalizeBase64Input(file));
 			const bytes = new Uint8Array(binary.length);
 			for (let i = 0; i < binary.length; i++) {
 				bytes[i] = binary.charCodeAt(i);
@@ -108,7 +140,7 @@ class BrowserFileHandler implements FileHandler {
 			bytes = new Uint8Array(data);
 		} else {
 			// Assume base64
-			const binary = atob(data);
+			const binary = atob(normalizeBase64Input(data));
 			bytes = new Uint8Array(binary.length);
 			for (let i = 0; i < binary.length; i++) {
 				bytes[i] = binary.charCodeAt(i);
@@ -197,7 +229,7 @@ class BrowserBase64Handler implements Base64Handler {
 	}
 
 	decode(base64: string): Uint8Array {
-		const binary = atob(base64);
+		const binary = atob(normalizeBase64Input(base64));
 		const bytes = new Uint8Array(binary.length);
 		for (let i = 0; i < binary.length; i++) {
 			bytes[i] = binary.charCodeAt(i);
@@ -210,7 +242,7 @@ class BrowserBase64Handler implements Base64Handler {
 	}
 
 	atob(base64: string): string {
-		return atob(base64);
+		return atob(normalizeBase64Input(base64));
 	}
 }
 
@@ -321,7 +353,7 @@ class ReactNativeFileHandler implements FileHandler {
 		let str = '';
 		let i = 0;
 
-		base64 = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+		base64 = normalizeBase64Input(base64).replace(/[^A-Za-z0-9+/=]/g, '');
 
 		while (i < base64.length) {
 			const enc1 = chars.indexOf(base64.charAt(i++));
@@ -480,7 +512,7 @@ class ReactNativeBase64Handler implements Base64Handler {
 		let str = '';
 		let i = 0;
 
-		base64 = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+		base64 = normalizeBase64Input(base64).replace(/[^A-Za-z0-9+/=]/g, '');
 
 		while (i < base64.length) {
 			const enc1 = chars.indexOf(base64.charAt(i++));

@@ -3,7 +3,7 @@
  * Supports Browser, Node.js, and React Native environments
  */
 
-import { TagType } from './types.ts';
+import type { TagType } from './types.ts';
 
 // ============================================================================
 // Wallet Provider Interface
@@ -19,6 +19,16 @@ export interface WalletProvider {
 	 * Sign arbitrary data
 	 */
 	sign(data: Uint8Array): Promise<Uint8Array>;
+
+	/**
+	 * Sign a complete ANS-104 data item when supported by the wallet
+	 */
+	signDataItem?(dataItem: {
+		data: Uint8Array;
+		tags?: TagType[];
+		target?: string;
+		anchor?: string;
+	}): Promise<Uint8Array>;
 
 	/**
 	 * Get the active public key

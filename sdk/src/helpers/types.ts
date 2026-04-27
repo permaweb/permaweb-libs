@@ -225,6 +225,7 @@ export type GQLNodeResponseType = {
 			height: number;
 			timestamp: number;
 		};
+		slot?: number
 	};
 };
 

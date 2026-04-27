@@ -1,4 +1,4 @@
-import { ArconnectSigner, createData } from '@dha-team/arbundles/web';
+import { createData, SIG_CONFIG, SignatureConfig } from '@dha-team/arbundles/web';
 
 import { TAGS, UPLOAD } from '../helpers/config.ts';
 import type { PlatformDependencyType } from '../helpers/platform.ts';
@@ -6,12 +6,50 @@ import { createPlatformContext } from '../helpers/platform-providers.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType } from '../helpers/utils.ts';
 
+function createDataItemAnchor(platform: any) {
+	const anchorBytes = platform.crypto.randomBytes(32);
+	return platform.base64.encode(anchorBytes).replace(/\+/g, '-').replace(/\//g, '_').slice(0, 32);
+}
+
+async function createSignedDataItemBytes(rawFile: Uint8Array, platform: any, txOpts: any & { upload?: any }) {
+	const dataItemOpts = txOpts ?? {};
+	const opts = {
+		...dataItemOpts,
+		anchor: dataItemOpts.anchor || createDataItemAnchor(platform),
+	};
+
+	if (typeof platform.wallet.signDataItem === 'function') {
+		return platform.wallet.signDataItem({
+			data: rawFile,
+			tags: opts.tags,
+			target: opts.target,
+			anchor: opts.anchor,
+		});
+	}
+
+	const pubKey = await platform.wallet.getActivePublicKey();
+	const signatureConfig = SIG_CONFIG[SignatureConfig.ARWEAVE];
+	const signer = {
+		publicKey: platform.base64.decode(pubKey),
+		signatureType: SignatureConfig.ARWEAVE,
+		signatureLength: signatureConfig.sigLength,
+		ownerLength: signatureConfig.pubLength,
+		sign: async (data: Uint8Array) => platform.wallet!.sign(data),
+	};
+
+	const dataItem = createData(rawFile, signer as any, opts);
+	await dataItem.sign(signer as any);
+
+	return new Uint8Array(dataItem.getRaw());
+}
+
 export function resolveTransactionWith(deps: DependencyType) {
-	return async (data: any) => {
+	return async (data: any, args?: { tags: TagType[] }) => {
 		if (checkValidAddress(data)) return data;
 		if (!deps.arweave) throw new Error(`Must initialize with Arweave in order to create transactions`);
+		console.log(args)
 		try {
-			return await createTransaction(deps, { data: data });
+			return await createTransaction(deps, { ...(args ?? {}), data });
 		} catch (e: any) {
 			throw new Error(e.message ?? 'Error resolving transaction');
 		}
@@ -60,7 +98,7 @@ export async function createTransaction(
 					throw new Error('Wallet provider not available');
 				}
 
-				const tx = await deps.arweave.createTransaction({ data: content }, 'use_wallet');
+				const tx = await deps.arweave.createTransaction({ data: content });
 				tx.addTag(TAGS.keys.contentType, contentType);
 				if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tx.addTag(tag.name, tag.value));
 
@@ -74,14 +112,16 @@ export async function createTransaction(
 				// Create blob for upload
 				const blob = platform.blob.createBlob(content, contentType);
 
+				const tags = [
+					{ name: 'Content-Type', value: contentType },
+				]
+				if (args.tags && args.tags.length > 0) args.tags.forEach((tag: TagType) => tags.push({ name: tag.name, value: tag.value }));
+
 				const uploadResponse = await runUpload(
 					blob,
 					platform,
 					{
-						tags: [
-							{ name: 'Content-Type', value: contentType },
-							{ name: 'App-Name', value: '@permaweb/libs' },
-						],
+						tags: tags
 					},
 					{
 						apiUrl: UPLOAD.node1,
@@ -112,69 +152,47 @@ export async function runUpload(
 	uploadOpts: {
 		apiUrl: string;
 		token: string;
-		chunkSize: number;
+		chunkSize?: number;
 		batchSize?: number;
+		useChunks?: boolean;
 	},
 ): Promise<any> {
-	const { apiUrl, token, chunkSize, batchSize = 3 } = uploadOpts;
+	const { apiUrl, token, batchSize = 3, useChunks = false } = uploadOpts;
 
 	if (!platform.wallet) {
 		throw new Error('Wallet provider not available');
 	}
 
-	const nonce = platform.crypto.randomUUID();
-	const msg = new TextEncoder().encode(nonce);
-
-	// Get public key from wallet
-	const pubKey = await platform.wallet.getActivePublicKey();
-
-	// Sign the message
-	const sigBytes = await platform.wallet.sign(msg);
-	const toB64Url = (buf: Uint8Array) =>
-		platform.base64.encode(buf).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-	const signature = toB64Url(sigBytes);
-	const turboBalanceRes = await fetch('https://payment.ardrive.io/v1/balance', {
-		headers: {
-			'x-nonce': nonce,
-			'x-signature': signature,
-			'x-public-key': pubKey,
-		},
-	});
-
-	const turboBalance = await turboBalanceRes.json();
-
-	// 2. Extract all paying addresses
-	const paidByArray = (turboBalance.receivedApprovals || []).map((a: any) => a.payingAddress);
-
 	// Read file blob as Uint8Array
 	const rawFile = new Uint8Array(await platform.blob.readAsArrayBuffer(fileBlob));
+	const rawBytes = await createSignedDataItemBytes(rawFile, platform, txOpts);
 
-	// Create a compatible signer for arbundles
-	// Note: This may need adjustment based on arbundles compatibility
-	const compatibleSigner = {
-		publicKey: platform.base64.decode(pubKey),
-		sign: async (data: Uint8Array) => platform.wallet!.sign(data),
-		getActivePublicKey: async () => pubKey,
-	};
+	if (!useChunks) {
+		const uploadRes = await fetch(`${apiUrl}/tx/${token}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/octet-stream',
+				Accept: 'application/json',
+			},
+			body: rawBytes,
+		});
 
-	const dataItem = createData(rawFile, compatibleSigner as any, {
-		...txOpts,
-		anchor:
-			txOpts.anchor ||
-			(() => {
-				const a = platform.crypto.randomBytes(32);
-				return platform.base64.encode(a).replace(/\+/g, '-').replace(/\//g, '_').slice(0, 32);
-			})(),
-	});
+		if (!uploadRes?.ok) {
+			const text = await uploadRes.text();
+			throw new Error(`${uploadRes.status}: ${text}`);
+		}
 
-	await dataItem.sign(compatibleSigner as any);
+		return uploadRes.json();
+	}
 
-	const rawBytes = dataItem.getRaw();
+	const { chunkSize } = uploadOpts;
+	if (!chunkSize) {
+		throw new Error('chunkSize is required when useChunks is true');
+	}
 
 	const fullBlob = platform.blob.createBlob(new Uint8Array(rawBytes), 'application/octet-stream');
 
-	const commonHeaders = { 'x-chunking-version': '2', 'x-paid-by': paidByArray.join(',') };
+	const commonHeaders = { 'x-chunking-version': '2' }; // 'x-paid-by': paidByArray.join(',')
 	let infoRes = await fetch(`${apiUrl}/chunks/${token}/-1/-1`, { headers: commonHeaders });
 	if (!infoRes.ok) {
 		throw new Error(`Failed to get upload ID: ${infoRes.status} ${await infoRes.text()}`);
