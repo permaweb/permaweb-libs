@@ -6,9 +6,133 @@ import { createPlatformContext } from '../helpers/platform-providers.ts';
 import { DependencyType, TagType } from '../helpers/types.ts';
 import { checkValidAddress, getBase64Data, getByteSize, getDataURLContentType } from '../helpers/utils.ts';
 
+export interface FolderUploadFile {
+	path: string;
+	data: any;
+	contentType?: string;
+	tags?: TagType[];
+}
+
+export interface FolderUploadArgs {
+	files: FolderUploadFile[];
+	tags?: TagType[];
+	fileTags?: TagType[];
+	concurrency?: number;
+	indexPath?: string;
+	throwOnFailure?: boolean;
+}
+
+export interface FolderUploadResult {
+	transactionId: string;
+	totalFiles: number;
+	uploaded: number;
+	failed: number;
+	manifest: {
+		manifest: 'arweave/paths';
+		version: '0.2.0';
+		index?: { path: string };
+		paths: Record<string, { id: string }>;
+	};
+	failures: { path: string; message: string }[];
+}
+
+type FolderUploadTask = FolderUploadFile & {
+	path: string;
+	contentType: string;
+};
+
+type FolderFileUploadResult = {
+	path: string;
+	transactionId: string | null;
+	error?: Error;
+};
+
+const DEFAULT_FOLDER_UPLOAD_CONCURRENCY = 3;
+const ARWEAVE_MANIFEST_CONTENT_TYPE = 'application/x.arweave-manifest+json';
+
 function createDataItemAnchor(platform: any) {
 	const anchorBytes = platform.crypto.randomBytes(32);
 	return platform.base64.encode(anchorBytes).replace(/\+/g, '-').replace(/\//g, '_').slice(0, 32);
+}
+
+function normalizeFolderUploadPath(path: string): string {
+	return path
+		.replace(/\\/g, '/')
+		.split('/')
+		.filter((segment) => segment && segment !== '.' && segment !== '..')
+		.join('/');
+}
+
+function getFolderUploadContentType(file: FolderUploadFile, platform: any): string {
+	if (file.contentType) return file.contentType;
+
+	try {
+		const contentType = platform.file.getContentType(file.data);
+		if (contentType) return contentType;
+	} catch {}
+
+	return 'application/octet-stream';
+}
+
+async function readFolderUploadBytes(data: any, platform: any): Promise<Uint8Array> {
+	if (typeof data === 'string') {
+		return new TextEncoder().encode(data);
+	}
+
+	if (data instanceof Uint8Array) {
+		return data;
+	}
+
+	if (data instanceof ArrayBuffer) {
+		return new Uint8Array(data);
+	}
+
+	if (ArrayBuffer.isView(data)) {
+		return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+	}
+
+	const buffer = await platform.file.readAsArrayBuffer(data);
+	return new Uint8Array(buffer);
+}
+
+function bytesToDataUrl(bytes: Uint8Array, contentType: string, platform: any): string {
+	const chunkSize = 0x8000;
+	let binary = '';
+
+	for (let i = 0; i < bytes.length; i += chunkSize) {
+		binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)) as any);
+	}
+
+	return `data:${contentType};base64,${platform.base64.btoa(binary)}`;
+}
+
+async function folderUploadDataToTransactionData(file: FolderUploadFile, contentType: string, platform: any): Promise<any> {
+	if (typeof file.data === 'string' && /^data:/i.test(file.data)) {
+		return file.data;
+	}
+
+	return bytesToDataUrl(await readFolderUploadBytes(file.data, platform), contentType, platform);
+}
+
+async function mapWithConcurrency<T, R>(
+	items: T[],
+	concurrency: number,
+	mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+	const results = new Array<R>(items.length);
+	let nextIndex = 0;
+	const workerCount = Math.max(1, Math.min(concurrency, items.length));
+
+	await Promise.all(
+		Array.from({ length: workerCount }, async () => {
+			while (nextIndex < items.length) {
+				const currentIndex = nextIndex++;
+				results[currentIndex] = await mapper(items[currentIndex]);
+			}
+		}),
+	);
+
+	return results;
 }
 
 async function createSignedDataItemBytes(rawFile: Uint8Array, platform: any, txOpts: any & { upload?: any }) {
@@ -47,7 +171,6 @@ export function resolveTransactionWith(deps: DependencyType) {
 	return async (data: any, args?: { tags: TagType[] }) => {
 		if (checkValidAddress(data)) return data;
 		if (!deps.arweave) throw new Error(`Must initialize with Arweave in order to create transactions`);
-		console.log(args)
 		try {
 			return await createTransaction(deps, { ...(args ?? {}), data });
 		} catch (e: any) {
@@ -131,8 +254,6 @@ export async function createTransaction(
 					},
 				);
 
-				console.log(uploadResponse);
-
 				console.log('Uploaded dataItem ID:', uploadResponse.id);
 
 				return uploadResponse.id;
@@ -143,6 +264,115 @@ export async function createTransaction(
 	} else {
 		throw new Error('Error preparing transaction data');
 	}
+}
+
+export function uploadFolderWith(deps: DependencyType) {
+	return async (args: FolderUploadArgs): Promise<FolderUploadResult> => {
+		return uploadFolder(deps, args);
+	};
+}
+
+export async function uploadFolder(deps: DependencyType, args: FolderUploadArgs): Promise<FolderUploadResult> {
+	const platformDeps = deps as PlatformDependencyType;
+	const platform = platformDeps.platform || createPlatformContext();
+	const concurrency = args.concurrency ?? DEFAULT_FOLDER_UPLOAD_CONCURRENCY;
+	const pathCounts = new Map<string, number>();
+
+	const tasks: FolderUploadTask[] = args.files
+		.map((file) => {
+			const path = normalizeFolderUploadPath(file.path);
+			if (!path) return null;
+
+			const count = pathCounts.get(path) ?? 0;
+			pathCounts.set(path, count + 1);
+
+			return {
+				...file,
+				path: count > 0 ? `${path}-${count + 1}` : path,
+				contentType: getFolderUploadContentType(file, platform),
+			};
+		})
+		.filter((file): file is FolderUploadTask => !!file);
+
+	if (tasks.length === 0) {
+		throw new Error('Folder is empty, nothing to upload');
+	}
+
+	const uploadResults = await mapWithConcurrency(tasks, concurrency, async (task): Promise<FolderFileUploadResult> => {
+		try {
+			const data = await folderUploadDataToTransactionData(task, task.contentType, platform);
+			const transactionId = await createTransaction(deps, {
+				data,
+				tags: [...(args.fileTags ?? []), ...(task.tags ?? [])],
+			});
+
+			return { path: task.path, transactionId };
+		} catch (error: any) {
+			if (args.throwOnFailure) {
+				throw error;
+			}
+
+			return {
+				path: task.path,
+				transactionId: null,
+				error: error instanceof Error ? error : new Error(error?.message ?? 'Failed to upload file'),
+			};
+		}
+	});
+
+	const failures = uploadResults
+		.filter((result) => !result.transactionId)
+		.map((result) => ({
+			path: result.path,
+			message: result.error?.message ?? 'Failed to upload file',
+		}));
+	const manifestPaths: Record<string, { id: string }> = {};
+
+	for (const result of uploadResults) {
+		if (!result.transactionId) continue;
+
+		manifestPaths[result.path] = { id: result.transactionId };
+
+		if (result.path.endsWith('/index.html')) {
+			manifestPaths[result.path.replace(/\/index\.html$/, '')] = { id: result.transactionId };
+		}
+	}
+
+	if (Object.keys(manifestPaths).length === 0) {
+		throw new Error('No files were uploaded');
+	}
+
+	const indexPath =
+		args.indexPath && manifestPaths[normalizeFolderUploadPath(args.indexPath)]
+			? normalizeFolderUploadPath(args.indexPath)
+			: manifestPaths['index.html']
+				? 'index.html'
+				: undefined;
+
+	const manifest: FolderUploadResult['manifest'] = {
+		manifest: 'arweave/paths',
+		version: '0.2.0',
+		...(indexPath ? { index: { path: indexPath } } : {}),
+		paths: manifestPaths,
+	};
+	const manifestData = bytesToDataUrl(
+		new TextEncoder().encode(JSON.stringify(manifest)),
+		ARWEAVE_MANIFEST_CONTENT_TYPE,
+		platform,
+	);
+	const transactionId = await createTransaction(deps, {
+		data: manifestData,
+		tags: args.tags,
+	});
+
+	return {
+		transactionId,
+		totalFiles: tasks.length,
+		uploaded: uploadResults.length - failures.length,
+		failed: failures.length,
+		manifest,
+		failures,
+	};
 }
 
 export async function runUpload(
