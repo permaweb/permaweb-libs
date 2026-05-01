@@ -84,6 +84,7 @@ function init(deps: Helpers.DependencyType | PlatformDependencyType) {
 
 		/* Common */
 		resolveTransaction: Common.resolveTransactionWith(deps),
+		uploadFolder: Common.uploadFolderWith(deps),
 		getGQLData: Common.getGQLDataWith(deps),
 		getAggregatedGQLData: Common.getAggregatedGQLDataWith(deps),
 		createProcess: Common.aoCreateProcessWith(deps),
