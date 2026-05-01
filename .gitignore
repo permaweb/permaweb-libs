@@ -1,4 +1,3 @@
-**.vscode
 **node_modules
 **wallets
 **.DS_Store
@@ -7,3 +6,7 @@
 **.idea/
 **.npmrc
 sdk/*.tgz
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
