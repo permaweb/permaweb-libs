@@ -232,7 +232,13 @@ function getQueryBody(args: QueryBodyGQLArgsType): string {
 
 	let fetchCount: string = `first: ${paginator}`;
 	let txCount: string = '';
-	let nodeFields: string = `data { size type } owner { address } block { height timestamp }`;
+	let nodeFields: string = `
+		data { size type }
+		quantity { winston ar }
+		fee { winston ar }
+		owner { address }
+		block { height timestamp }
+	`;
 	let recipientsfield: string = '';
 
 	const gateway = args.gateway ?? GATEWAYS.ao;
