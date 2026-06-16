@@ -6,6 +6,11 @@ export type DependencyType = {
 	gateway?: string;
 };
 
+export type TransactionAmountType = {
+	winston?: string;
+	ar?: string;
+};
+
 export type ProcessReadType = {
 	processId: string;
 	path?: string;
@@ -218,6 +223,8 @@ export type GQLNodeResponseType = {
 			size: string;
 			type: string;
 		};
+		quantity?: TransactionAmountType;
+		fee?: TransactionAmountType;
 		owner: {
 			address: string;
 		};
