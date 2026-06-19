@@ -48,7 +48,7 @@ This SDK provides a set of libraries designed as foundational building blocks fo
 
 ## Prerequisites
 
-- `node >= v18.0`
+- `node >= v22.0`
 - `npm` or `yarn`
 - `arweave`
 - `@permaweb/aoconnect`
